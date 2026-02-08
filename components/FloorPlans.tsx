@@ -1,0 +1,231 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import type { FloorPlan } from "@/data/floorPlans";
+
+interface FloorPlansProps {
+  buildingName: string;
+  floorPlans?: FloorPlan[];
+}
+
+function groupHeading(bed: number): string {
+  if (bed === 0) return "Studio Floor Plans";
+  if (bed === 1) return "One Bedroom Floor Plans";
+  if (bed === 2) return "Two Bedroom Floor Plans";
+  if (bed === 3) return "Three Bedroom Floor Plans";
+  return `${bed} Bedroom Floor Plans`;
+}
+
+function formatSqft(sqft: number): string {
+  if (sqft <= 0) return "—";
+  return sqft.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+export default function FloorPlans({
+  buildingName,
+  floorPlans,
+}: FloorPlansProps) {
+  const [selectedPlan, setSelectedPlan] = useState<FloorPlan | null>(null);
+
+  // Group floor plans by bedroom count
+  const bedroomGroups = useMemo(() => {
+    if (!floorPlans || floorPlans.length === 0) return {};
+    const groups: Record<number, FloorPlan[]> = {};
+    for (const plan of floorPlans) {
+      if (!groups[plan.bedrooms]) groups[plan.bedrooms] = [];
+      groups[plan.bedrooms].push(plan);
+    }
+    return groups;
+  }, [floorPlans]);
+
+  const bedroomCounts = Object.keys(bedroomGroups)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  // No floor plan data — show placeholder
+  if (!floorPlans || floorPlans.length === 0) {
+    return (
+      <section className="section-padding bg-light">
+        <div className="container-narrow max-w-3xl text-center">
+          <h2 className="mb-10 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+            Floor Plans
+          </h2>
+          <div className="border border-gray-200 bg-white p-12">
+            <div className="text-4xl">📐</div>
+            <p className="mt-4 text-lg font-semibold text-primary">
+              {buildingName} Floor Plans
+            </p>
+            <p className="mt-2 text-sm text-secondary">
+              Contact Jacob for detailed floor plans, availability, and pricing
+              for {buildingName}.
+            </p>
+            <a
+              href="#inquiry"
+              className="mt-6 inline-block border border-primary bg-primary px-8 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary"
+            >
+              Request Floor Plans
+            </a>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section-padding bg-white">
+      <div className="container-narrow">
+        {/* Heading */}
+        <h2 className="mb-10 text-center text-2xl tracking-tight text-primary md:text-3xl">
+          <span className="font-bold">Floor Plans</span>{" "}
+          <span className="font-light">at {buildingName}</span>
+        </h2>
+
+        {/* Grouped Tables */}
+        <div className="grid items-start gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {bedroomCounts.map((bed) => (
+            <div key={bed} className="border border-gray-200 bg-white p-6">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-primary">
+                {groupHeading(bed)}
+              </h3>
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wider text-accent">
+                    <th className="pb-2 pr-3 font-normal">Floor Plan</th>
+                    <th className="pb-2 pr-3 font-normal"># Bed</th>
+                    <th className="pb-2 pr-3 font-normal"># Bath</th>
+                    <th className="pb-2 font-normal text-right">
+                      SQ FT (Int.)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bedroomGroups[bed].map((plan) => (
+                    <tr
+                      key={plan.name}
+                      className="border-b border-gray-100 last:border-0"
+                    >
+                      <td className="py-2.5 pr-3">
+                        <button
+                          onClick={() => setSelectedPlan(plan)}
+                          className="font-semibold text-primary underline decoration-gray-300 underline-offset-2 hover:decoration-primary"
+                        >
+                          {plan.name}
+                        </button>
+                      </td>
+                      <td className="py-2.5 pr-3 text-secondary">{bed}</td>
+                      <td className="py-2.5 pr-3 text-secondary">
+                        {plan.bathrooms}
+                      </td>
+                      <td className="py-2.5 text-right text-secondary">
+                        {formatSqft(plan.sqft)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+
+        {/* Modal */}
+        {selectedPlan && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setSelectedPlan(null)}
+          >
+            <div
+              className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedPlan(null)}
+                className="absolute right-4 top-4 z-10 text-2xl leading-none text-gray-400 hover:text-primary"
+              >
+                &times;
+              </button>
+
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-100 p-6 pr-12">
+                <div>
+                  <p className="text-xl font-semibold text-primary">
+                    {selectedPlan.name}
+                  </p>
+                  <p className="mt-1 text-sm text-secondary">
+                    {selectedPlan.bedrooms === 0
+                      ? "Studio"
+                      : `${selectedPlan.bedrooms} Bed`}{" "}
+                    / {selectedPlan.bathrooms} Bath
+                    {selectedPlan.hasStudy && " + Study"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-semibold text-primary">
+                    {formatSqft(selectedPlan.sqft)} SF
+                  </p>
+                </div>
+              </div>
+
+              {/* Floor Plan Image */}
+              {selectedPlan.imageUrl && (
+                <div className="bg-gray-50 p-6">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedPlan.imageUrl}
+                    alt={`${buildingName} - ${selectedPlan.name} floor plan`}
+                    className="mx-auto max-h-[50vh] w-auto"
+                  />
+                </div>
+              )}
+
+              {/* Details */}
+              <div className="grid grid-cols-2 gap-4 p-6 text-sm">
+                {selectedPlan.orientation && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-accent">
+                      Orientation
+                    </p>
+                    <p className="mt-0.5 font-medium text-primary">
+                      {selectedPlan.orientation}
+                    </p>
+                  </div>
+                )}
+                {selectedPlan.unitNumbers && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-accent">
+                      Unit Numbers
+                    </p>
+                    <p className="mt-0.5 font-medium text-primary">
+                      {selectedPlan.unitNumbers}
+                    </p>
+                  </div>
+                )}
+                {selectedPlan.quantity > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-accent">
+                      Total Units
+                    </p>
+                    <p className="mt-0.5 font-medium text-primary">
+                      {selectedPlan.quantity}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Inquire */}
+              <div className="border-t border-gray-100 p-6">
+                <a
+                  href="#inquiry"
+                  onClick={() => setSelectedPlan(null)}
+                  className="block border border-primary bg-primary py-3 text-center text-xs uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-primary"
+                >
+                  Inquire About This Plan
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
