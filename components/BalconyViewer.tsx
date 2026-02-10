@@ -16,11 +16,13 @@ export default function BalconyViewer({
   return (
     <div className={`relative ${className}`} style={{ width, height }}>
       <iframe
-        src="/downtown-condos/balcony-viewer/index.html"
+        src="/balcony-viewer/index.html"
         title="Balcony Viewer"
         className="w-full h-full border-0 rounded-lg shadow-lg"
         allow="geolocation"
         loading="lazy"
+        scrolling="no"
+        style={{ overflow: 'hidden' }}
       />
     </div>
   );
