@@ -29,6 +29,7 @@ export default function FloorPlans({
 }: FloorPlansProps) {
   const [selectedPlan, setSelectedPlan] = useState<FloorPlan | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
   // Group floor plans by bedroom count
   const bedroomGroups = useMemo(() => {
@@ -44,6 +45,13 @@ export default function FloorPlans({
   const bedroomCounts = Object.keys(bedroomGroups)
     .map(Number)
     .sort((a, b) => a - b);
+
+  const toggleGroup = (bedrooms: number) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [bedrooms]: !prev[bedrooms]
+    }));
+  };
 
   // No floor plan data — show placeholder
   if (!floorPlans || floorPlans.length === 0) {
@@ -85,49 +93,65 @@ export default function FloorPlans({
 
         {/* Grouped Tables */}
         <div className="grid items-start gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {bedroomCounts.map((bed) => (
-            <div key={bed} className="border border-gray-200 bg-white p-6">
-              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-primary">
-                {groupHeading(bed)}
-              </h3>
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wider text-accent">
-                    <th className="pb-2 pr-3 font-normal">Floor Plan</th>
-                    <th className="pb-2 pr-3 font-normal"># Bed</th>
-                    <th className="pb-2 pr-3 font-normal"># Bath</th>
-                    <th className="pb-2 font-normal text-right">
-                      SQ FT (Int.)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bedroomGroups[bed].map((plan) => (
-                    <tr
-                      key={plan.name}
-                      className="border-b border-gray-100 last:border-0"
-                    >
-                      <td className="py-2.5 pr-3">
-                        <button
-                          onClick={() => setSelectedPlan(plan)}
-                          className="font-semibold text-primary underline decoration-gray-300 underline-offset-2 hover:decoration-primary"
-                        >
-                          {plan.name}
-                        </button>
-                      </td>
-                      <td className="py-2.5 pr-3 text-secondary">{bed}</td>
-                      <td className="py-2.5 pr-3 text-secondary">
-                        {plan.bathrooms}
-                      </td>
-                      <td className="py-2.5 text-right text-secondary">
-                        {formatSqft(plan.sqft)}
-                      </td>
+          {bedroomCounts.map((bed) => {
+            const plans = bedroomGroups[bed];
+            const isExpanded = expandedGroups[bed] || false;
+            const hasMore = plans.length > 4;
+            const visiblePlans = hasMore && !isExpanded ? plans.slice(0, 4) : plans;
+
+            return (
+              <div key={bed} className="border border-gray-200 bg-white p-6">
+                <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-primary">
+                  {groupHeading(bed)}
+                </h3>
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-xs uppercase tracking-wider text-accent">
+                      <th className="pb-2 pr-3 font-normal">Floor Plan</th>
+                      <th className="pb-2 pr-3 font-normal"># Bed</th>
+                      <th className="pb-2 pr-3 font-normal"># Bath</th>
+                      <th className="pb-2 font-normal text-right">
+                        SQ FT (Int.)
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                  </thead>
+                  <tbody>
+                    {visiblePlans.map((plan) => (
+                      <tr
+                        key={plan.name}
+                        className="border-b border-gray-100 last:border-0"
+                      >
+                        <td className="py-2.5 pr-3">
+                          <button
+                            onClick={() => setSelectedPlan(plan)}
+                            className="font-semibold text-primary underline decoration-gray-300 underline-offset-2 hover:decoration-primary"
+                          >
+                            {plan.name}
+                          </button>
+                        </td>
+                        <td className="py-2.5 pr-3 text-secondary">{bed}</td>
+                        <td className="py-2.5 pr-3 text-secondary">
+                          {plan.bathrooms}
+                        </td>
+                        <td className="py-2.5 text-right text-secondary">
+                          {formatSqft(plan.sqft)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {hasMore && (
+                  <button
+                    onClick={() => toggleGroup(bed)}
+                    className="mt-4 w-full border border-gray-300 py-2 text-xs font-medium uppercase tracking-wider text-secondary transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {isExpanded ? `Show Less` : `Show More (${plans.length - 4} more)`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Modal */}
