@@ -129,7 +129,7 @@ export default function MapView({ buildings }: MapViewProps) {
               </div>
               <Link
                 href={`/${building.slug}`}
-                className="mt-3 block rounded bg-gray-900 py-1.5 text-center text-xs font-medium text-white hover:bg-gray-700"
+                className="mt-3 block rounded bg-gray-900 py-1.5 text-center text-xs font-medium text-white hover:bg-gray-700 hover:text-white"
               >
                 View Building
               </Link>
