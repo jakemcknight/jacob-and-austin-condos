@@ -85,7 +85,7 @@ export default function MapView({ buildings }: MapViewProps) {
   const center: [number, number] = [30.268, -97.745];
 
   return (
-    <div style={{ height: "500px", width: "100%" }}>
+    <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
     <MapContainer
       center={center}
       zoom={14}
