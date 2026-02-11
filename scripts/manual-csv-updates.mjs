@@ -1,0 +1,249 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Manually extracted data from the CSV for accuracy
+const csvData = {
+  'The Modern': {
+    yearBuilt: 2025,
+    floors: 56,
+    units: 367,
+    architect: 'Page & Nelsen Partners',
+    developer: 'Urbanspace'
+  },
+  '44 East': {
+    yearBuilt: 2022,
+    floors: 48,
+    units: 309,
+    architect: 'Page Southland Page',
+    developer: 'Intracorp'
+  },
+  'The Independent': {
+    yearBuilt: 2018,
+    floors: 58,
+    units: 363,
+    architect: 'Rhode Partners',
+    developer: 'Aspen Heights + CIM Group'
+  },
+  '70 Rainey': {
+    yearBuilt: 2019,
+    floors: 33,
+    units: 176,
+    architect: 'Page Architects',
+    developer: 'Sackman Enterprises'
+  },
+  'Four Seasons': {
+    yearBuilt: 2010,
+    floors: 32,
+    units: 148,
+    architect: 'Michael Graves',
+    developer: 'Ardent Residential and Post Properties Inc'
+  },
+  'The Austonian': {
+    yearBuilt: 2010,
+    floors: 56,
+    units: 185,
+    architect: 'Ziegler Cooper Architects',
+    developer: 'Benchmark Development'
+  },
+  'W Residences': {
+    yearBuilt: 2010,
+    floors: 37,
+    units: 160,
+    architect: 'Andersson-Wise Architects',
+    developer: 'Stratus Properties'
+  },
+  '360 Condos': {
+    yearBuilt: 2009,
+    floors: 43,
+    units: 430,
+    architect: 'Preston Partnership, LLC',
+    developer: 'Andrews Urban LLC, Novare Group Holdings LLC'
+  },
+  'Spring Condos': {
+    yearBuilt: 2010,
+    floors: 42,
+    units: 246,
+    architect: 'Rafii Architects Inc. (Vancouver, B.C.-based)',
+    developer: 'Zenith Partners'
+  },
+  'Seaholm Residences': {
+    yearBuilt: 2016,
+    floors: 30,
+    units: 269,
+    architect: 'STG Design',
+    developer: 'Southwest Strategies Group'
+  },
+  'Natiivo': {
+    yearBuilt: 2022,
+    floors: 33,
+    units: 249,
+    architect: 'STG Design',
+    developer: 'Pearlstone'
+  },
+  '5th & West': {
+    yearBuilt: 2018,
+    floors: 39,
+    units: 154,
+    architect: 'GDA Architecture',
+    developer: 'Riverside Resources'
+  },
+  'Austin City Lofts': {
+    yearBuilt: 2004,
+    floors: 14,
+    units: 82,
+    architect: 'Page Southerland Page; Lawrence W. Speck Associates',
+    developer: 'CLB Partners'
+  },
+  'Nokonah': {
+    yearBuilt: 2001,
+    floors: 11,
+    units: 95,
+    architect: 'Lake/Flato Architects Inc',
+    developer: 'Lake/Flato Architects Inc'
+  },
+  'The Shore': {
+    yearBuilt: 2008,
+    floors: 22,
+    units: 192,
+    architect: 'WDG Architecture',
+    developer: 'WDG Architecture'
+  },
+  'Milago': {
+    yearBuilt: 2006,
+    floors: 13,
+    units: 240,
+    architect: 'WDG Architecture, PLLC',
+    developer: 'WDG Architecture, PLLC'
+  },
+  'Five Fifty 05': {
+    yearBuilt: 2004,
+    floors: 31,
+    units: 98,
+    architect: 'Ellerbe Becket, Inc. and Susman Tisdale Gayle Architects, Inc.',
+    developer: 'Ellerbe Becket, Inc. and Susman Tisdale Gayle Architects, Inc.'
+  },
+  'Sabine on 5th': {
+    yearBuilt: 2007,
+    floors: 10,
+    units: 80,
+    architect: 'CWS Capital Partners',
+    developer: 'CWS Capital Partners'
+  },
+  'Brown Building': {
+    yearBuilt: 1938,
+    floors: 10,
+    units: 89,
+    architect: 'Charles Henry Page & Son',
+    developer: 'Charles Henry Page & Son'
+  },
+  'Austin Proper': {
+    yearBuilt: 2019,
+    floors: 33,
+    units: 99,
+    architect: 'Handel Architects',
+    developer: 'The Kor Group, Trammell Crow Company'
+  },
+  'Vesper': {
+    yearBuilt: 2023,
+    floors: 41,
+    units: 284,
+    architect: 'STG Design',
+    developer: 'Pearlstone & ATCO'
+  },
+  'The Linden': {
+    yearBuilt: 2024,
+    floors: 28,
+    units: 117,
+    architect: 'Rhode Partners',
+    developer: 'Reger Holdings LLC'
+  },
+  'Penthouse Condos': {
+    yearBuilt: 1964,
+    floors: 11,
+    units: 81,
+    architect: '',
+    developer: ''
+  },
+  'Brazos Place': {
+    yearBuilt: 2008,
+    floors: 14,
+    units: 72,
+    architect: 'Pomeroy Reinhart Stration Development (PRS)',
+    developer: 'Pomeroy Reinhart Stration Development (PRS)'
+  },
+  'Westgate Tower': {
+    yearBuilt: 1967,
+    floors: 23,
+    units: 60,
+    architect: 'Edward Durrell Stone',
+    developer: 'Edward Durrell Stone'
+  },
+  'Plaza Lofts': {
+    yearBuilt: 2004,
+    floors: 12,
+    units: 60,
+    architect: 'Morris',
+    developer: 'The Sutton Company'
+  },
+};
+
+// Create mapping from current building names to CSV names
+const buildingNameMap = {
+  'The Modern Austin': 'The Modern',
+  '44 East Avenue': '44 East',
+  'The Independent': 'The Independent',
+  '70 Rainey': '70 Rainey',
+  'Four Seasons': 'Four Seasons',
+  'The Austonian': 'The Austonian',
+  'W Residences': 'W Residences',
+  '360 Condominiums': '360 Condos',
+  'Spring Condos': 'Spring Condos',
+  'Seaholm Residences': 'Seaholm Residences',
+  'Natiivo': 'Natiivo',
+  '5th & West': '5th & West',
+  'Austin City Lofts': 'Austin City Lofts',
+  'Nokonah': 'Nokonah',
+  'The Shore': 'The Shore',
+  'Milago': 'Milago',
+  'Five Fifty 05': 'Five Fifty 05',
+  'Sabine on 5th': 'Sabine on 5th',
+  'Brown Building': 'Brown Building',
+  'Austin Proper': 'Austin Proper',
+  'Vesper': 'Vesper',
+  'The Linden': 'The Linden',
+  'Penthouse Condos': 'Penthouse Condos',
+  'Brazos Place': 'Brazos Place',
+  'Westgate Tower': 'Westgate Tower',
+  'Plaza Lofts': 'Plaza Lofts',
+};
+
+const updates = {};
+for (const [currentName, csvName] of Object.entries(buildingNameMap)) {
+  updates[currentName] = csvData[csvName] || null;
+}
+
+console.log('Updates to apply:');
+for (const [name, data] of Object.entries(updates)) {
+  if (data) {
+    console.log(`\n${name}:`);
+    console.log(`  Year Built: ${data.yearBuilt}`);
+    console.log(`  Floors: ${data.floors}`);
+    console.log(`  Units: ${data.units}`);
+    console.log(`  Architect: ${data.architect}`);
+    console.log(`  Developer: ${data.developer}`);
+  } else {
+    console.log(`\n${name}: NO DATA FOUND`);
+  }
+}
+
+// Write the updates to a JSON file
+fs.writeFileSync(
+  path.join(__dirname, 'building-updates.json'),
+  JSON.stringify(updates, null, 2)
+);
+
+console.log('\n✅ Wrote updates to building-updates.json');
