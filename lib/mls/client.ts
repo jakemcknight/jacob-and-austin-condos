@@ -135,9 +135,9 @@ export class MLSGridClient {
           const listing = await this.parseMLSListing(item, listingType);
           parsed.push(listing);
 
-          // Rate limit photo fetches (2 second delay between listings)
+          // Rate limit photo fetches (0.5 second delay between listings)
           if (parsed.length < response.value.length) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
         results.push(...parsed);
