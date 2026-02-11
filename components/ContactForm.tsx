@@ -15,6 +15,8 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Pre-fill message from URL parameter
   useEffect(() => {
@@ -27,10 +29,34 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, this would submit to an API
-    setSubmitted(true);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          buildingName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Contact form error:", err);
+      setError("Failed to send message. Please try again or email jacob@jacobinaustin.com directly.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -54,6 +80,11 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {error}
+              </div>
+            )}
             <div className="grid gap-5 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
@@ -138,9 +169,10 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
 
             <button
               type="submit"
-              className="w-full border border-primary bg-primary py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary"
+              disabled={submitting}
+              className="w-full border border-primary bg-primary py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Send Inquiry
+              {submitting ? "Sending..." : "Send Inquiry"}
             </button>
           </form>
         )}
