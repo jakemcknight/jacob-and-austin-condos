@@ -158,11 +158,7 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, message: e.target.value })
                 }
-                placeholder={
-                  buildingName
-                    ? `Tell us about your interest in ${buildingName}...`
-                    : "Tell us what you're looking for..."
-                }
+                placeholder="Tell us what you're looking for..."
                 className="w-full resize-none border border-gray-200 bg-white px-4 py-3 text-sm text-primary outline-none transition-colors focus:border-primary"
               />
             </div>
