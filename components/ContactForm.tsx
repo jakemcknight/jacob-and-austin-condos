@@ -35,7 +35,7 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch("/downtown-condos/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
