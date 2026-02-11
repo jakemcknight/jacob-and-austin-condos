@@ -22,8 +22,20 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<"name" | "floors" | "yearBuilt">("name");
 
   const filteredBuildings = useMemo(() => {
+    // Buildings to hide (marked with * in CSV)
+    const excludedSlugs = [
+      "1704-west-condos",
+      "904-west-condos",
+      "1306-west",
+      "penthouse-condos",
+      "cambridge-tower",
+      "celias-court",
+      "terrace-on-shoal-creek",
+      "greenwood-tower",
+    ];
+
     let result = buildings
-      .filter((b) => !b.name.startsWith("*"))
+      .filter((b) => !excludedSlugs.includes(b.slug))
       .filter(
         (b) =>
           b.name.toLowerCase().includes(search.toLowerCase()) ||
