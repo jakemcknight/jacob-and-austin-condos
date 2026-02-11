@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ContactFormProps {
   buildingName?: string;
@@ -15,6 +15,17 @@ export default function ContactForm({ buildingName }: ContactFormProps) {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+
+  // Pre-fill message from URL parameter
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const messageParam = urlParams.get("message");
+      if (messageParam) {
+        setFormData(prev => ({ ...prev, message: messageParam }));
+      }
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { buildings } from "@/data/buildings";
 
 interface MLSListing {
   listingId: string;
@@ -33,6 +34,10 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("price");
+
+  // Get building name for contact link
+  const building = buildings.find(b => b.slug === buildingSlug);
+  const buildingName = building?.name || "";
 
   // Filter state
   const [listingTypeFilter, setListingTypeFilter] = useState<"Sale" | "Lease">("Sale");
@@ -175,7 +180,14 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
         {/* Show message if no listings at all */}
         {listings.length === 0 ? (
           <p className="py-12 text-center text-secondary">
-            No active listings at this time. Check back soon for updates.
+            No active listings at this time. Check back soon for updates or{" "}
+            <a
+              href={`#inquiry?message=${encodeURIComponent(`Looking for a condo off-market in ${buildingName}`)}`}
+              className="text-accent underline hover:text-primary"
+            >
+              reach out to find a home in {buildingName} off-market
+            </a>
+            .
           </p>
         ) : (
           <>
