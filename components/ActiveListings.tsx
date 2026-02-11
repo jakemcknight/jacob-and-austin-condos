@@ -202,17 +202,17 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+        {/* Filters - Compact */}
+        <div className="mb-4 rounded border border-gray-200 bg-white p-4">
           {/* Bedroom Filters */}
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
               Bedrooms
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => toggleBedroomFilter(0)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
                   bedroomFilters.includes(0)
                     ? "bg-accent text-white"
                     : "bg-gray-100 text-secondary hover:bg-gray-200"
@@ -222,7 +222,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
               </button>
               <button
                 onClick={() => toggleBedroomFilter(1)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
                   bedroomFilters.includes(1)
                     ? "bg-accent text-white"
                     : "bg-gray-100 text-secondary hover:bg-gray-200"
@@ -232,7 +232,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
               </button>
               <button
                 onClick={() => toggleBedroomFilter(2)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
                   bedroomFilters.includes(2)
                     ? "bg-accent text-white"
                     : "bg-gray-100 text-secondary hover:bg-gray-200"
@@ -242,7 +242,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
               </button>
               <button
                 onClick={() => toggleBedroomFilter(3)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
                   bedroomFilters.includes(3)
                     ? "bg-accent text-white"
                     : "bg-gray-100 text-secondary hover:bg-gray-200"
@@ -253,58 +253,46 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
             </div>
           </div>
 
-          {/* Price Range */}
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
+          {/* Price and Sqft Ranges - Single Row */}
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
-                Min Price
-              </label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Min Price</label>
               <input
                 type="number"
                 placeholder="$0"
                 value={priceMin}
                 onChange={(e) => setPriceMin(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+                className="w-full border border-gray-300 px-2 py-1 text-xs focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
-                Max Price
-              </label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Max Price</label>
               <input
                 type="number"
                 placeholder="Any"
                 value={priceMax}
                 onChange={(e) => setPriceMax(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+                className="w-full border border-gray-300 px-2 py-1 text-xs focus:border-accent focus:outline-none"
               />
             </div>
-          </div>
-
-          {/* Square Footage Range */}
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
-                Min Sq Ft
-              </label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Min Sq Ft</label>
               <input
                 type="number"
                 placeholder="0"
                 value={sqftMin}
                 onChange={(e) => setSqftMin(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+                className="w-full border border-gray-300 px-2 py-1 text-xs focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
-                Max Sq Ft
-              </label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Max Sq Ft</label>
               <input
                 type="number"
                 placeholder="Any"
                 value={sqftMax}
                 onChange={(e) => setSqftMax(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+                className="w-full border border-gray-300 px-2 py-1 text-xs focus:border-accent focus:outline-none"
               />
             </div>
           </div>
@@ -313,60 +301,32 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
           {activeFilterCount > 0 && (
             <button
               onClick={clearFilters}
-              className="text-sm font-medium uppercase tracking-wider text-accent hover:text-primary"
+              className="mt-2 text-xs font-medium uppercase tracking-wide text-accent hover:text-primary"
             >
-              Clear All Filters ({activeFilterCount})
+              Clear All ({activeFilterCount})
             </button>
           )}
         </div>
 
-        {/* Results count */}
-        <p className="mb-4 text-center text-sm text-secondary">
-          Showing {sortedListings.length} of {listings.length} listings
-        </p>
+        {/* Results count and Sort dropdown */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm text-secondary">
+            {sortedListings.length} of {listings.length} listings
+          </p>
 
-        {/* Sort controls */}
-        <div className="mb-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setSortBy("price")}
-            className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
-              sortBy === "price"
-                ? "bg-accent text-white"
-                : "bg-white text-accent hover:bg-accent hover:text-white"
-            }`}
-          >
-            PRICE
-          </button>
-          <button
-            onClick={() => setSortBy("priceSf")}
-            className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
-              sortBy === "priceSf"
-                ? "bg-accent text-white"
-                : "bg-white text-accent hover:bg-accent hover:text-white"
-            }`}
-          >
-            $/SF
-          </button>
-          <button
-            onClick={() => setSortBy("dom")}
-            className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
-              sortBy === "dom"
-                ? "bg-accent text-white"
-                : "bg-white text-accent hover:bg-accent hover:text-white"
-            }`}
-          >
-            DAYS ON MARKET
-          </button>
-          <button
-            onClick={() => setSortBy("date")}
-            className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
-              sortBy === "date"
-                ? "bg-accent text-white"
-                : "bg-white text-accent hover:bg-accent hover:text-white"
-            }`}
-          >
-            NEWEST
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-gray-600">Sort by:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="border border-gray-300 px-3 py-1 text-sm focus:border-accent focus:outline-none"
+            >
+              <option value="price">Price (High to Low)</option>
+              <option value="priceSf">$/SF (High to Low)</option>
+              <option value="dom">Days on Market</option>
+              <option value="date">Newest First</option>
+            </select>
+          </div>
         </div>
 
         {/* Listings grid */}
