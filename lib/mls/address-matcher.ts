@@ -2,8 +2,6 @@
 
 import { buildings } from "@/data/buildings";
 import { levenshteinDistance } from "./string-utils";
-import fs from "fs";
-import path from "path";
 
 interface MatchResult {
   slug: string;
@@ -66,40 +64,11 @@ function normalizeAddress(addr: string): string {
 }
 
 /**
- * Log unmatched addresses to a file for manual review
+ * Log unmatched addresses for manual review (console only in serverless environment)
  */
 function logUnmatchedAddress(mlsAddress: string): void {
-  try {
-    const logDir = path.join(process.cwd(), "logs");
-    const logFile = path.join(logDir, "unmatched-mls-listings.json");
-
-    // Create logs directory if it doesn't exist
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-
-    // Read existing log or create new
-    let log: { timestamp: string; address: string }[] = [];
-    if (fs.existsSync(logFile)) {
-      const content = fs.readFileSync(logFile, "utf-8");
-      log = JSON.parse(content);
-    }
-
-    // Check if address already logged
-    const alreadyLogged = log.some(entry => entry.address === mlsAddress);
-    if (!alreadyLogged) {
-      log.push({
-        timestamp: new Date().toISOString(),
-        address: mlsAddress,
-      });
-
-      // Write back to file
-      fs.writeFileSync(logFile, JSON.stringify(log, null, 2));
-      console.log(`[Address Matcher] Logged unmatched address: ${mlsAddress}`);
-    }
-  } catch (error) {
-    console.error("[Address Matcher] Error logging unmatched address:", error);
-  }
+  // In serverless environment, just log to console (no file system access)
+  console.warn(`[Address Matcher] UNMATCHED ADDRESS: "${mlsAddress}"`);
 }
 
 /**
