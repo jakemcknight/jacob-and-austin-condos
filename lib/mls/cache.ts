@@ -1,34 +1,30 @@
-// JSON file cache utilities for MLS data
+// Vercel KV cache utilities for MLS data
+// Uses Upstash Redis for persistent storage in serverless environment
 
-import fs from "fs";
-import path from "path";
+import { kv } from "@vercel/kv";
 import { MLSListing, CachedMlsData } from "./types";
 
-const CACHE_DIR = path.join(process.cwd(), "data", "mls-cache");
+// KV key prefix for MLS cache entries
+const CACHE_PREFIX = "mls:cache:";
 
 /**
- * Ensure cache directory exists
+ * Generate KV key for a building's MLS cache
  */
-function ensureCacheDir(): void {
-  if (!fs.existsSync(CACHE_DIR)) {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
-  }
+function getCacheKey(slug: string): string {
+  return `${CACHE_PREFIX}${slug}`;
 }
 
 /**
- * Read MLS cache for a specific building
+ * Read MLS cache for a specific building from Vercel KV
  */
 export async function readMlsCache(slug: string): Promise<CachedMlsData | null> {
   try {
-    ensureCacheDir();
-    const cachePath = path.join(CACHE_DIR, `${slug}.json`);
+    const key = getCacheKey(slug);
+    const cached = await kv.get<CachedMlsData>(key);
 
-    if (!fs.existsSync(cachePath)) {
+    if (!cached) {
       return null;
     }
-
-    const content = fs.readFileSync(cachePath, "utf-8");
-    const cached: CachedMlsData = JSON.parse(content);
 
     return cached;
   } catch (error) {
@@ -38,19 +34,18 @@ export async function readMlsCache(slug: string): Promise<CachedMlsData | null> 
 }
 
 /**
- * Write MLS cache for a specific building (replaces existing cache)
+ * Write MLS cache for a specific building to Vercel KV (replaces existing cache)
  */
 export async function writeMlsCache(slug: string, data: MLSListing[]): Promise<void> {
   try {
-    ensureCacheDir();
-    const cachePath = path.join(CACHE_DIR, `${slug}.json`);
+    const key = getCacheKey(slug);
 
     const cached: CachedMlsData = {
       timestamp: Date.now(),
       data,
     };
 
-    fs.writeFileSync(cachePath, JSON.stringify(cached, null, 2));
+    await kv.set(key, cached);
     console.log(`[MLS Cache] Wrote cache for ${slug} (${data.length} listings)`);
   } catch (error) {
     console.error(`[MLS Cache] Error writing cache for ${slug}:`, error);
@@ -66,8 +61,6 @@ export async function writeMlsCache(slug: string, data: MLSListing[]): Promise<v
  */
 export async function updateMlsCache(slug: string, updates: MLSListing[]): Promise<void> {
   try {
-    ensureCacheDir();
-
     // Read existing cache
     const existing = await readMlsCache(slug);
     const existingData = existing?.data || [];
@@ -126,20 +119,25 @@ export function isCacheExpired(timestamp: number, ttl: number): boolean {
 }
 
 /**
- * Clear all cached data
+ * Clear all cached data from Vercel KV
  */
 export async function clearAllCache(): Promise<void> {
   try {
-    ensureCacheDir();
-    const files = fs.readdirSync(CACHE_DIR);
+    // Get all cache keys
+    const pattern = `${CACHE_PREFIX}*`;
+    const keys = await kv.keys(pattern);
 
-    for (const file of files) {
-      if (file.endsWith(".json")) {
-        fs.unlinkSync(path.join(CACHE_DIR, file));
-      }
+    if (keys.length === 0) {
+      console.log("[MLS Cache] No cache entries to clear");
+      return;
     }
 
-    console.log(`[MLS Cache] Cleared ${files.length} cache files`);
+    // Delete all cache keys
+    for (const key of keys) {
+      await kv.del(key);
+    }
+
+    console.log(`[MLS Cache] Cleared ${keys.length} cache entries`);
   } catch (error) {
     console.error("[MLS Cache] Error clearing cache:", error);
     throw error;

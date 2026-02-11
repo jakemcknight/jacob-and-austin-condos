@@ -1,11 +1,10 @@
 // Sync state management for MLSGrid replication
 // Tracks last sync timestamp for incremental updates
+// Uses Vercel KV for persistent storage in serverless environment
 
-import fs from "fs";
-import path from "path";
+import { kv } from "@vercel/kv";
 
-const STATE_DIR = path.join(process.cwd(), "data", "mls-sync-state");
-const STATE_FILE = path.join(STATE_DIR, "sync-state.json");
+const SYNC_STATE_KEY = "mls:sync:state";
 
 export interface SyncState {
   lastSyncTimestamp: string; // ISO 8601 format
@@ -18,28 +17,11 @@ export interface SyncState {
 }
 
 /**
- * Ensure state directory exists
- */
-function ensureStateDir(): void {
-  if (!fs.existsSync(STATE_DIR)) {
-    fs.mkdirSync(STATE_DIR, { recursive: true });
-  }
-}
-
-/**
- * Read current sync state
+ * Read current sync state from Vercel KV
  */
 export async function readSyncState(): Promise<SyncState | null> {
   try {
-    ensureStateDir();
-
-    if (!fs.existsSync(STATE_FILE)) {
-      return null;
-    }
-
-    const content = fs.readFileSync(STATE_FILE, "utf-8");
-    const state: SyncState = JSON.parse(content);
-
+    const state = await kv.get<SyncState>(SYNC_STATE_KEY);
     return state;
   } catch (error) {
     console.error("[Sync State] Error reading state:", error);
@@ -48,12 +30,11 @@ export async function readSyncState(): Promise<SyncState | null> {
 }
 
 /**
- * Write sync state
+ * Write sync state to Vercel KV
  */
 export async function writeSyncState(state: SyncState): Promise<void> {
   try {
-    ensureStateDir();
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    await kv.set(SYNC_STATE_KEY, state);
     console.log(`[Sync State] Updated state: ${state.totalCount} listings at ${state.lastSyncDate}`);
   } catch (error) {
     console.error("[Sync State] Error writing state:", error);
