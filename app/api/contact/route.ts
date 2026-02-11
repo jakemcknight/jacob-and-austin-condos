@@ -52,7 +52,7 @@ Sent from jacobinaustin.com contact form
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "Jacob In Austin <noreply@jacobinaustin.com>",
+        from: "Jacob In Austin <onboarding@resend.dev>",
         to: ["jacob@jacobinaustin.com"],
         reply_to: email,
         subject: emailSubject,
