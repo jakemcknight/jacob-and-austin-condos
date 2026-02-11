@@ -34,6 +34,14 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("price");
 
+  // Filter state
+  const [listingTypeFilter, setListingTypeFilter] = useState<"Sale" | "Lease">("Sale");
+  const [bedroomFilters, setBedroomFilters] = useState<number[]>([]);
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
+  const [sqftMin, setSqftMin] = useState<string>("");
+  const [sqftMax, setSqftMax] = useState<string>("");
+
   useEffect(() => {
     fetchListings();
   }, [buildingSlug]);
@@ -59,8 +67,66 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     }
   }
 
+  // Toggle bedroom filter
+  const toggleBedroomFilter = (bedrooms: number) => {
+    if (bedroomFilters.includes(bedrooms)) {
+      setBedroomFilters(bedroomFilters.filter(b => b !== bedrooms));
+    } else {
+      setBedroomFilters([...bedroomFilters, bedrooms]);
+    }
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setBedroomFilters([]);
+    setPriceMin("");
+    setPriceMax("");
+    setSqftMin("");
+    setSqftMax("");
+  };
+
+  // Filter listings
+  const filteredListings = listings.filter(listing => {
+    // Filter by listing type (Sale/Lease)
+    if (listing.listingType !== listingTypeFilter) return false;
+
+    // Filter by bedroom count
+    if (bedroomFilters.length > 0) {
+      const listingBedrooms = listing.bedroomsTotal;
+      let bedroomMatch = false;
+
+      for (const filterBedrooms of bedroomFilters) {
+        if (filterBedrooms === 3) {
+          // "3+ BR" includes 3 or more bedrooms
+          if (listingBedrooms >= 3) {
+            bedroomMatch = true;
+            break;
+          }
+        } else {
+          // Exact match for Studio, 1BR, 2BR
+          if (listingBedrooms === filterBedrooms) {
+            bedroomMatch = true;
+            break;
+          }
+        }
+      }
+
+      if (!bedroomMatch) return false;
+    }
+
+    // Filter by price
+    if (priceMin && listing.listPrice < parseFloat(priceMin)) return false;
+    if (priceMax && listing.listPrice > parseFloat(priceMax)) return false;
+
+    // Filter by square footage
+    if (sqftMin && listing.livingArea < parseFloat(sqftMin)) return false;
+    if (sqftMax && listing.livingArea > parseFloat(sqftMax)) return false;
+
+    return true;
+  });
+
   // Sort listings
-  const sortedListings = [...listings].sort((a, b) => {
+  const sortedListings = [...filteredListings].sort((a, b) => {
     switch (sortBy) {
       case "price":
         return b.listPrice - a.listPrice; // High to low
@@ -95,12 +161,169 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     return null; // Hide section if no listings
   }
 
+  // Count active filters
+  const activeFilterCount =
+    bedroomFilters.length +
+    (priceMin ? 1 : 0) +
+    (priceMax ? 1 : 0) +
+    (sqftMin ? 1 : 0) +
+    (sqftMax ? 1 : 0);
+
   return (
     <section className="section-padding bg-light">
       <div className="container-narrow">
         <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-primary md:text-3xl">
           Active Listings
         </h2>
+
+        {/* Sale/Lease Toggle */}
+        <div className="mb-6 flex justify-center">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+            <button
+              onClick={() => setListingTypeFilter("Sale")}
+              className={`px-6 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                listingTypeFilter === "Sale"
+                  ? "rounded-md bg-accent text-white"
+                  : "text-accent hover:text-primary"
+              }`}
+            >
+              For Sale
+            </button>
+            <button
+              onClick={() => setListingTypeFilter("Lease")}
+              className={`px-6 py-2 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                listingTypeFilter === "Lease"
+                  ? "rounded-md bg-accent text-white"
+                  : "text-accent hover:text-primary"
+              }`}
+            >
+              For Lease
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+          {/* Bedroom Filters */}
+          <div className="mb-4">
+            <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+              Bedrooms
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => toggleBedroomFilter(0)}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  bedroomFilters.includes(0)
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-secondary hover:bg-gray-200"
+                }`}
+              >
+                Studio
+              </button>
+              <button
+                onClick={() => toggleBedroomFilter(1)}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  bedroomFilters.includes(1)
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-secondary hover:bg-gray-200"
+                }`}
+              >
+                1 BR
+              </button>
+              <button
+                onClick={() => toggleBedroomFilter(2)}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  bedroomFilters.includes(2)
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-secondary hover:bg-gray-200"
+                }`}
+              >
+                2 BR
+              </button>
+              <button
+                onClick={() => toggleBedroomFilter(3)}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  bedroomFilters.includes(3)
+                    ? "bg-accent text-white"
+                    : "bg-gray-100 text-secondary hover:bg-gray-200"
+                }`}
+              >
+                3+ BR
+              </button>
+            </div>
+          </div>
+
+          {/* Price Range */}
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+                Min Price
+              </label>
+              <input
+                type="number"
+                placeholder="$0"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+                Max Price
+              </label>
+              <input
+                type="number"
+                placeholder="Any"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Square Footage Range */}
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+                Min Sq Ft
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={sqftMin}
+                onChange={(e) => setSqftMin(e.target.value)}
+                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-primary">
+                Max Sq Ft
+              </label>
+              <input
+                type="number"
+                placeholder="Any"
+                value={sqftMax}
+                onChange={(e) => setSqftMax(e.target.value)}
+                className="w-full border border-gray-300 px-4 py-2 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={clearFilters}
+              className="text-sm font-medium uppercase tracking-wider text-accent hover:text-primary"
+            >
+              Clear All Filters ({activeFilterCount})
+            </button>
+          )}
+        </div>
+
+        {/* Results count */}
+        <p className="mb-4 text-center text-sm text-secondary">
+          Showing {sortedListings.length} of {listings.length} listings
+        </p>
 
         {/* Sort controls */}
         <div className="mb-6 flex flex-wrap justify-center gap-2">
@@ -147,11 +370,17 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
         </div>
 
         {/* Listings grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sortedListings.map(listing => (
-            <ListingCard key={listing.listingId} listing={listing} />
-          ))}
-        </div>
+        {sortedListings.length === 0 ? (
+          <p className="py-12 text-center text-secondary">
+            No listings match your filters. Try adjusting your search criteria.
+          </p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {sortedListings.map(listing => (
+              <ListingCard key={listing.listingId} listing={listing} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
