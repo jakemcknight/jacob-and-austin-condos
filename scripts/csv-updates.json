@@ -1,0 +1,236 @@
+{
+  "The Modern Austin": {
+    "name": "The Modern",
+    "address": "601 Davis St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": 130,
+    "architect": "",
+    "developer": ""
+  },
+  "44 East Avenue": {
+    "name": "44 East",
+    "address": "44 East Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "15",
+    "developer": "3"
+  },
+  "The Independent": {
+    "name": "The Independent",
+    "address": "301 West Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "63%",
+    "developer": "4"
+  },
+  "70 Rainey": {
+    "name": "70 Rainey",
+    "address": "70 Rainey St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "8",
+    "developer": "4"
+  },
+  "Four Seasons": {
+    "name": "Four Seasons",
+    "address": "98 San Jacinto Blvd",
+    "yearBuilt": null,
+    "floors": null,
+    "units": 471,
+    "architect": "4",
+    "developer": "5%"
+  },
+  "The Austonian": {
+    "name": "The Austonian",
+    "address": "200 Congress Ave.",
+    "yearBuilt": null,
+    "floors": null,
+    "units": 18,
+    "architect": "#DIV/0!",
+    "developer": "4"
+  },
+  "W Residences": {
+    "name": "W Residences",
+    "address": "210 Lavaca St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": 18,
+    "architect": "2",
+    "developer": "10%"
+  },
+  "360 Condominiums": {
+    "name": "360 Condos",
+    "address": "360 Nueces St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "0%",
+    "developer": "4"
+  },
+  "Spring Condos": {
+    "name": "Spring Condos",
+    "address": "300 Bowie St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "0%",
+    "developer": "2"
+  },
+  "Seaholm Residences": {
+    "name": "Seaholm Residences",
+    "address": "222 West Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "30",
+    "developer": "30%"
+  },
+  "Natiivo": {
+    "name": "Natiivo",
+    "address": "48 East Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "2",
+    "developer": "0"
+  },
+  "5th & West": {
+    "name": "5th & West",
+    "address": "501 West Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "2",
+    "developer": "0"
+  },
+  "Austin City Lofts": {
+    "name": "Austin City Lofts",
+    "address": "800 W 5th St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "55",
+    "developer": "47%"
+  },
+  "Nokonah": {
+    "name": "Nokonah",
+    "address": "901 W 9th St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "The Shore": {
+    "name": "The Shore",
+    "address": "603 Davis St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Milago": {
+    "name": "Milago",
+    "address": "54 Rainey St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Five Fifty 05": {
+    "name": "Five Fifty 05",
+    "address": "555 E 5th St.",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Sabine on 5th": {
+    "name": "Sabine on 5th",
+    "address": "507 Sabine St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Brown Building": {
+    "name": "Brown Building",
+    "address": "710 Colorado St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Austin Proper": {
+    "name": "Austin Proper",
+    "address": "202 Nueces St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "8%",
+    "developer": "10"
+  },
+  "Vesper": {
+    "name": "Vesper",
+    "address": "84 East Ave",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "The Linden": {
+    "name": "The Linden",
+    "address": "313 W 17th St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Penthouse Condos": {
+    "name": "Penthouse Condos",
+    "address": "1212 Guadalupe St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Brazos Place": {
+    "name": "Brazos Place",
+    "address": "800 Brazos St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Westgate Tower": {
+    "name": "Westgate Tower",
+    "address": "1122 Colorado St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  },
+  "Plaza Lofts": {
+    "name": "Plaza Lofts",
+    "address": "311 W 5th St",
+    "yearBuilt": null,
+    "floors": null,
+    "units": null,
+    "architect": "",
+    "developer": ""
+  }
+}

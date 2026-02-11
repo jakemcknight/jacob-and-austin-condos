@@ -46,20 +46,19 @@ export default function MapView({ buildings }: MapViewProps) {
           "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      // Create custom Zilker green marker
+      // Create simple Zilker green marker
       const svgIcon = `
-        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.437 12.5 28.5 12.5 28.5S25 20.937 25 12.5C25 5.596 19.404 0 12.5 0z" fill="#324A32"/>
-          <circle cx="12.5" cy="12.5" r="4" fill="#E1DDD1"/>
+        <svg width="24" height="36" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 8.4 12 24 12 24s12-15.6 12-24c0-6.627-5.373-12-12-12zm0 16.5c-2.485 0-4.5-2.015-4.5-4.5S9.515 7.5 12 7.5s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5z" fill="#324A32"/>
         </svg>
       `;
       const iconUrl = 'data:image/svg+xml;base64,' + btoa(svgIcon);
 
       const customIcon = new L.Icon({
         iconUrl: iconUrl,
-        iconSize: [25, 41] as [number, number],
-        iconAnchor: [12, 41] as [number, number],
-        popupAnchor: [1, -34] as [number, number],
+        iconSize: [24, 36] as [number, number],
+        iconAnchor: [12, 36] as [number, number],
+        popupAnchor: [0, -36] as [number, number],
       });
 
       setIcon(customIcon);
@@ -91,24 +90,12 @@ export default function MapView({ buildings }: MapViewProps) {
     <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
       <style dangerouslySetInnerHTML={{ __html: `
         .leaflet-popup-content-wrapper {
-          background-color: #E1DDD1 !important;
-          padding: 0 !important;
-          border-radius: 0 !important;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+          border-radius: 4px !important;
+          padding: 1px !important;
         }
         .leaflet-popup-content {
-          margin: 0 !important;
-        }
-        .leaflet-popup-tip {
-          background-color: #E1DDD1 !important;
-        }
-        .leaflet-container a.leaflet-popup-close-button {
-          color: #4A3427 !important;
-          font-size: 20px !important;
-          padding: 8px 8px 0 0 !important;
-        }
-        .leaflet-container a.leaflet-popup-close-button:hover {
-          color: #191919 !important;
+          margin: 14px !important;
+          font-family: inherit !important;
         }
       ` }} />
     <MapContainer
@@ -118,8 +105,8 @@ export default function MapView({ buildings }: MapViewProps) {
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       {buildings.map((building) => (
         <Marker
@@ -128,47 +115,24 @@ export default function MapView({ buildings }: MapViewProps) {
           icon={icon}
         >
           <Popup>
-            <div className="w-64" style={{ backgroundColor: '#E1DDD1' }}>
-              <div className="mb-3 flex h-32 items-center justify-center" style={{ backgroundColor: '#93B9BC' }}>
-                <div className="text-center">
-                  <div className="text-4xl">🏙️</div>
-                </div>
+            <div className="w-56">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {building.name}
+              </h3>
+              <p className="mt-1 text-xs text-gray-600">{building.address}</p>
+              <div className="mt-2 flex gap-2 text-xs text-gray-500">
+                <span>{building.floors} floors</span>
+                <span>·</span>
+                <span>{building.units} units</span>
+                <span>·</span>
+                <span>{building.yearBuilt}</span>
               </div>
-              <div className="px-3 pb-3">
-                <h3 className="text-base font-bold uppercase tracking-wide" style={{ color: '#4A3427' }}>
-                  {building.name}
-                </h3>
-                <p className="mt-1 text-xs" style={{ color: '#886752' }}>
-                  {building.address}
-                </p>
-                <div className="mt-3 flex gap-3 text-xs" style={{ color: '#886752' }}>
-                  <span>
-                    <strong style={{ color: '#4A3427' }}>{building.floors}</strong> Floors
-                  </span>
-                  <span>·</span>
-                  <span>
-                    <strong style={{ color: '#4A3427' }}>{building.units}</strong> Units
-                  </span>
-                  <span>·</span>
-                  <span>{building.yearBuilt}</span>
-                </div>
-                <Link
-                  href={`/${building.slug}`}
-                  className="mt-4 block py-2 text-center text-xs font-semibold uppercase tracking-widest transition-colors"
-                  style={{
-                    backgroundColor: '#324A32',
-                    color: '#E1DDD1'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#4A3427';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#324A32';
-                  }}
-                >
-                  View Building →
-                </Link>
-              </div>
+              <Link
+                href={`/${building.slug}`}
+                className="mt-3 block rounded bg-gray-900 py-1.5 text-center text-xs font-medium text-white hover:bg-gray-700"
+              >
+                View Building
+              </Link>
             </div>
           </Popup>
         </Marker>
