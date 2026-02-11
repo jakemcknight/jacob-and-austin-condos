@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildings, getBuildingBySlug } from "@/data/buildings";
-import { nearbyPlaces } from "@/data/nearbyPlaces";
+// import { nearbyPlaces } from "@/data/nearbyPlaces";
 import { floorPlans } from "@/data/floorPlans";
 import HeroSection from "@/components/HeroSection";
 import BuildingStats from "@/components/BuildingStats";
@@ -10,7 +10,7 @@ import AmenitiesList from "@/components/AmenitiesList";
 import ImageGallery from "@/components/ImageGallery";
 import FloorPlans from "@/components/FloorPlans";
 import ActiveListings from "@/components/ActiveListings";
-import NearbyPlaces from "@/components/NearbyPlaces";
+// import NearbyPlaces from "@/components/NearbyPlaces";
 import NeighborhoodInfo from "@/components/NeighborhoodInfo";
 import ContactForm from "@/components/ContactForm";
 
@@ -87,13 +87,13 @@ export default function BuildingPage({ params }: PageProps) {
 
       <ActiveListings buildingSlug={building.slug} />
 
-      {nearbyPlaces[building.slug] && (
+      {/* {nearbyPlaces[building.slug] && (
         <NearbyPlaces
           coffee={nearbyPlaces[building.slug].coffee}
           restaurant={nearbyPlaces[building.slug].restaurant}
           bar={nearbyPlaces[building.slug].bar}
         />
-      )}
+      )} */}
 
       <NeighborhoodInfo
         neighborhood={building.neighborhood}
