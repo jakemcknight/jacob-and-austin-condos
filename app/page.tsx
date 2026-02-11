@@ -25,7 +25,7 @@ export default function HomePage() {
     // Buildings to hide (marked with * in CSV)
     const excludedSlugs = [
       "1704-west-condos",
-      "904-west-condos",
+      "904-west",
       "1306-west",
       "penthouse-condos",
       "cambridge-tower",
