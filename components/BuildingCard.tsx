@@ -7,7 +7,6 @@ interface BuildingCardProps {
   floors: number;
   units: number;
   yearBuilt: number;
-  priceRange: string;
   heroImage: string;
 }
 
@@ -18,7 +17,6 @@ export default function BuildingCard({
   floors,
   units,
   yearBuilt,
-  priceRange,
 }: BuildingCardProps) {
   return (
     <Link
@@ -52,7 +50,6 @@ export default function BuildingCard({
             <span className="font-medium text-secondary">{yearBuilt}</span>
           </div>
         </div>
-        <p className="mt-2 text-sm font-medium text-primary">{priceRange}</p>
       </div>
     </Link>
   );

@@ -5,8 +5,6 @@ interface BuildingStatsProps {
   yearBuilt: number;
   architect: string;
   developer: string;
-  builder: string;
-  priceRange: string;
 }
 
 export default function BuildingStats({
@@ -16,8 +14,6 @@ export default function BuildingStats({
   yearBuilt,
   architect,
   developer,
-  builder,
-  priceRange,
 }: BuildingStatsProps) {
   const stats = [
     { label: "Address", value: address },
@@ -26,8 +22,6 @@ export default function BuildingStats({
     { label: "Year Built", value: yearBuilt.toString() },
     { label: "Architect", value: architect },
     { label: "Developer", value: developer },
-    { label: "Builder", value: builder },
-    { label: "Price Range", value: priceRange },
   ];
 
   return (

@@ -22,11 +22,13 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<"name" | "floors" | "yearBuilt">("name");
 
   const filteredBuildings = useMemo(() => {
-    let result = buildings.filter(
-      (b) =>
-        b.name.toLowerCase().includes(search.toLowerCase()) ||
-        b.address.toLowerCase().includes(search.toLowerCase())
-    );
+    let result = buildings
+      .filter((b) => !b.name.startsWith("*"))
+      .filter(
+        (b) =>
+          b.name.toLowerCase().includes(search.toLowerCase()) ||
+          b.address.toLowerCase().includes(search.toLowerCase())
+      );
 
     result.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -140,7 +142,6 @@ export default function HomePage() {
                 floors={building.floors}
                 units={building.units}
                 yearBuilt={building.yearBuilt}
-                priceRange={building.priceRange}
                 heroImage={building.heroImage}
               />
             ))}

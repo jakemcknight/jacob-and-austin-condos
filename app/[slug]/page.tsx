@@ -56,8 +56,6 @@ export default function BuildingPage({ params }: PageProps) {
         yearBuilt={building.yearBuilt}
         architect={building.architect}
         developer={building.developer}
-        builder={building.builder}
-        priceRange={building.priceRange}
       />
 
       <QuickNav />
