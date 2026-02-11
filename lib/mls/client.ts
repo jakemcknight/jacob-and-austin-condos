@@ -129,9 +129,17 @@ export class MLSGridClient {
       const response = await this.makeRequest(nextUrl);
 
       if (response.value && Array.isArray(response.value)) {
-        const parsed = response.value.map((item: any) =>
-          this.parseMLSListing(item, listingType)
-        );
+        // Parse listings with photos - fetch photos one at a time with rate limiting
+        const parsed: MLSListing[] = [];
+        for (const item of response.value) {
+          const listing = await this.parseMLSListing(item, listingType);
+          parsed.push(listing);
+
+          // Rate limit photo fetches (2 second delay between listings)
+          if (parsed.length < response.value.length) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
         results.push(...parsed);
       }
 
@@ -189,9 +197,31 @@ export class MLSGridClient {
   }
 
   /**
+   * Fetch primary photo for a listing from Media endpoint
+   * Returns the first photo URL or empty string if none available
+   */
+  private async fetchPrimaryPhoto(listingKey: string): Promise<string> {
+    try {
+      // Query Media endpoint for this listing, ordered by Order field, get only first photo
+      const url = `${this.baseUrl}/Media?$filter=ResourceRecordKey eq '${listingKey}'&$orderby=Order asc&$top=1&$select=MediaURL`;
+
+      const response = await this.makeRequest(url);
+
+      if (response.value && response.value.length > 0 && response.value[0].MediaURL) {
+        return response.value[0].MediaURL;
+      }
+
+      return "";
+    } catch (error) {
+      console.warn(`[MLSGrid] Failed to fetch photo for ${listingKey}:`, error);
+      return "";
+    }
+  }
+
+  /**
    * Parse raw MLS data into MLSListing format
    */
-  private parseMLSListing(data: any, listingType: "Sale" | "Lease"): MLSListing {
+  private async parseMLSListing(data: any, listingType: "Sale" | "Lease"): Promise<MLSListing> {
     // Build full address
     const streetNumber = data.StreetNumber || "";
     const streetName = data.StreetName || "";
@@ -202,9 +232,10 @@ export class MLSGridClient {
     const listPrice = parseFloat(data.ListPrice || "0");
     const priceSf = livingArea > 0 ? listPrice / livingArea : 0;
 
-    // Photos will need to be fetched separately via the Media endpoint
-    // For now, we don't include photos in the initial listing data
-    const photos: string[] = [];
+    // Fetch primary photo from Media endpoint
+    const listingKey = data.ListingKey || data.ListingId || "";
+    const primaryPhoto = await this.fetchPrimaryPhoto(listingKey);
+    const photos: string[] = primaryPhoto ? [primaryPhoto] : [];
 
     return {
       listingId: data.ListingId || data.ListingKey || "",
