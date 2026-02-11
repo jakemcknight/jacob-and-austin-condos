@@ -157,10 +157,6 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     return null; // Hide section on error
   }
 
-  if (listings.length === 0) {
-    return null; // Hide section if no listings
-  }
-
   // Count active filters
   const activeFilterCount =
     bedroomFilters.length +
@@ -176,8 +172,15 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
           Active Listings
         </h2>
 
-        {/* Sale/Lease Toggle */}
-        <div className="mb-6 flex justify-center">
+        {/* Show message if no listings at all */}
+        {listings.length === 0 ? (
+          <p className="py-12 text-center text-secondary">
+            No active listings at this time. Check back soon for updates.
+          </p>
+        ) : (
+          <>
+            {/* Sale/Lease Toggle */}
+            <div className="mb-6 flex justify-center">
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
             <button
               onClick={() => setListingTypeFilter("Sale")}
@@ -329,17 +332,19 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
           </div>
         </div>
 
-        {/* Listings grid */}
-        {sortedListings.length === 0 ? (
-          <p className="py-12 text-center text-secondary">
-            No listings match your filters. Try adjusting your search criteria.
-          </p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {sortedListings.map(listing => (
-              <ListingCard key={listing.listingId} listing={listing} />
-            ))}
-          </div>
+            {/* Listings grid */}
+            {sortedListings.length === 0 ? (
+              <p className="py-12 text-center text-secondary">
+                No listings match your filters. Try adjusting your search criteria.
+              </p>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {sortedListings.map(listing => (
+                  <ListingCard key={listing.listingId} listing={listing} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
