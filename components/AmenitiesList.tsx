@@ -64,7 +64,7 @@ function getIcon(amenity: string): string {
 
 export default function AmenitiesList({ amenities }: AmenitiesListProps) {
   return (
-    <section className="section-padding">
+    <section id="amenities" className="section-padding">
       <div className="container-narrow">
         <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
           Amenities

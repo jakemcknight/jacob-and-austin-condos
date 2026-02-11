@@ -24,7 +24,7 @@ export default function NearbyPlaces({
   const places = { coffee, restaurant, bar };
 
   return (
-    <section className="section-padding">
+    <section id="nearby" className="section-padding">
       <div className="container-narrow max-w-4xl">
         <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
           Nearest To You

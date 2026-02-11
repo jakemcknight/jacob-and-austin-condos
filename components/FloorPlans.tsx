@@ -48,7 +48,7 @@ export default function FloorPlans({
   // No floor plan data — show placeholder
   if (!floorPlans || floorPlans.length === 0) {
     return (
-      <section className="section-padding bg-light">
+      <section id="floor-plans" className="section-padding bg-light">
         <div className="container-narrow max-w-3xl text-center">
           <h2 className="mb-10 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
             Floor Plans
@@ -75,7 +75,7 @@ export default function FloorPlans({
   }
 
   return (
-    <section className="section-padding bg-white">
+    <section id="floor-plans" className="section-padding bg-white">
       <div className="container-narrow">
         {/* Heading */}
         <h2 className="mb-10 text-center text-2xl tracking-tight text-primary md:text-3xl">

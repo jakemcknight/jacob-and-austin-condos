@@ -17,7 +17,7 @@ export default function ImageGallery({
   const hasImages = images.length > 0;
 
   return (
-    <section className="section-padding bg-light">
+    <section id="gallery" className="section-padding bg-light">
       <div className="container-narrow">
         <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
           Gallery

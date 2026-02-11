@@ -171,7 +171,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     (sqftMax ? 1 : 0);
 
   return (
-    <section className="section-padding bg-light">
+    <section id="active-listings" className="section-padding bg-light">
       <div className="container-narrow">
         <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-primary md:text-3xl">
           Active Listings

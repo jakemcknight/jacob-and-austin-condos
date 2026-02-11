@@ -5,6 +5,7 @@ import { nearbyPlaces } from "@/data/nearbyPlaces";
 import { floorPlans } from "@/data/floorPlans";
 import HeroSection from "@/components/HeroSection";
 import BuildingStats from "@/components/BuildingStats";
+import QuickNav from "@/components/QuickNav";
 import AmenitiesList from "@/components/AmenitiesList";
 import ImageGallery from "@/components/ImageGallery";
 import FloorPlans from "@/components/FloorPlans";
@@ -59,8 +60,10 @@ export default function BuildingPage({ params }: PageProps) {
         priceRange={building.priceRange}
       />
 
+      <QuickNav />
+
       {/* About */}
-      <section className="section-padding">
+      <section id="about" className="section-padding">
         <div className="container-narrow max-w-3xl">
           <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
             About {building.name}
