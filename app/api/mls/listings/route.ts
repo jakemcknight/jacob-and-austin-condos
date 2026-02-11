@@ -6,10 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readMlsCache } from "@/lib/mls/cache";
 import { buildings } from "@/data/buildings";
 
-// Force dynamic rendering since we use searchParams
+// Force dynamic rendering - no ISR caching since data is already cached in KV
 export const dynamic = 'force-dynamic';
-// ISR: Revalidate every 1 hour
-export const revalidate = 3600;
 
 export async function GET(request: NextRequest) {
   try {
