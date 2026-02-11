@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { buildings } from "@/data/buildings";
 
 interface MLSListing {
@@ -365,15 +366,18 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
 
 function ListingCard({ listing }: { listing: MLSListing }) {
   return (
-    <div className="overflow-hidden border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+    <Link
+      href={`/listings/${listing.mlsNumber}`}
+      className="group block overflow-hidden border border-gray-200 bg-white transition-shadow hover:shadow-lg"
+    >
       {/* Photo */}
       {listing.photos && listing.photos[0] ? (
-        <div className="relative h-48 w-full bg-gray-100">
+        <div className="relative h-48 w-full overflow-hidden bg-gray-100">
           <Image
             src={listing.photos[0]}
             alt={`Unit ${listing.unitNumber}`}
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
           {listing.listingType === "Lease" && (
             <div className="absolute left-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
@@ -429,20 +433,13 @@ function ListingCard({ listing }: { listing: MLSListing }) {
           </p>
         </div>
 
-        {/* Virtual Tour Link */}
-        {listing.virtualTourUrl && (
-          <div className="mt-3 border-t border-gray-100 pt-3">
-            <a
-              href={listing.virtualTourUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium uppercase tracking-wider text-accent hover:text-primary"
-            >
-              Virtual Tour →
-            </a>
-          </div>
-        )}
+        {/* View Details CTA */}
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <span className="text-xs font-medium uppercase tracking-wider text-accent group-hover:text-primary">
+            View Details →
+          </span>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
