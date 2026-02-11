@@ -1,0 +1,67 @@
+// MLS Data Types for MLSGrid API
+
+export interface MLSListing {
+  // Core identifiers
+  listingId: string;
+  mlsNumber: string;
+
+  // Property details
+  buildingName: string;
+  address: string;
+  unitNumber: string;
+
+  // Pricing
+  listPrice: number;
+  originalListPrice?: number;
+
+  // Property specs
+  bedroomsTotal: number;
+  bathroomsTotalInteger: number;
+  bathroomsFull?: number;
+  bathroomsHalf?: number;
+  livingArea: number; // Square feet
+  priceSf: number; // Calculated: listPrice / livingArea
+
+  // Status and dates
+  status: "Active" | "Pending" | "Under Contract" | "Active Under Contract";
+  listDate: string;
+  daysOnMarket: number;
+  modificationTimestamp?: string; // ISO 8601 timestamp for replication
+  mlgCanView?: boolean; // False = listing should be removed from display
+
+  // Transaction type
+  listingType: "Sale" | "Lease";
+
+  // Media
+  photos?: string[];
+  virtualTourUrl?: string;
+
+  // Additional details
+  propertyType?: string;
+  propertySubType?: string;
+  parkingFeatures?: string;
+  hoaFee?: number;
+
+  // Raw MLS data (for debugging)
+  rawData?: Record<string, any>;
+}
+
+export interface MLSSearchParams {
+  areaCode?: string;
+  propertySubType?: string;
+  status?: string[];
+  limit?: number;
+  offset?: number;
+}
+
+export interface CachedMlsData {
+  timestamp: number;
+  data: MLSListing[];
+}
+
+export interface MLSApiResponse {
+  value: any[];
+  "@odata.context"?: string;
+  "@odata.count"?: number;
+  "@odata.nextLink"?: string;
+}

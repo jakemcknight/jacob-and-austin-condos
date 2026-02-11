@@ -8,15 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#000000",
-        secondary: "#333333",
-        accent: "#666666",
-        light: "#f5f5f5",
+        primary: "#191919",      // Midnight
+        secondary: "#4A3427",    // Porsche
+        accent: "#886752",       // Whiskey
+        light: "#E1DDD1",        // Moontower
+        denim: "#93B9BC",        // Faded Denim
+        zilker: "#324A32",       // Zilker
       },
       fontFamily: {
         sans: [
-          "Inter",
           "Neue Haas Grotesk Display Pro",
+          "NHaasGroteskDSPro-65Md",
           "Helvetica Neue",
           "Arial",
           "sans-serif",

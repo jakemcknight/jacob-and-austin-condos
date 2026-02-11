@@ -5,6 +5,7 @@ import type { FloorPlan } from "@/data/floorPlans";
 
 interface FloorPlansProps {
   buildingName: string;
+  buildingSlug: string;
   floorPlans?: FloorPlan[];
 }
 
@@ -23,9 +24,11 @@ function formatSqft(sqft: number): string {
 
 export default function FloorPlans({
   buildingName,
+  buildingSlug,
   floorPlans,
 }: FloorPlansProps) {
   const [selectedPlan, setSelectedPlan] = useState<FloorPlan | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Group floor plans by bedroom count
   const bedroomGroups = useMemo(() => {
@@ -171,58 +174,58 @@ export default function FloorPlans({
                 <div className="bg-gray-50 p-6">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={selectedPlan.imageUrl}
+                    src={`/downtown-condos${selectedPlan.imageUrl}`}
                     alt={`${buildingName} - ${selectedPlan.name} floor plan`}
-                    className="mx-auto max-h-[50vh] w-auto"
+                    className="mx-auto max-h-[50vh] w-auto cursor-pointer"
+                    onClick={() => setIsFullScreen(true)}
                   />
                 </div>
               )}
 
-              {/* Details */}
-              <div className="grid grid-cols-2 gap-4 p-6 text-sm">
-                {selectedPlan.orientation && (
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-accent">
-                      Orientation
-                    </p>
-                    <p className="mt-0.5 font-medium text-primary">
-                      {selectedPlan.orientation}
-                    </p>
-                  </div>
+              {/* Actions */}
+              <div className="border-t border-gray-100 p-6 space-y-3">
+                {/* View Full Screen */}
+                {selectedPlan.imageUrl && (
+                  <button
+                    onClick={() => setIsFullScreen(true)}
+                    className="block w-full border border-blue-600 bg-blue-600 py-3 text-center text-xs uppercase tracking-wider text-white transition-colors hover:bg-blue-700 hover:border-blue-700"
+                  >
+                    View Full Screen
+                  </button>
                 )}
-                {selectedPlan.unitNumbers && (
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-accent">
-                      Unit Numbers
-                    </p>
-                    <p className="mt-0.5 font-medium text-primary">
-                      {selectedPlan.unitNumbers}
-                    </p>
-                  </div>
-                )}
-                {selectedPlan.quantity > 0 && (
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-accent">
-                      Total Units
-                    </p>
-                    <p className="mt-0.5 font-medium text-primary">
-                      {selectedPlan.quantity}
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              {/* Inquire */}
-              <div className="border-t border-gray-100 p-6">
+                {/* Inquire */}
                 <a
                   href="#inquiry"
                   onClick={() => setSelectedPlan(null)}
-                  className="block border border-primary bg-primary py-3 text-center text-xs uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-primary"
+                  className="block border border-primary bg-white py-3 text-center text-xs uppercase tracking-wider text-primary transition-colors hover:bg-primary hover:text-white"
                 >
                   Inquire About This Plan
                 </a>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Full Screen Image Overlay */}
+        {isFullScreen && selectedPlan?.imageUrl && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4"
+            onClick={() => setIsFullScreen(false)}
+          >
+            <button
+              onClick={() => setIsFullScreen(false)}
+              className="absolute right-4 top-4 z-10 text-4xl leading-none text-white hover:text-gray-300"
+            >
+              &times;
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/downtown-condos${selectedPlan.imageUrl}`}
+              alt={`${buildingName} - ${selectedPlan.name} floor plan`}
+              className="max-h-[95vh] max-w-[95vw] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         )}
       </div>

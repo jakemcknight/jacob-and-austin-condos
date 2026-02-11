@@ -1,45 +1,52 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-gray-100 bg-white/95 backdrop-blur-sm">
-      <div className="container-narrow flex items-center justify-between px-6 py-4 md:px-12 lg:px-20">
-        <Link href="/" className="flex flex-col">
-          <span className="text-xl font-bold uppercase tracking-widest text-primary">
-            Jacob In Austin
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.3em] text-accent">
-            Downtown High-Rise Expert
-          </span>
-        </Link>
+    <header className="fixed top-0 z-50 w-full bg-[#E1DDD1]">
+      <div className="flex items-center justify-between" style={{ padding: "1.3vw 4vw" }}>
+        <a href="https://www.jacobinaustin.com/" className="flex items-center">
+          <Image
+            src="/downtown-condos/logo.webp"
+            alt="Jacob Hannusch"
+            width={200}
+            height={50}
+            className="w-auto h-[34px] md:h-[50px]"
+            priority
+          />
+        </a>
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-8 md:flex">
+          <a
+            href="https://www.jacobinaustin.com/newsletter"
+            className="text-base font-medium text-primary transition-colors hover:opacity-70"
+          >
+            Join Newsletter
+          </a>
+          <a
+            href="https://www.jacobinaustin.com/insights"
+            className="text-base font-medium text-primary transition-colors hover:opacity-70"
+          >
+            Insights
+          </a>
           <Link
             href="/"
-            className="text-sm uppercase tracking-wider text-secondary transition-colors hover:text-primary"
+            className="text-base font-medium text-primary transition-colors hover:opacity-70"
           >
             Condos
           </Link>
-          <Link
-            href="https://www.jacobinaustin.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm uppercase tracking-wider text-secondary transition-colors hover:text-primary"
+          <a
+            href="mailto:jacob@jacobinaustin.com"
+            className="text-base font-medium text-primary transition-colors hover:opacity-70"
           >
-            About
-          </Link>
-          <Link
-            href="#contact"
-            className="border border-primary bg-primary px-5 py-2 text-sm uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-primary"
-          >
-            Contact
-          </Link>
+            jacob@jacobinaustin.com
+          </a>
         </nav>
 
         {/* Mobile Hamburger */}
@@ -47,6 +54,7 @@ export default function Header() {
           className="flex flex-col gap-1.5 md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
+          style={{ padding: "6vw 0" }}
         >
           <span
             className={`h-0.5 w-6 bg-primary transition-transform ${mobileOpen ? "translate-y-2 rotate-45" : ""}`}
@@ -62,31 +70,36 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <nav className="border-t border-gray-100 bg-white px-6 py-6 md:hidden">
+        <nav className="border-t border-black/10 bg-[#E1DDD1] px-[6vw] py-6 md:hidden">
           <div className="flex flex-col gap-4">
+            <a
+              href="https://www.jacobinaustin.com/newsletter"
+              onClick={() => setMobileOpen(false)}
+              className="text-base font-medium text-primary"
+            >
+              Join Newsletter
+            </a>
+            <a
+              href="https://www.jacobinaustin.com/insights"
+              onClick={() => setMobileOpen(false)}
+              className="text-base font-medium text-primary"
+            >
+              Insights
+            </a>
             <Link
               href="/"
               onClick={() => setMobileOpen(false)}
-              className="text-sm uppercase tracking-wider text-secondary"
+              className="text-base font-medium text-primary"
             >
               Condos
             </Link>
-            <Link
-              href="https://www.jacobinaustin.com/"
-              target="_blank"
-              rel="noopener noreferrer"
+            <a
+              href="mailto:jacob@jacobinaustin.com"
               onClick={() => setMobileOpen(false)}
-              className="text-sm uppercase tracking-wider text-secondary"
+              className="text-base font-medium text-primary"
             >
-              About
-            </Link>
-            <Link
-              href="#contact"
-              onClick={() => setMobileOpen(false)}
-              className="text-sm uppercase tracking-wider text-secondary"
-            >
-              Contact
-            </Link>
+              jacob@jacobinaustin.com
+            </a>
           </div>
         </nav>
       )}

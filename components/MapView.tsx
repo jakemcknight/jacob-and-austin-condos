@@ -128,7 +128,7 @@ export default function MapView({ buildings }: MapViewProps) {
                 {building.priceRange}
               </p>
               <Link
-                href={`/condos/${building.slug}`}
+                href={`/${building.slug}`}
                 className="mt-3 block bg-black py-1.5 text-center text-xs uppercase tracking-wider text-white hover:bg-gray-800"
               >
                 View Building →

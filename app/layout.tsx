@@ -18,7 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Header />
-        <main className="min-h-screen pt-[73px]">{children}</main>
+        <main className="min-h-screen pt-[76px]">{children}</main>
         <Footer />
       </body>
     </html>

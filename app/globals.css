@@ -2,15 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@font-face {
+  font-family: 'Neue Haas Grotesk Display Pro';
+  src: url('/downtown-condos/fonts/neue-haas-grotesk-display-pro.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NHaasGroteskDSPro-65Md';
+  src: url('/downtown-condos/fonts/nhaasgroteskdspro-65md.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 @layer base {
   body {
-    @apply font-sans text-secondary antialiased;
+    @apply font-sans text-primary antialiased;
+    background-color: #E1DDD1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight text-primary;
+    @apply font-semibold text-primary;
+    letter-spacing: 0.01em;
+  }
+
+  /* Add comfortable letter-spacing to all bold text */
+  b, strong, .font-bold, .font-semibold {
+    letter-spacing: 0.01em;
   }
 }
 

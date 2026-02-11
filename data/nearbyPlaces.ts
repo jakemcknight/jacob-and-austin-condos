@@ -11,26 +11,7 @@ export interface BuildingNearby {
 }
 
 export const nearbyPlaces: Record<string, BuildingNearby> = {
-  // 1. Luminary Austin - 400 W 14th St (Clarksville / West End)
-  "luminary-austin": {
-    coffee: {
-      name: "Houndstooth Coffee",
-      address: "401 Congress Ave",
-      distance: "0.5 miles",
-    },
-    restaurant: {
-      name: "Jeffrey's",
-      address: "1204 West Lynn St",
-      distance: "0.4 miles",
-    },
-    bar: {
-      name: "Small Victory",
-      address: "108 E 7th St",
-      distance: "0.7 miles",
-    },
-  },
-
-  // 2. The Modern Austin - 610 Davis St (near West Ave / Seaholm)
+  // The Modern Austin - 610 Davis St (near West Ave / Seaholm)
   "the-modern-austin": {
     coffee: {
       name: "Merit Coffee",
@@ -353,26 +334,7 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 19. Brazos Lofts - 411 Brazos St (East 4th / CBD)
-  "brazos-lofts": {
-    coffee: {
-      name: "Houndstooth Coffee",
-      address: "401 Congress Ave",
-      distance: "2 min walk",
-    },
-    restaurant: {
-      name: "1886 Cafe & Bakery",
-      address: "604 Brazos St",
-      distance: "0.1 miles",
-    },
-    bar: {
-      name: "Midnight Cowboy",
-      address: "313 E 6th St",
-      distance: "0.2 miles",
-    },
-  },
-
-  // 20. Sabine on 5th - 507 Sabine St (East 5th / Waller Creek)
+  // Sabine on 5th - 507 Sabine St (East 5th / Waller Creek)
   "sabine-on-5th": {
     coffee: {
       name: "Alfred",
@@ -391,26 +353,7 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 21. The Laan - 3100 Menchaca Rd (South Lamar / Zilker area)
-  "the-laan": {
-    coffee: {
-      name: "Fleet Coffee",
-      address: "2427 Webberville Rd",
-      distance: "0.8 miles",
-    },
-    restaurant: {
-      name: "Odd Duck",
-      address: "1201 S Lamar Blvd",
-      distance: "0.4 miles",
-    },
-    bar: {
-      name: "Hotel San Jose Bar",
-      address: "1316 S Congress Ave",
-      distance: "0.6 miles",
-    },
-  },
-
-  // 22. 904 West - 904 West Ave (West Ave / 9th St)
+  // 904 West - 904 West Ave (West Ave / 9th St)
   "904-west": {
     coffee: {
       name: "Medici Roasting",
@@ -448,26 +391,7 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 24. 6th and Brushy - 601 Brushy St (East 6th)
-  "6th-and-brushy": {
-    coffee: {
-      name: "Figure 8 Coffee",
-      address: "1111 Chicon St",
-      distance: "0.3 miles",
-    },
-    restaurant: {
-      name: "Launderette",
-      address: "2115 Holly St",
-      distance: "0.5 miles",
-    },
-    bar: {
-      name: "Whisler's",
-      address: "1816 E 6th St",
-      distance: "0.4 miles",
-    },
-  },
-
-  // 25. Brazos Place - 800 Brazos St (CBD / East 8th)
+  // Brazos Place - 800 Brazos St (CBD / East 8th)
   "brazos-place": {
     coffee: {
       name: "Houndstooth Coffee",
@@ -505,7 +429,7 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 27. Nokonah - 901 W 9th St (Clarksville / Shoal Creek)
+  // Nokonah - 901 W 9th St (Clarksville / Shoal Creek)
   "nokonah": {
     coffee: {
       name: "Civil Goat Coffee",
@@ -524,22 +448,212 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 28. The Hillside - 8110 Ranch Rd 2222 (NW Austin hills)
-  "the-hillside": {
+  // Vesper - 84 East Ave (Rainey Street area)
+  "vesper": {
     coffee: {
-      name: "Summer Moon Coffee",
-      address: "3115 N Lamar Blvd",
-      distance: "0.8 miles",
+      name: "Cenote",
+      address: "1010 E Cesar Chavez St",
+      distance: "0.5 miles",
     },
     restaurant: {
-      name: "Uchiko",
-      address: "4200 N Lamar Blvd",
-      distance: "0.6 miles",
+      name: "Emmer & Rye",
+      address: "51 Rainey St",
+      distance: "0.2 miles",
     },
     bar: {
-      name: "Loro",
-      address: "2115 S Lamar Blvd",
-      distance: "3.5 miles",
+      name: "Container Bar",
+      address: "90 Rainey St",
+      distance: "0.2 miles",
+    },
+  },
+
+  // Plaza Lofts - 311 W 5th St (Warehouse District)
+  "plaza-lofts": {
+    coffee: {
+      name: "Jo's Coffee",
+      address: "242 W 2nd St",
+      distance: "0.2 miles",
+    },
+    restaurant: {
+      name: "Wu Chow",
+      address: "500 W 5th St",
+      distance: "0.1 miles",
+    },
+    bar: {
+      name: "The Roosevelt Room",
+      address: "307 W 5th St",
+      distance: "1 min walk",
+    },
+  },
+
+  // 1704 West Condos - 1704 West Ave (West Ave corridor)
+  "1704-west-condos": {
+    coffee: {
+      name: "Medici Roasting",
+      address: "1101 W Lynn St",
+      distance: "0.3 miles",
+    },
+    restaurant: {
+      name: "Jeffrey's",
+      address: "1204 West Lynn St",
+      distance: "0.3 miles",
+    },
+    bar: {
+      name: "Small Victory",
+      address: "108 E 7th St",
+      distance: "0.8 miles",
+    },
+  },
+
+  // The Linden - 313 W 17th St (North downtown / Capitol area)
+  "the-linden": {
+    coffee: {
+      name: "Seventh Flag Coffee",
+      address: "1117 W 6th St",
+      distance: "0.6 miles",
+    },
+    restaurant: {
+      name: "Dai Due",
+      address: "2406 Manor Rd",
+      distance: "0.9 miles",
+    },
+    bar: {
+      name: "Midnight Cowboy",
+      address: "313 E 6th St",
+      distance: "0.7 miles",
+    },
+  },
+
+  // Natiivo - 48 East Ave (Rainey Street area)
+  "natiivo": {
+    coffee: {
+      name: "Cenote",
+      address: "1010 E Cesar Chavez St",
+      distance: "0.4 miles",
+    },
+    restaurant: {
+      name: "Emmer & Rye",
+      address: "51 Rainey St",
+      distance: "0.1 miles",
+    },
+    bar: {
+      name: "Craft Pride",
+      address: "61 Rainey St",
+      distance: "0.1 miles",
+    },
+  },
+
+  // 1306 West - 1306 West Ave (West Ave corridor)
+  "1306-west": {
+    coffee: {
+      name: "Medici Roasting",
+      address: "1101 W Lynn St",
+      distance: "0.2 miles",
+    },
+    restaurant: {
+      name: "Clark's Oyster Bar",
+      address: "1200 W 6th St",
+      distance: "0.4 miles",
+    },
+    bar: {
+      name: "Small Victory",
+      address: "108 E 7th St",
+      distance: "0.6 miles",
+    },
+  },
+
+  // Westgate Tower - 1122 Colorado St (North downtown)
+  "westgate-tower": {
+    coffee: {
+      name: "Seventh Flag Coffee",
+      address: "1117 W 6th St",
+      distance: "0.4 miles",
+    },
+    restaurant: {
+      name: "Dai Due",
+      address: "2406 Manor Rd",
+      distance: "0.9 miles",
+    },
+    bar: {
+      name: "Midnight Cowboy",
+      address: "313 E 6th St",
+      distance: "0.5 miles",
+    },
+  },
+
+  // Penthouse Condos - 1212 Guadalupe St (UT area)
+  "penthouse-condos": {
+    coffee: {
+      name: "Houndstooth Coffee",
+      address: "401 Congress Ave",
+      distance: "0.5 miles",
+    },
+    restaurant: {
+      name: "Dai Due",
+      address: "2406 Manor Rd",
+      distance: "0.8 miles",
+    },
+    bar: {
+      name: "Midnight Cowboy",
+      address: "313 E 6th St",
+      distance: "0.5 miles",
+    },
+  },
+
+  // Brown Building - 710 Colorado St (downtown CBD)
+  "brown-building": {
+    coffee: {
+      name: "Houndstooth Coffee",
+      address: "401 Congress Ave",
+      distance: "0.2 miles",
+    },
+    restaurant: {
+      name: "Wu Chow",
+      address: "500 W 5th St",
+      distance: "0.2 miles",
+    },
+    bar: {
+      name: "Firehouse Lounge",
+      address: "605 Brazos St",
+      distance: "1 min walk",
+    },
+  },
+
+  // Terrace on Shoal Creek - 1101 Shoal Creek Blvd (Clarksville)
+  "terrace-on-shoal-creek": {
+    coffee: {
+      name: "Civil Goat Coffee",
+      address: "510 Oakland Ave",
+      distance: "0.3 miles",
+    },
+    restaurant: {
+      name: "Jeffrey's",
+      address: "1204 West Lynn St",
+      distance: "0.3 miles",
+    },
+    bar: {
+      name: "The Roosevelt Room",
+      address: "307 W 5th St",
+      distance: "0.6 miles",
+    },
+  },
+
+  // Greenwood Tower - 1800 Lavaca St (North downtown)
+  "greenwood-tower": {
+    coffee: {
+      name: "Seventh Flag Coffee",
+      address: "1117 W 6th St",
+      distance: "0.5 miles",
+    },
+    restaurant: {
+      name: "Dai Due",
+      address: "2406 Manor Rd",
+      distance: "0.9 miles",
+    },
+    bar: {
+      name: "Midnight Cowboy",
+      address: "313 E 6th St",
+      distance: "0.6 miles",
     },
   },
 };

@@ -22,7 +22,7 @@ export default function BuildingCard({
 }: BuildingCardProps) {
   return (
     <Link
-      href={`/condos/${slug}`}
+      href={`/${slug}`}
       className="group block overflow-hidden border border-gray-100 bg-white transition-all hover:border-gray-300 hover:shadow-lg"
     >
       {/* Image Placeholder */}
