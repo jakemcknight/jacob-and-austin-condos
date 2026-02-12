@@ -245,7 +245,7 @@ export default function FloorPlans({
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/downtown-condos${selectedPlan.imageUrl}`}
+              src={selectedPlan.imageUrl}
               alt={`${buildingName} - ${selectedPlan.name} floor plan`}
               className="max-h-[95vh] max-w-[95vw] object-contain"
               onClick={(e) => e.stopPropagation()}
