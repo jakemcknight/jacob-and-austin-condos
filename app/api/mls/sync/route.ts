@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
 
     // 4. Group listings by building using address matching
     const listingsByBuilding = new Map<string, typeof allListings>();
+    let matchedCount = 0;
+    let unmatchedCount = 0;
 
     for (const listing of allListings) {
       const buildingSlug = matchListingToBuilding(listing.address);
@@ -79,10 +81,21 @@ export async function GET(request: NextRequest) {
           listingsByBuilding.set(buildingSlug, []);
         }
         listingsByBuilding.get(buildingSlug)!.push(listing);
+        matchedCount++;
+      } else {
+        unmatchedCount++;
       }
     }
 
-    console.log(`[MLS Sync] Matched listings to ${listingsByBuilding.size} buildings`);
+    console.log(`[MLS Sync] Address matching results:`);
+    console.log(`[MLS Sync]   Matched: ${matchedCount} listings → ${listingsByBuilding.size} buildings`);
+    console.log(`[MLS Sync]   Unmatched: ${unmatchedCount} listings`);
+
+    // Log building-specific counts
+    for (const [buildingSlug, listings] of listingsByBuilding.entries()) {
+      const building = buildings.find(b => b.slug === buildingSlug);
+      console.log(`[MLS Sync]   ${building?.name || buildingSlug}: ${listings.length} listings`);
+    }
 
     // 5. Update cache for each building
     let totalCached = 0;

@@ -18,12 +18,22 @@ export function matchListingToBuilding(mlsAddress: string): string | null {
   const normalized = normalizeAddress(mlsAddress);
 
   let bestMatch: MatchResult | null = null;
+  let allMatches: { building: string; score: number; normalized: string }[] = [];
 
   for (const building of buildings) {
     const buildingAddr = normalizeAddress(building.address);
     const distance = levenshteinDistance(normalized, buildingAddr);
     const maxLen = Math.max(normalized.length, buildingAddr.length);
     const similarity = maxLen > 0 ? 1 - distance / maxLen : 0;
+
+    // Log matching attempts for Rainey Street addresses
+    if (mlsAddress.toLowerCase().includes('rainey')) {
+      allMatches.push({
+        building: building.address,
+        score: similarity,
+        normalized: buildingAddr
+      });
+    }
 
     if (similarity > 0.85 && (!bestMatch || similarity > bestMatch.score)) {
       bestMatch = {
@@ -35,9 +45,24 @@ export function matchListingToBuilding(mlsAddress: string): string | null {
     }
   }
 
+  // Detailed logging for Rainey Street addresses
+  if (mlsAddress.toLowerCase().includes('rainey')) {
+    console.log(`[Address Matcher] Rainey Street listing: "${mlsAddress}"`);
+    console.log(`[Address Matcher] Normalized: "${normalized}"`);
+    console.log(`[Address Matcher] Best match: ${bestMatch ? `${bestMatch.buildingAddress} (${(bestMatch.score * 100).toFixed(1)}%)` : 'NONE'}`);
+
+    // Show top 3 matches for debugging
+    const top3 = allMatches
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(m => `${m.building} → "${m.normalized}" (${(m.score * 100).toFixed(1)}%)`)
+      .join(', ');
+    console.log(`[Address Matcher] Top matches: ${top3}`);
+  }
+
   // Log unmatched addresses for manual review
   if (!bestMatch) {
-    logUnmatchedAddress(mlsAddress);
+    logUnmatchedAddress(mlsAddress, normalized);
   }
 
   return bestMatch?.slug || null;
@@ -66,9 +91,9 @@ function normalizeAddress(addr: string): string {
 /**
  * Log unmatched addresses for manual review (console only in serverless environment)
  */
-function logUnmatchedAddress(mlsAddress: string): void {
+function logUnmatchedAddress(mlsAddress: string, normalized: string): void {
   // In serverless environment, just log to console (no file system access)
-  console.warn(`[Address Matcher] UNMATCHED ADDRESS: "${mlsAddress}"`);
+  console.warn(`[Address Matcher] UNMATCHED ADDRESS: "${mlsAddress}" → normalized: "${normalized}"`);
 }
 
 /**

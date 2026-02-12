@@ -72,8 +72,8 @@ export class MLSGridClient {
     let nextUrl: string | null = null;
 
     // Build OData query filter per MLSGrid requirements
-    // Allowed filter fields: OriginatingSystemName, ModificationTimestamp, StandardStatus,
-    // PropertyType, ListingId, MlgCanView, ListOfficeMlsId
+    // Allowed filter fields: MlgCanView, ModificationTimestamp, OriginatingSystemName,
+    // StandardStatus, ListingId, PropertyType, ListOfficeMlsId
     const filters = [];
 
     // 1. OriginatingSystemName - REQUIRED by MLSGrid API (exactly one per request)
@@ -115,12 +115,14 @@ export class MLSGridClient {
       "ListingContractDate",
       "DaysOnMarket",
       "PropertySubType",
+      "MLSAreaMajor",
       "ModificationTimestamp",
       "MlgCanView",
       "OriginatingSystemName",
     ].join(",");
 
-    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$top=200`;
+    // Use $expand=Media to get photos (v2 API requirement)
+    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=200`;
 
     nextUrl = initialUrl;
 
@@ -129,25 +131,18 @@ export class MLSGridClient {
       const response = await this.makeRequest(nextUrl);
 
       if (response.value && Array.isArray(response.value)) {
-        // Parse listings with photos - fetch photos one at a time with rate limiting
-        const parsed: MLSListing[] = [];
-        for (const item of response.value) {
-          const listing = await this.parseMLSListing(item, listingType);
-          parsed.push(listing);
-
-          // Rate limit photo fetches (0.5 second delay between listings)
-          if (parsed.length < response.value.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
+        // Parse listings with photos from expanded Media field
+        const parsed: MLSListing[] = response.value.map(item =>
+          this.parseMLSListing(item, listingType)
+        );
         results.push(...parsed);
       }
 
       // Check for next page
       nextUrl = response["@odata.nextLink"] || null;
 
-      // Rate limiting: 2-second delay = 0.5 req/sec (MLSGrid limit is 2 req/sec)
-      // This conservative approach ensures we never hit rate limits
+      // Rate limiting: 3-second delay = 0.33 req/sec (MLSGrid limit is 2 req/sec)
+      // Extra conservative to avoid rate limit warnings with $expand=Media
       if (nextUrl) {
         this.requestCount++;
 
@@ -159,18 +154,31 @@ export class MLSGridClient {
           console.warn(`[MLSGrid] Rate limit warning: ${requestsPerSecond.toFixed(2)} req/sec`);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
-    // Filter client-side for Condominium property subtype
-    // Note: We rely on building address matching to filter to DT area buildings
+    // Filter client-side for Condominium property subtype and Downtown area
+    // Make MLSAreaMajor optional since some listings may not have it set
     const filtered = results.filter(listing => {
       const propertySubType = (listing as any).rawData?.PropertySubType;
-      return propertySubType === 'Condominium';
+      const mlsAreaMajor = (listing as any).rawData?.MLSAreaMajor;
+
+      // Must be a Condominium
+      if (propertySubType !== 'Condominium') {
+        return false;
+      }
+
+      // Prefer DT area, but allow listings without MLSAreaMajor set
+      // (some downtown condos may not have this field populated)
+      if (mlsAreaMajor && mlsAreaMajor !== 'DT') {
+        return false;
+      }
+
+      return true;
     });
 
-    console.log(`[MLSGrid] Filtered ${filtered.length} from ${results.length} ${listingType} listings (condos only)`);
+    console.log(`[MLSGrid] Filtered ${filtered.length} from ${results.length} ${listingType} listings (downtown condos)`);
 
     return filtered;
   }
@@ -221,7 +229,7 @@ export class MLSGridClient {
   /**
    * Parse raw MLS data into MLSListing format
    */
-  private async parseMLSListing(data: any, listingType: "Sale" | "Lease"): Promise<MLSListing> {
+  private parseMLSListing(data: any, listingType: "Sale" | "Lease"): MLSListing {
     // Build full address
     const streetNumber = data.StreetNumber || "";
     const streetName = data.StreetName || "";
@@ -232,10 +240,23 @@ export class MLSGridClient {
     const listPrice = parseFloat(data.ListPrice || "0");
     const priceSf = livingArea > 0 ? listPrice / livingArea : 0;
 
-    // Fetch primary photo from Media endpoint
-    const listingKey = data.ListingKey || data.ListingId || "";
-    const primaryPhoto = await this.fetchPrimaryPhoto(listingKey);
-    const photos: string[] = primaryPhoto ? [primaryPhoto] : [];
+    // Extract photos from expanded Media field (sorted by Order)
+    const photos: string[] = [];
+    if (data.Media && Array.isArray(data.Media)) {
+      console.log(`[MLSGrid] Media array for ${address}: ${data.Media.length} items`);
+      for (const media of data.Media) {
+        if (media.MediaURL) {
+          photos.push(media.MediaURL);
+        }
+      }
+      if (photos.length === 0 && data.Media.length > 0) {
+        console.warn(`[MLSGrid] Media array has ${data.Media.length} items but no MediaURL found for ${address}`);
+      }
+    } else if (!data.Media) {
+      // Log if Media field is missing (expand might not be working)
+      console.warn(`[MLSGrid] No Media field for listing at ${address}`);
+    }
+    console.log(`[MLSGrid] Extracted ${photos.length} photos for ${address}`);
 
     return {
       listingId: data.ListingId || data.ListingKey || "",
