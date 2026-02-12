@@ -72,6 +72,31 @@ export async function updateSyncState(
 }
 
 /**
+ * Check if a sync is currently in progress
+ * Returns true if another sync is running (prevents overlapping syncs)
+ */
+export async function isSyncInProgress(): Promise<boolean> {
+  const state = await readSyncState();
+
+  // If status is "in_progress", check if it's stale (older than 10 minutes)
+  if (state?.status === "in_progress") {
+    const lastSyncTime = new Date(state.lastSyncDate).getTime();
+    const now = Date.now();
+    const tenMinutes = 10 * 60 * 1000;
+
+    // If the "in_progress" status is older than 10 minutes, consider it stale
+    if (now - lastSyncTime > tenMinutes) {
+      console.warn("[Sync State] Stale 'in_progress' status detected, allowing new sync");
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Mark sync as in progress
  */
 export async function markSyncInProgress(): Promise<void> {

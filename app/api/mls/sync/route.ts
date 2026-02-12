@@ -13,6 +13,7 @@ import {
   markSyncInProgress,
   markSyncFailed,
   findLatestTimestamp,
+  isSyncInProgress,
 } from "@/lib/mls/sync-state";
 
 // Disable static optimization - this is a dynamic route
@@ -41,6 +42,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // Check if another sync is already running
+    const syncAlreadyInProgress = await isSyncInProgress();
+    if (syncAlreadyInProgress) {
+      console.warn("[MLS Sync] ⚠️  Sync already in progress - aborting to prevent overlap");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sync already in progress",
+          message: "Another sync is currently running. Please wait for it to complete.",
+        },
+        { status: 409 } // 409 Conflict
       );
     }
 

@@ -32,8 +32,21 @@ export class MLSGridClient {
    * - Initial mode: Fetch all active listings with MlgCanView=true
    * - Incremental mode: Fetch only changes since lastSyncTimestamp
    *
-   * Rate limiting: 0.5 req/sec (2 second delay between requests)
-   * MLSGrid limit: 2 req/sec, but we stay well under to be safe
+   * MLSGrid Rate Limits (WARNING THRESHOLDS):
+   * - 4 requests/second (RPS)
+   * - 7,200 requests/hour
+   * - 40,000 requests/24 hours
+   * - 3,072 MB/hour
+   * - 40 GB/24 hours
+   *
+   * SUSPENSION THRESHOLDS (CRITICAL):
+   * - 6 requests/second (RPS)
+   * - 18,000 requests/hour
+   * - 60,000 requests/24 hours
+   * - 4,096 MB/hour
+   * - 60 GB/24 hours
+   *
+   * Our conservative target: 0.1 req/sec (10-second delay) = ~360 requests/hour
    */
   async replicateListings(options: ReplicationOptions): Promise<MLSListing[]> {
     try {
@@ -122,7 +135,8 @@ export class MLSGridClient {
     ].join(",");
 
     // Use $expand=Media to get photos (v2 API requirement)
-    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=200`;
+    // Reduced $top from 200 to 100 to minimize request size and spread requests
+    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=100`;
 
     nextUrl = initialUrl;
 
@@ -141,8 +155,8 @@ export class MLSGridClient {
       // Check for next page
       nextUrl = response["@odata.nextLink"] || null;
 
-      // Rate limiting: 3-second delay = 0.33 req/sec (MLSGrid limit is 2 req/sec)
-      // Extra conservative to avoid rate limit warnings with $expand=Media
+      // Rate limiting: 10-second delay = 0.1 req/sec (MLSGrid limit is 2 req/sec, warning at 4 req/sec)
+      // CRITICAL: Must stay well under 2 req/sec to avoid suspension
       if (nextUrl) {
         this.requestCount++;
 
@@ -150,11 +164,14 @@ export class MLSGridClient {
         const elapsedSeconds = (Date.now() - this.requestStartTime) / 1000;
         const requestsPerSecond = this.requestCount / elapsedSeconds;
 
-        if (requestsPerSecond > 1.5) {
-          console.warn(`[MLSGrid] Rate limit warning: ${requestsPerSecond.toFixed(2)} req/sec`);
-        }
+        console.log(`[MLSGrid] Current rate: ${requestsPerSecond.toFixed(3)} req/sec (${this.requestCount} requests in ${elapsedSeconds.toFixed(1)}s)`);
 
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        if (requestsPerSecond > 0.5) {
+          console.warn(`[MLSGrid] Rate approaching limit: ${requestsPerSecond.toFixed(3)} req/sec - increasing delay`);
+          await new Promise(resolve => setTimeout(resolve, 15000)); // 15 second delay if approaching limit
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 10000)); // Normal 10 second delay
+        }
       }
     }
 
