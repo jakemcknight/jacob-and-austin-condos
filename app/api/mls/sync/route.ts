@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
 
     // 5. Update cache for each building
     let totalCached = 0;
-    const buildingEntries = Array.from(listingsByBuilding.entries());
 
     if (isInitialImport) {
       // Initial import: replace all caches
