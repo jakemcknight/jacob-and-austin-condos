@@ -198,7 +198,7 @@ export default function FloorPlans({
                 <div className="bg-gray-50 p-6">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={selectedPlan.imageUrl}
+                    src={`/downtown-condos${selectedPlan.imageUrl}`}
                     alt={`${buildingName} - ${selectedPlan.name} floor plan`}
                     className="mx-auto max-h-[50vh] w-auto cursor-pointer"
                     onClick={() => setIsFullScreen(true)}
@@ -245,7 +245,7 @@ export default function FloorPlans({
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={selectedPlan.imageUrl}
+              src={`/downtown-condos${selectedPlan.imageUrl}`}
               alt={`${buildingName} - ${selectedPlan.name} floor plan`}
               className="max-h-[95vh] max-w-[95vw] object-contain"
               onClick={(e) => e.stopPropagation()}
