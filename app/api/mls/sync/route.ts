@@ -92,7 +92,8 @@ export async function GET(request: NextRequest) {
     console.log(`[MLS Sync]   Unmatched: ${unmatchedCount} listings`);
 
     // Log building-specific counts
-    for (const [buildingSlug, listings] of listingsByBuilding.entries()) {
+    const buildingEntries = Array.from(listingsByBuilding.entries());
+    for (const [buildingSlug, listings] of buildingEntries) {
       const building = buildings.find(b => b.slug === buildingSlug);
       console.log(`[MLS Sync]   ${building?.name || buildingSlug}: ${listings.length} listings`);
     }
