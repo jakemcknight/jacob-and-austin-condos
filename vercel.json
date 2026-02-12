@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/downtown-condos/api/mls/sync",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "functions": {
