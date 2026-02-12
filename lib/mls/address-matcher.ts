@@ -8,61 +8,93 @@ interface MatchResult {
   score: number;
   buildingAddress: string;
   mlsAddress: string;
+  matchType: 'name' | 'address';
 }
 
 /**
- * Match an MLS listing address to a building slug
- * Returns the building slug if match confidence > 85%, otherwise null
+ * Match an MLS listing to a building slug using both building name and address
+ * Returns the building slug if match confidence > 75%, otherwise null
+ *
+ * @param mlsAddress - Street address from MLS (e.g., "70 Rainey St")
+ * @param buildingName - Building name from MLS (e.g., "70 Rainey")
  */
-export function matchListingToBuilding(mlsAddress: string): string | null {
-  const normalized = normalizeAddress(mlsAddress);
+export function matchListingToBuilding(mlsAddress: string, buildingName?: string): string | null {
+  const normalizedAddr = normalizeAddress(mlsAddress);
+  const normalizedName = buildingName ? normalizeAddress(buildingName) : "";
 
   let bestMatch: MatchResult | null = null;
-  let allMatches: { building: string; score: number; normalized: string }[] = [];
+  let allMatches: { building: string; score: number; matchType: string }[] = [];
 
   for (const building of buildings) {
+    let bestScore = 0;
+    let matchType: 'name' | 'address' = 'address';
+
+    // Try matching by building name first (if provided)
+    if (buildingName && normalizedName) {
+      const buildingNameNorm = normalizeAddress(building.name);
+      const nameDistance = levenshteinDistance(normalizedName, buildingNameNorm);
+      const nameMaxLen = Math.max(normalizedName.length, buildingNameNorm.length);
+      const nameSimilarity = nameMaxLen > 0 ? 1 - nameDistance / nameMaxLen : 0;
+
+      if (nameSimilarity > bestScore) {
+        bestScore = nameSimilarity;
+        matchType = 'name';
+      }
+    }
+
+    // Try matching by address
     const buildingAddr = normalizeAddress(building.address);
-    const distance = levenshteinDistance(normalized, buildingAddr);
-    const maxLen = Math.max(normalized.length, buildingAddr.length);
-    const similarity = maxLen > 0 ? 1 - distance / maxLen : 0;
+    const addrDistance = levenshteinDistance(normalizedAddr, buildingAddr);
+    const addrMaxLen = Math.max(normalizedAddr.length, buildingAddr.length);
+    const addrSimilarity = addrMaxLen > 0 ? 1 - addrDistance / addrMaxLen : 0;
+
+    if (addrSimilarity > bestScore) {
+      bestScore = addrSimilarity;
+      matchType = 'address';
+    }
 
     // Log matching attempts for Rainey Street addresses
-    if (mlsAddress.toLowerCase().includes('rainey')) {
+    if (mlsAddress.toLowerCase().includes('rainey') || (buildingName && buildingName.toLowerCase().includes('rainey'))) {
       allMatches.push({
-        building: building.address,
-        score: similarity,
-        normalized: buildingAddr
+        building: building.name,
+        score: bestScore,
+        matchType
       });
     }
 
-    if (similarity > 0.85 && (!bestMatch || similarity > bestMatch.score)) {
+    // Lowered threshold from 85% to 75% to catch more matches
+    if (bestScore > 0.75 && (!bestMatch || bestScore > bestMatch.score)) {
       bestMatch = {
         slug: building.slug,
-        score: similarity,
+        score: bestScore,
         buildingAddress: building.address,
         mlsAddress,
+        matchType
       };
     }
   }
 
   // Detailed logging for Rainey Street addresses
-  if (mlsAddress.toLowerCase().includes('rainey')) {
-    console.log(`[Address Matcher] Rainey Street listing: "${mlsAddress}"`);
-    console.log(`[Address Matcher] Normalized: "${normalized}"`);
-    console.log(`[Address Matcher] Best match: ${bestMatch ? `${bestMatch.buildingAddress} (${(bestMatch.score * 100).toFixed(1)}%)` : 'NONE'}`);
+  if (mlsAddress.toLowerCase().includes('rainey') || (buildingName && buildingName.toLowerCase().includes('rainey'))) {
+    console.log(`[Address Matcher] Rainey Street listing:`);
+    console.log(`[Address Matcher]   MLS Address: "${mlsAddress}" → normalized: "${normalizedAddr}"`);
+    if (buildingName) {
+      console.log(`[Address Matcher]   Building Name: "${buildingName}" → normalized: "${normalizedName}"`);
+    }
+    console.log(`[Address Matcher]   Best match: ${bestMatch ? `${bestMatch.buildingAddress} (${(bestMatch.score * 100).toFixed(1)}% via ${bestMatch.matchType})` : 'NONE'}`);
 
     // Show top 3 matches for debugging
     const top3 = allMatches
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
-      .map(m => `${m.building} → "${m.normalized}" (${(m.score * 100).toFixed(1)}%)`)
+      .map(m => `${m.building} via ${m.matchType} (${(m.score * 100).toFixed(1)}%)`)
       .join(', ');
-    console.log(`[Address Matcher] Top matches: ${top3}`);
+    console.log(`[Address Matcher]   Top 3: ${top3}`);
   }
 
   // Log unmatched addresses for manual review
   if (!bestMatch) {
-    logUnmatchedAddress(mlsAddress, normalized);
+    logUnmatchedAddress(mlsAddress, normalizedAddr, buildingName);
   }
 
   return bestMatch?.slug || null;
@@ -91,9 +123,13 @@ function normalizeAddress(addr: string): string {
 /**
  * Log unmatched addresses for manual review (console only in serverless environment)
  */
-function logUnmatchedAddress(mlsAddress: string, normalized: string): void {
+function logUnmatchedAddress(mlsAddress: string, normalized: string, buildingName?: string): void {
   // In serverless environment, just log to console (no file system access)
-  console.warn(`[Address Matcher] UNMATCHED ADDRESS: "${mlsAddress}" → normalized: "${normalized}"`);
+  if (buildingName) {
+    console.warn(`[Address Matcher] UNMATCHED: address="${mlsAddress}", building="${buildingName}"`);
+  } else {
+    console.warn(`[Address Matcher] UNMATCHED: address="${mlsAddress}" (no building name)`);
+  }
 }
 
 /**
@@ -104,7 +140,7 @@ export function getListingsForBuilding(
   buildingSlug: string
 ): any[] {
   return allListings.filter(listing => {
-    const matchedSlug = matchListingToBuilding(listing.address);
+    const matchedSlug = matchListingToBuilding(listing.address, listing.buildingName);
     return matchedSlug === buildingSlug;
   });
 }

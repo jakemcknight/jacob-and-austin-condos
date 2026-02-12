@@ -68,13 +68,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`[MLS Sync] Fetched ${allListings.length} listings from MLSGrid`);
 
-    // 4. Group listings by building using address matching
+    // 4. Group listings by building using address and building name matching
     const listingsByBuilding = new Map<string, typeof allListings>();
     let matchedCount = 0;
     let unmatchedCount = 0;
 
     for (const listing of allListings) {
-      const buildingSlug = matchListingToBuilding(listing.address);
+      const buildingSlug = matchListingToBuilding(listing.address, listing.buildingName);
 
       if (buildingSlug) {
         if (!listingsByBuilding.has(buildingSlug)) {
