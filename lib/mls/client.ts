@@ -135,8 +135,8 @@ export class MLSGridClient {
     ].join(",");
 
     // Use $expand=Media to get photos (v2 API requirement)
-    // Reduced $top from 200 to 100 to minimize request size and spread requests
-    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=100`;
+    // $top=500 to reduce pagination rounds and stay within Vercel function timeout
+    const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=500`;
 
     nextUrl = initialUrl;
 
