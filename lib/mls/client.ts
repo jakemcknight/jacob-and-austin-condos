@@ -174,19 +174,24 @@ export class MLSGridClient {
       }
     }
 
-    // Filter client-side for Condominium property subtype only
-    // Downtown filtering happens via address matching to the 37 defined buildings
+    // Filter client-side: MLSAreaMajor = 'DT' (downtown) and Condominium property subtype
     const filtered = results.filter(listing => {
-      const propertySubType = (listing as any).rawData?.PropertySubType;
+      const rawData = (listing as any).rawData;
 
-      // Accept various condo PropertySubType values (case-insensitive)
+      // 1. Filter by MLSAreaMajor — only downtown Austin listings
+      const area = rawData?.MLSAreaMajor || '';
+      if (area !== 'DT') {
+        return false;
+      }
+
+      // 2. Filter by PropertySubType — only condos/townhouses/townhomes
+      const propertySubType = rawData?.PropertySubType;
       const subType = (propertySubType || '').toLowerCase();
       const isCondoType = subType.includes('condo') ||
                            subType.includes('townhouse') ||
                            subType.includes('townhome');
 
       if (!isCondoType && propertySubType) {
-        console.log(`[MLSGrid] Rejected non-condo: "${propertySubType}" - ${listing.listingId}`);
         return false;
       }
 
@@ -195,9 +200,8 @@ export class MLSGridClient {
 
     console.log(`[MLSGrid] Filter Statistics:`);
     console.log(`  - Total from API: ${results.length}`);
-    console.log(`  - After Condo filter: ${filtered.length}`);
+    console.log(`  - After DT + Condo filter: ${filtered.length}`);
     console.log(`  - Rejected: ${results.length - filtered.length}`);
-    console.log(`  - Note: Downtown filtering happens via address matching to 37 buildings`);
 
     return filtered;
   }
