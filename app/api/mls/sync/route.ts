@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MLSGridClient } from "@/lib/mls/client";
-import { writeMlsCache, updateMlsCache } from "@/lib/mls/cache";
+import { writeMlsCache, updateMlsCache, readMlsCache } from "@/lib/mls/cache";
 import { matchListingToBuilding } from "@/lib/mls/address-matcher";
 import { buildings } from "@/data/buildings";
 import {
@@ -83,6 +83,26 @@ export async function GET(request: NextRequest) {
 
     console.log(`[MLS Sync] Fetched ${allListings.length} listings from MLSGrid`);
 
+    // 3b. Guard against incomplete initial imports
+    // If an initial import returns very few listings, something went wrong — don't save the
+    // timestamp or we'll be stuck in incremental mode with an almost-empty cache
+    const MINIMUM_INITIAL_LISTINGS = 50;
+    if (isInitialImport && allListings.length < MINIMUM_INITIAL_LISTINGS) {
+      const msg = `Initial import seems incomplete: only ${allListings.length} listings (expected at least ${MINIMUM_INITIAL_LISTINGS})`;
+      console.error(`[MLS Sync] ${msg}`);
+      await markSyncFailed(msg);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Initial import incomplete",
+          totalListings: allListings.length,
+          message: msg,
+          duration: `${((Date.now() - startTime) / 1000).toFixed(2)}s`,
+        },
+        { status: 500 }
+      );
+    }
+
     // 4. Group listings by building using address and building name matching
     const listingsByBuilding = new Map<string, typeof allListings>();
     let matchedCount = 0;
@@ -133,29 +153,44 @@ export async function GET(request: NextRequest) {
     // 6. Find the latest ModificationTimestamp for next sync
     const latestTimestamp = findLatestTimestamp(allListings);
 
-    // 7. Count by listing type for reporting
-    const salesCount = allListings.filter(l => l.listingType === "Sale").length;
-    const leasesCount = allListings.filter(l => l.listingType === "Lease").length;
+    // 7. Count batch listings (what this sync fetched)
+    const batchSalesCount = allListings.filter(l => l.listingType === "Sale").length;
+    const batchLeasesCount = allListings.filter(l => l.listingType === "Lease").length;
 
-    // 8. Update sync state
-    await updateSyncState(salesCount, leasesCount, latestTimestamp);
+    // 8. Count TOTAL listings across all building caches (not just this batch)
+    let totalCachedSales = 0;
+    let totalCachedLeases = 0;
+
+    for (const building of buildings) {
+      const cached = await readMlsCache(building.slug);
+      if (cached && cached.data) {
+        totalCachedSales += cached.data.filter((l: any) => l.listingType === "Sale").length;
+        totalCachedLeases += cached.data.filter((l: any) => l.listingType === "Lease").length;
+      }
+    }
+
+    // 9. Update sync state with total cache counts and batch counts
+    await updateSyncState(totalCachedSales, totalCachedLeases, latestTimestamp, batchSalesCount, batchLeasesCount);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
     const result = {
       success: true,
       mode: isInitialImport ? "initial" : "incremental",
-      totalListings: allListings.length,
-      salesCount,
-      leasesCount,
+      batchListings: allListings.length,
+      batchSalesCount,
+      batchLeasesCount,
+      totalCachedSales,
+      totalCachedLeases,
+      totalCachedListings: totalCachedSales + totalCachedLeases,
       buildingsUpdated: listingsByBuilding.size,
       latestTimestamp,
       duration: `${duration}s`,
       nextSyncTimestamp: latestTimestamp,
     };
 
-    console.log(`[MLS Sync] ✅ Completed successfully in ${duration}s`);
-    console.log(`[MLS Sync] ${result.totalListings} listings → ${result.buildingsUpdated} buildings`);
+    console.log(`[MLS Sync] Completed successfully in ${duration}s`);
+    console.log(`[MLS Sync] Batch: ${allListings.length} listings | Total cached: ${totalCachedSales + totalCachedLeases} (${totalCachedSales} sales, ${totalCachedLeases} leases)`);
 
     return NextResponse.json(result);
   } catch (error) {
