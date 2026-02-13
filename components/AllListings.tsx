@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { buildings } from "@/data/buildings";
 
 interface MLSListing {
   listingId: string;
@@ -39,7 +38,6 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
   const [sortBy, setSortBy] = useState<SortOption>("price");
 
   // Filter state
-  const [selectedBuildings, setSelectedBuildings] = useState<string[]>([]);
   const [bedroomFilters, setBedroomFilters] = useState<number[]>([]);
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
@@ -80,18 +78,8 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
     }
   };
 
-  // Toggle building filter
-  const toggleBuildingFilter = (slug: string) => {
-    if (selectedBuildings.includes(slug)) {
-      setSelectedBuildings(selectedBuildings.filter(s => s !== slug));
-    } else {
-      setSelectedBuildings([...selectedBuildings, slug]);
-    }
-  };
-
   // Clear all filters
   const clearFilters = () => {
-    setSelectedBuildings([]);
     setBedroomFilters([]);
     setPriceMin("");
     setPriceMax("");
@@ -103,13 +91,6 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
   const filteredListings = listings.filter(listing => {
     // Filter by listing type (Sale/Lease)
     if (listing.listingType !== listingType) return false;
-
-    // Filter by building
-    if (selectedBuildings.length > 0) {
-      if (!listing.buildingSlug || !selectedBuildings.includes(listing.buildingSlug)) {
-        return false;
-      }
-    }
 
     // Filter by bedroom count
     if (bedroomFilters.length > 0) {
@@ -180,7 +161,6 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
 
   // Count active filters
   const activeFilterCount =
-    selectedBuildings.length +
     bedroomFilters.length +
     (priceMin ? 1 : 0) +
     (priceMax ? 1 : 0) +
@@ -191,7 +171,7 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
     <section id="all-listings" className="section-padding bg-light">
       <div className="container-narrow">
         <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-primary md:text-3xl">
-          {listingType === "Sale" ? "All Condos For Sale" : "All Condos For Lease"}
+          {listingType === "Sale" ? "Downtown Austin Condos For Sale" : "Downtown Austin Condos For Lease"}
         </h2>
 
         {/* Show message if no listings at all */}
@@ -210,13 +190,6 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
           <>
             {/* Filters - Compact */}
             <div className="mb-4 rounded border border-gray-200 bg-white p-4">
-              {/* Building Filter */}
-              <BuildingFilter
-                selected={selectedBuildings}
-                onChange={setSelectedBuildings}
-                onToggle={toggleBuildingFilter}
-              />
-
               {/* Bedroom Filters */}
               <div className="mb-3">
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -358,84 +331,6 @@ export default function AllListings({ listingType = "Sale" }: AllListingsProps) 
         )}
       </div>
     </section>
-  );
-}
-
-function BuildingFilter({
-  selected,
-  onChange,
-  onToggle,
-}: {
-  selected: string[];
-  onChange: (value: string[]) => void;
-  onToggle: (slug: string) => void;
-}) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const filteredBuildings = buildings.filter(b =>
-    b.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="mb-3">
-      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-        Buildings {selected.length > 0 && `(${selected.length} selected)`}
-      </label>
-
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="mb-2 w-full border border-gray-300 bg-white px-3 py-2 text-left text-sm text-secondary hover:bg-gray-50"
-      >
-        {selected.length === 0
-          ? "All buildings"
-          : selected.length === 1
-          ? buildings.find(b => b.slug === selected[0])?.name
-          : `${selected.length} buildings selected`}
-        <span className="float-right">{isExpanded ? "▲" : "▼"}</span>
-      </button>
-
-      {isExpanded && (
-        <div className="border border-gray-200 bg-white p-2">
-          {/* Search box */}
-          <input
-            type="text"
-            placeholder="Search buildings..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mb-2 w-full border border-gray-300 px-3 py-2 text-sm"
-          />
-
-          {/* Building list with checkboxes */}
-          <div className="max-h-48 overflow-y-auto">
-            {filteredBuildings.map(building => (
-              <label
-                key={building.slug}
-                className="flex cursor-pointer items-center gap-2 py-1 hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(building.slug)}
-                  onChange={() => onToggle(building.slug)}
-                  className="text-accent"
-                />
-                <span className="text-sm">{building.name}</span>
-              </label>
-            ))}
-          </div>
-
-          {selected.length > 0 && (
-            <button
-              onClick={() => onChange([])}
-              className="mt-2 text-xs text-accent hover:text-primary"
-            >
-              Clear all buildings
-            </button>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 

@@ -181,21 +181,31 @@ export class MLSGridClient {
       const propertySubType = (listing as any).rawData?.PropertySubType;
       const mlsAreaMajor = (listing as any).rawData?.MLSAreaMajor;
 
-      // Must be a Condominium
-      if (propertySubType !== 'Condominium') {
+      // Accept various condo PropertySubType values (case-insensitive)
+      const subType = (propertySubType || '').toLowerCase();
+      const isCondoType = subType.includes('condo') ||
+                           subType.includes('townhouse') ||
+                           subType.includes('townhome');
+
+      if (!isCondoType && propertySubType) {
+        console.log(`[MLSGrid] Rejected non-condo: "${propertySubType}" - ${listing.listingId}`);
         return false;
       }
 
       // Prefer DT area, but allow listings without MLSAreaMajor set
       // (some downtown condos may not have this field populated)
       if (mlsAreaMajor && mlsAreaMajor !== 'DT') {
+        console.log(`[MLSGrid] Rejected non-DT listing: "${mlsAreaMajor}" - ${listing.listingId}`);
         return false;
       }
 
       return true;
     });
 
-    console.log(`[MLSGrid] Filtered ${filtered.length} from ${results.length} ${listingType} listings (downtown condos)`);
+    console.log(`[MLSGrid] Filter Statistics:`);
+    console.log(`  - Total from API: ${results.length}`);
+    console.log(`  - After DT + Condo filter: ${filtered.length}`);
+    console.log(`  - Rejected: ${results.length - filtered.length}`);
 
     return filtered;
   }
