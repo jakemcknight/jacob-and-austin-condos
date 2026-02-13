@@ -352,15 +352,15 @@ function ListingCard({ listing, showBuilding = false }: {
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {/* Building Badge */}
+          {/* Building Badge - Top Right */}
           {showBuilding && listing.buildingName && (
-            <div className="absolute left-2 top-2 bg-primary/90 px-2 py-1 text-xs font-semibold text-white">
+            <div className="absolute right-2 top-2 bg-primary/90 px-2 py-1 text-xs font-semibold text-white">
               {listing.buildingName}
             </div>
           )}
-          {/* Lease Badge */}
+          {/* Lease Badge - Top Left */}
           {listing.listingType === "Lease" && (
-            <div className="absolute right-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            <div className="absolute left-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
               For Lease
             </div>
           )}
@@ -371,54 +371,27 @@ function ListingCard({ listing, showBuilding = false }: {
         </div>
       )}
 
-      {/* Content */}
-      <div className="p-4">
+      {/* Content - Zillow Style */}
+      <div className="p-3">
         {/* Price */}
-        <p className="mb-2 text-2xl font-bold text-primary">
+        <p className="mb-1 text-xl font-bold text-primary">
           ${listing.listPrice.toLocaleString()}
           {listing.listingType === "Lease" && <span className="text-sm font-normal">/mo</span>}
         </p>
 
-        {/* Beds/Baths/Sqft */}
-        <p className="mb-2 text-sm text-secondary">
-          {listing.bedroomsTotal > 0 ? `${listing.bedroomsTotal} bed` : "Studio"} ·{" "}
-          {listing.bathroomsTotalInteger} bath · {listing.livingArea.toLocaleString()} SF
+        {/* Beds/Baths/Sqft/Status - Zillow format with pipes */}
+        <p className="mb-1 text-xs text-gray-600">
+          {listing.bedroomsTotal > 0 ? `${listing.bedroomsTotal} bds` : "Studio"} |{" "}
+          {listing.bathroomsTotalInteger} ba |{" "}
+          {listing.livingArea.toLocaleString()} sqft |{" "}
+          {listing.status}
         </p>
 
-        {/* $/SF */}
-        <p className="mb-3 text-sm font-medium text-accent">
-          ${Math.round(listing.priceSf)}/SF
+        {/* Address */}
+        <p className="text-xs text-gray-700">
+          {listing.address}
+          {listing.unitNumber && `, Unit ${listing.unitNumber}`}
         </p>
-
-        {/* Details */}
-        <div className="space-y-1 border-t border-gray-100 pt-3 text-xs text-secondary">
-          {listing.unitNumber && (
-            <p>
-              <span className="font-medium">Unit:</span> {listing.unitNumber}
-            </p>
-          )}
-          <p>
-            <span className="font-medium">Status:</span> {listing.status}
-          </p>
-          <p>
-            <span className="font-medium">Days on Market:</span> {listing.daysOnMarket}
-          </p>
-          {listing.hoaFee && listing.hoaFee > 0 && (
-            <p>
-              <span className="font-medium">HOA:</span> ${listing.hoaFee.toLocaleString()}/mo
-            </p>
-          )}
-          <p>
-            <span className="font-medium">MLS#:</span> {listing.mlsNumber}
-          </p>
-        </div>
-
-        {/* View Details CTA */}
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <span className="text-xs font-medium uppercase tracking-wider text-accent group-hover:text-primary">
-            View Details →
-          </span>
-        </div>
       </div>
     </Link>
   );
