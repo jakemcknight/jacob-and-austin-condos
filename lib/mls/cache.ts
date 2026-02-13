@@ -34,15 +34,30 @@ export async function readMlsCache(slug: string): Promise<CachedMlsData | null> 
 }
 
 /**
+ * Strip heavy fields before caching to stay under Upstash 1MB value limit.
+ * Removes rawData and limits photos to first 10 per listing.
+ */
+function trimForCache(listings: MLSListing[]): MLSListing[] {
+  return listings.map(listing => {
+    const { rawData, ...rest } = listing as any;
+    return {
+      ...rest,
+      photos: (rest.photos || []).slice(0, 10),
+    };
+  });
+}
+
+/**
  * Write MLS cache for a specific building to Vercel KV (replaces existing cache)
  */
 export async function writeMlsCache(slug: string, data: MLSListing[]): Promise<void> {
   try {
     const key = getCacheKey(slug);
+    const trimmed = trimForCache(data);
 
     const cached: CachedMlsData = {
       timestamp: Date.now(),
-      data,
+      data: trimmed,
     };
 
     await kv.set(key, cached);
