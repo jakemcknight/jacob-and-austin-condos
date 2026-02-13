@@ -352,15 +352,15 @@ function ListingCard({ listing, showBuilding = false }: {
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {/* Building Badge - Top Right */}
+          {/* Building Badge - Top Left with Green Background */}
           {showBuilding && listing.buildingName && (
-            <div className="absolute right-2 top-2 bg-primary/90 px-2 py-1 text-xs font-semibold text-white">
+            <div className="absolute left-2 top-2 bg-accent px-2 py-1 text-xs font-semibold text-white">
               {listing.buildingName}
             </div>
           )}
-          {/* Lease Badge - Top Left */}
+          {/* Lease Badge - Top Right */}
           {listing.listingType === "Lease" && (
-            <div className="absolute left-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            <div className="absolute right-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
               For Lease
             </div>
           )}
@@ -379,12 +379,12 @@ function ListingCard({ listing, showBuilding = false }: {
           {listing.listingType === "Lease" && <span className="text-sm font-normal">/mo</span>}
         </p>
 
-        {/* Beds/Baths/Sqft/Status - Zillow format with pipes */}
+        {/* Beds/Baths/Sqft/$/SF - Zillow format with pipes */}
         <p className="mb-1 text-xs text-gray-600">
           {listing.bedroomsTotal > 0 ? `${listing.bedroomsTotal} bds` : "Studio"} |{" "}
           {listing.bathroomsTotalInteger} ba |{" "}
           {listing.livingArea.toLocaleString()} sqft |{" "}
-          {listing.status}
+          ${Math.round(listing.priceSf)}/sf
         </p>
 
         {/* Address */}
