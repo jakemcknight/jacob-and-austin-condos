@@ -15,10 +15,25 @@ export async function GET(request: NextRequest) {
     const buildingSlug = searchParams.get("building");
 
     if (!buildingSlug) {
-      return NextResponse.json(
-        { error: "Building slug required" },
-        { status: 400 }
-      );
+      // Fetch all listings from all buildings
+      console.log(`[MLS API] Fetching all listings across all buildings`);
+      const allListings: any[] = [];
+
+      for (const building of buildings) {
+        const cached = await readMlsCache(building.slug);
+        if (cached && cached.data) {
+          // Add building metadata to each listing for filtering/display
+          const listingsWithBuilding = cached.data.map((listing: any) => ({
+            ...listing,
+            buildingSlug: building.slug,
+            buildingName: building.name,
+          }));
+          allListings.push(...listingsWithBuilding);
+        }
+      }
+
+      console.log(`[MLS API] Returning ${allListings.length} total listings across all buildings`);
+      return NextResponse.json(allListings);
     }
 
     // Verify building exists
