@@ -148,7 +148,7 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
             <div className="rounded-lg bg-white p-6 shadow-sm">
               <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100">
                 <Image
-                  src={floorPlan.imageUrl}
+                  src={`/downtown-condos${floorPlan.imageUrl}`}
                   alt={`${building.name} ${floorPlan.name} floor plan - ${floorPlan.bedrooms} bed, ${floorPlan.sqft} SF`}
                   fill
                   className="object-contain"
