@@ -692,7 +692,7 @@ export default function DataV2Page() {
                       <td className="px-3 py-1.5 text-center text-primary">{formatDollar(row.medianPrice)}</td>
                       <td className="px-3 py-1.5 text-center text-primary">{formatPsf(row.medianPsf, isLease)}</td>
                       <td className="px-3 py-1.5 text-center text-primary">{row.count}</td>
-                      <td className="px-3 py-1.5 text-center text-primary">{formatPsf(row.medianHoaPsf, isLease)}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">${row.medianHoaPsf.toFixed(2)}</td>
                       <td className="px-3 py-1.5 text-center text-primary">{row.medianDom}</td>
                       <td className="px-3 py-1.5 text-center text-primary">{Math.round(row.medianSf).toLocaleString()}</td>
                       <td className="px-3 py-1.5 text-center text-primary">{formatDollar(row.totalVolume)}</td>
