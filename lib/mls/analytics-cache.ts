@@ -242,6 +242,7 @@ export async function appendListingSnapshots(
 export async function countAnalyticsListings(): Promise<{
   closed: number;
   pending: number;
+  active: number;
   other: number;
   total: number;
 }> {
@@ -249,14 +250,16 @@ export async function countAnalyticsListings(): Promise<{
 
   let closed = 0;
   let pending = 0;
+  let active = 0;
   let other = 0;
 
   for (const listing of all) {
     const s = (listing.status || "").toLowerCase();
     if (s === "closed") closed++;
     else if (s === "pending") pending++;
+    else if (s === "active" || s === "active under contract") active++;
     else other++;
   }
 
-  return { closed, pending, other, total: all.length };
+  return { closed, pending, active, other, total: all.length };
 }

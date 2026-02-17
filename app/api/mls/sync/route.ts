@@ -24,6 +24,7 @@ import {
 } from "@/lib/mls/analytics-cache";
 import { readAllEnrichmentMaps, enrichListing } from "@/lib/mls/enrichment";
 import type { AnalyticsListing, AnalyticsSyncState, ListingSnapshot } from "@/lib/mls/analytics-types";
+import type { MLSListing } from "@/lib/mls/types";
 
 // Disable static optimization - this is a dynamic route
 export const dynamic = "force-dynamic";
@@ -34,6 +35,49 @@ const UNMATCHED_SLUG = "_unmatched";
 // Maximum execution time for Vercel (10 min for Pro, 60s for Hobby)
 // Set conservatively to avoid timeouts
 export const maxDuration = 300; // 5 minutes
+
+/**
+ * Convert an MLSListing (active listings format) to AnalyticsListing format.
+ * Used to feed already-fetched active listings into the analytics pipeline
+ * without making a duplicate API call.
+ */
+function mlsListingToAnalytics(
+  listing: MLSListing,
+  buildingSlug: string | null,
+  buildingName: string
+): AnalyticsListing {
+  const priceSf = listing.livingArea > 0 ? listing.listPrice / listing.livingArea : 0;
+
+  return {
+    listingId: listing.listingId,
+    buildingSlug,
+    buildingName,
+    address: listing.address,
+    unitNumber: listing.unitNumber,
+    listPrice: listing.listPrice,
+    originalListPrice: listing.originalListPrice ?? listing.listPrice,
+    closePrice: undefined,
+    previousListPrice: undefined,
+    currentPrice: undefined,
+    bedroomsTotal: listing.bedroomsTotal,
+    bathroomsTotalInteger: listing.bathroomsTotalInteger,
+    livingArea: listing.livingArea,
+    priceSf,
+    status: listing.status,
+    listingContractDate: listing.listDate || undefined,
+    closeDate: undefined,
+    daysOnMarket: listing.daysOnMarket,
+    hoaFee: listing.hoaFee,
+    associationFeeFrequency: listing.associationFeeFrequency,
+    propertyType: listing.propertyType,
+    propertySubType: listing.propertySubType,
+    yearBuilt: listing.yearBuilt,
+    listAgentFullName: listing.listAgentFullName,
+    listOfficeName: listing.listOfficeName,
+    source: "api-sync",
+    importedAt: new Date().toISOString(),
+  };
+}
 
 /**
  * Vercel Cron Job Handler
@@ -228,14 +272,35 @@ export async function GET(request: NextRequest) {
       const analyticsSyncState = await readAnalyticsSyncState();
       const analyticsTimestamp = analyticsSyncState?.lastSyncTimestamp;
 
-      // Fetch recently modified Closed, Pending, Withdrawn, and Hold listings
-      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold"];
+      // Fetch recently modified non-active listings (Active/AUC handled by converting already-fetched data)
+      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold", "Expired", "Canceled"];
       const analyticsListings = await mlsClient.fetchAnalyticsListings(
         analyticsStatuses,
         analyticsTimestamp || undefined
       );
 
-      console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} listings`);
+      console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} non-active listings`);
+
+      // Convert already-fetched active listings to analytics format (avoids duplicate API call)
+      const convertedActiveListings: AnalyticsListing[] = [];
+      for (const [slug, listings] of buildingEntries) {
+        const building = buildings.find(b => b.slug === slug);
+        for (const listing of listings) {
+          convertedActiveListings.push(
+            mlsListingToAnalytics(listing, slug, building?.name || listing.buildingName)
+          );
+        }
+      }
+      for (const listing of unmatchedFullListings) {
+        convertedActiveListings.push(
+          mlsListingToAnalytics(listing, null, listing.buildingName)
+        );
+      }
+
+      console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings`);
+
+      // Combine API-fetched non-active listings with converted active listings
+      const allAnalyticsListings = [...analyticsListings, ...convertedActiveListings];
 
       // Load enrichment maps for auto-enrichment
       const enrichmentMaps = await readAllEnrichmentMaps();
@@ -245,7 +310,7 @@ export async function GET(request: NextRequest) {
       let analyticsMatched = 0;
       let analyticsUnmatched = 0;
 
-      for (const listing of analyticsListings) {
+      for (const listing of allAnalyticsListings) {
         const slug = matchListingToBuilding(listing.address, listing.buildingName || undefined);
         if (slug) {
           listing.buildingSlug = slug;
@@ -290,18 +355,15 @@ export async function GET(request: NextRequest) {
 
       // Update analytics sync state
       const analyticsCounts = await countAnalyticsListings();
-      const analyticsLatest = analyticsListings.length > 0
-        ? analyticsListings.reduce((latest, l) => {
-            const ts = (l as any).modificationTimestamp || "";
-            return ts > latest ? ts : latest;
-          }, "")
-        : analyticsTimestamp || new Date().toISOString();
+      // Use the main sync's latest timestamp (always fresh from full fetch)
+      const analyticsLatest = latestTimestamp || analyticsTimestamp || new Date().toISOString();
 
       const newAnalyticsSyncState: AnalyticsSyncState = {
         lastSyncTimestamp: analyticsLatest || new Date().toISOString(),
         lastSyncDate: new Date().toLocaleString(),
         closedCount: analyticsCounts.closed,
         pendingCount: analyticsCounts.pending,
+        activeCount: analyticsCounts.active,
         otherCount: analyticsCounts.other,
         totalCount: analyticsCounts.total,
         status: "success",
@@ -310,6 +372,7 @@ export async function GET(request: NextRequest) {
 
       analyticsResult = {
         analyticsListingsFetched: analyticsListings.length,
+        analyticsActiveConverted: convertedActiveListings.length,
         analyticsMatched,
         analyticsUnmatched,
         analyticsAdded,
@@ -319,7 +382,7 @@ export async function GET(request: NextRequest) {
       };
 
       console.log(
-        `[MLS Sync] Analytics phase: ${analyticsListings.length} fetched, ` +
+        `[MLS Sync] Analytics phase: ${analyticsListings.length} API-fetched + ${convertedActiveListings.length} converted active, ` +
         `${analyticsAdded} added, ${analyticsUpdated} updated, ` +
         `${analyticsCounts.total} total cached`
       );
