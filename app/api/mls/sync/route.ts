@@ -22,7 +22,8 @@ import {
   appendListingSnapshots,
   countAnalyticsListings,
 } from "@/lib/mls/analytics-cache";
-import { readAllEnrichmentMaps, enrichListing } from "@/lib/mls/enrichment";
+import { readAllEnrichmentMaps, enrichListing, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
+import { unitLookup } from "@/data/unitLookup";
 import type { AnalyticsListing, AnalyticsSyncState, ListingSnapshot } from "@/lib/mls/analytics-types";
 import type { MLSListing } from "@/lib/mls/types";
 
@@ -203,12 +204,40 @@ export async function GET(request: NextRequest) {
       console.log(`[MLS Sync]   ${building?.name || buildingSlug}: ${listings.length} listings`);
     }
 
-    // 5. Update cache for each building (always full replace since we fetch all listings)
+    // 5. Enrich listings with floor plan data, then update cache
     let totalCached = 0;
+    let totalEnriched = 0;
 
     for (const [buildingSlug, listings] of buildingEntries) {
-      await writeMlsCache(buildingSlug, listings);
-      totalCached += listings.length;
+      const buildingLookup = unitLookup[buildingSlug];
+      let enrichedListings = listings;
+      if (buildingLookup) {
+        enrichedListings = listings.map(l => enrichActiveListingWithFloorPlan(l, buildingLookup));
+        const enrichedCount = enrichedListings.filter(l => l.floorPlan).length;
+        totalEnriched += enrichedCount;
+      }
+      await writeMlsCache(buildingSlug, enrichedListings);
+      totalCached += enrichedListings.length;
+    }
+    console.log(`[MLS Sync] Enriched ${totalEnriched} listings with floor plan data`);
+
+    // 5a. Sync unitLookup into KV enrichment maps (for analytics enrichment)
+    // Write fresh maps from unitLookup, then delete any stale maps from old CSV data
+    const unitLookupSlugs = new Set(Object.keys(unitLookup));
+    for (const [slug, units] of Object.entries(unitLookup)) {
+      const kvMap: Record<string, { floorPlan: string; orientation: string }> = {};
+      for (const [unit, entry] of Object.entries(units)) {
+        kvMap[unit] = { floorPlan: entry.floorPlan, orientation: entry.orientation };
+      }
+      await writeEnrichmentMap(slug, kvMap);
+    }
+    // Delete stale enrichment maps for buildings not in unitLookup
+    const existingMaps = await readAllEnrichmentMaps();
+    for (const existingSlug of Object.keys(existingMaps)) {
+      if (!unitLookupSlugs.has(existingSlug)) {
+        await deleteEnrichmentMap(existingSlug);
+        console.log(`[MLS Sync] Deleted stale enrichment map: ${existingSlug}`);
+      }
     }
 
     // Also cache unmatched listings so they appear on the /for-sale page

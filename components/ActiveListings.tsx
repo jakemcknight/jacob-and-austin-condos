@@ -28,6 +28,8 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const [priceMax, setPriceMax] = useState<string>("");
   const [sqftMin, setSqftMin] = useState<string>("");
   const [sqftMax, setSqftMax] = useState<string>("");
+  const [floorPlanFilters, setFloorPlanFilters] = useState<string[]>([]);
+  const [orientationFilters, setOrientationFilters] = useState<string[]>([]);
 
   useEffect(() => {
     fetchListings();
@@ -63,6 +65,22 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     }
   };
 
+  const toggleFloorPlanFilter = (fp: string) => {
+    if (floorPlanFilters.includes(fp)) {
+      setFloorPlanFilters(floorPlanFilters.filter(f => f !== fp));
+    } else {
+      setFloorPlanFilters([...floorPlanFilters, fp]);
+    }
+  };
+
+  const toggleOrientationFilter = (o: string) => {
+    if (orientationFilters.includes(o)) {
+      setOrientationFilters(orientationFilters.filter(x => x !== o));
+    } else {
+      setOrientationFilters([...orientationFilters, o]);
+    }
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setBedroomFilters([]);
@@ -70,6 +88,8 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     setPriceMax("");
     setSqftMin("");
     setSqftMax("");
+    setFloorPlanFilters([]);
+    setOrientationFilters([]);
   };
 
   // Filter listings
@@ -109,8 +129,27 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     if (sqftMin && listing.livingArea < parseFloat(sqftMin)) return false;
     if (sqftMax && listing.livingArea > parseFloat(sqftMax)) return false;
 
+    // Filter by floor plan
+    if (floorPlanFilters.length > 0) {
+      if (!listing.floorPlan || !floorPlanFilters.includes(listing.floorPlan)) return false;
+    }
+
+    // Filter by orientation
+    if (orientationFilters.length > 0) {
+      if (!listing.orientation || !orientationFilters.includes(listing.orientation)) return false;
+    }
+
     return true;
   });
+
+  // Compute available floor plans and orientations from listings of the current type
+  const typeFilteredListings = listings.filter(l => l.listingType === listingTypeFilter);
+  const availableFloorPlans = Array.from(
+    new Set(typeFilteredListings.map(l => l.floorPlan).filter((fp): fp is string => !!fp))
+  ).sort();
+  const availableOrientations = Array.from(
+    new Set(typeFilteredListings.map(l => l.orientation).filter((o): o is string => !!o))
+  ).sort();
 
   // Sort listings
   const sortedListings = [...filteredListings].sort((a, b) => {
@@ -148,6 +187,8 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   // Count active filters
   const activeFilterCount =
     bedroomFilters.length +
+    floorPlanFilters.length +
+    orientationFilters.length +
     (priceMin ? 1 : 0) +
     (priceMax ? 1 : 0) +
     (sqftMin ? 1 : 0) +
@@ -250,6 +291,54 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
               </button>
             </div>
           </div>
+
+          {/* Floor Plan Filters */}
+          {availableFloorPlans.length > 0 && (
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Floor Plan
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {availableFloorPlans.map(fp => (
+                  <button
+                    key={fp}
+                    onClick={() => toggleFloorPlanFilter(fp)}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      floorPlanFilters.includes(fp)
+                        ? "bg-accent text-white"
+                        : "bg-gray-100 text-secondary hover:bg-gray-200"
+                    }`}
+                  >
+                    {fp}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Orientation Filters */}
+          {availableOrientations.length > 0 && (
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Orientation
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {availableOrientations.map(o => (
+                  <button
+                    key={o}
+                    onClick={() => toggleOrientationFilter(o)}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      orientationFilters.includes(o)
+                        ? "bg-accent text-white"
+                        : "bg-gray-100 text-secondary hover:bg-gray-200"
+                    }`}
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Price and Sqft Ranges - Single Row */}
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">

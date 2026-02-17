@@ -37,6 +37,8 @@ export default function AllListings() {
     sqftMin: "",
     sqftMax: "",
     sortBy: "dom",
+    floorPlanFilters: [],
+    orientationFilters: [],
   });
 
   useEffect(() => {
@@ -88,8 +90,25 @@ export default function AllListings() {
     if (filters.sqftMin && listing.livingArea < parseFloat(filters.sqftMin)) return false;
     if (filters.sqftMax && listing.livingArea > parseFloat(filters.sqftMax)) return false;
 
+    if (filters.floorPlanFilters.length > 0) {
+      if (!listing.floorPlan || !filters.floorPlanFilters.includes(listing.floorPlan)) return false;
+    }
+
+    if (filters.orientationFilters.length > 0) {
+      if (!listing.orientation || !filters.orientationFilters.includes(listing.orientation)) return false;
+    }
+
     return true;
   });
+
+  // Compute available floor plans and orientations from the current type-filtered listing set
+  const typeFilteredListings = listings.filter(l => l.listingType === filters.listingTypeFilter);
+  const availableFloorPlans = Array.from(
+    new Set(typeFilteredListings.map(l => l.floorPlan).filter((fp): fp is string => !!fp))
+  ).sort();
+  const availableOrientations = Array.from(
+    new Set(typeFilteredListings.map(l => l.orientation).filter((o): o is string => !!o))
+  ).sort();
 
   // Sort listings
   const sortedListings = [...filteredListings].sort((a, b) => {
@@ -158,6 +177,8 @@ export default function AllListings() {
         onViewModeChange={setViewMode}
         resultCount={sortedListings.length}
         totalCount={totalCount}
+        availableFloorPlans={availableFloorPlans}
+        availableOrientations={availableOrientations}
       />
 
       {/* Content */}

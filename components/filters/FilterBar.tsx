@@ -15,6 +15,8 @@ export interface FilterState {
   sqftMin: string;
   sqftMax: string;
   sortBy: SortOption;
+  floorPlanFilters: string[];
+  orientationFilters: string[];
 }
 
 interface FilterBarProps {
@@ -24,6 +26,8 @@ interface FilterBarProps {
   onViewModeChange: (mode: "list" | "map") => void;
   resultCount: number;
   totalCount: number;
+  availableFloorPlans?: string[];
+  availableOrientations?: string[];
 }
 
 // Format price for display in active label
@@ -44,8 +48,11 @@ export default function FilterBar({
   onViewModeChange,
   resultCount,
   totalCount,
+  availableFloorPlans = [],
+  availableOrientations = [],
 }: FilterBarProps) {
   const [buildingSearch, setBuildingSearch] = useState("");
+  const [floorPlanSearch, setFloorPlanSearch] = useState("");
 
   const update = (partial: Partial<FilterState>) => {
     onFiltersChange({ ...filters, ...partial });
@@ -65,10 +72,26 @@ export default function FilterBar({
     update({ selectedBuildings: next });
   };
 
+  const toggleFloorPlan = (fp: string) => {
+    const next = filters.floorPlanFilters.includes(fp)
+      ? filters.floorPlanFilters.filter(f => f !== fp)
+      : [...filters.floorPlanFilters, fp];
+    update({ floorPlanFilters: next });
+  };
+
+  const toggleOrientation = (o: string) => {
+    const next = filters.orientationFilters.includes(o)
+      ? filters.orientationFilters.filter(x => x !== o)
+      : [...filters.orientationFilters, o];
+    update({ orientationFilters: next });
+  };
+
   // Active filter counts
   const activeFilterCount =
     filters.bedroomFilters.length +
     filters.selectedBuildings.length +
+    filters.floorPlanFilters.length +
+    filters.orientationFilters.length +
     (filters.priceMin ? 1 : 0) +
     (filters.priceMax ? 1 : 0) +
     (filters.sqftMin ? 1 : 0) +
@@ -103,8 +126,22 @@ export default function FilterBar({
     buildingLabel = `${filters.selectedBuildings.length} building${filters.selectedBuildings.length > 1 ? "s" : ""}`;
   }
 
+  let floorPlanLabel: string | undefined;
+  if (filters.floorPlanFilters.length > 0) {
+    floorPlanLabel = `${filters.floorPlanFilters.length} plan${filters.floorPlanFilters.length > 1 ? "s" : ""}`;
+  }
+
+  let orientationLabel: string | undefined;
+  if (filters.orientationFilters.length > 0) {
+    orientationLabel = filters.orientationFilters.join(", ");
+  }
+
   const filteredBuildings = sortedBuildings.filter(b =>
     b.name.toLowerCase().includes(buildingSearch.toLowerCase())
+  );
+
+  const filteredFloorPlans = availableFloorPlans.filter(fp =>
+    fp.toLowerCase().includes(floorPlanSearch.toLowerCase())
   );
 
   return (
@@ -275,6 +312,92 @@ export default function FilterBar({
             </div>
           </FilterDropdown>
 
+          {/* Floor Plan */}
+          {availableFloorPlans.length > 0 && (
+            <FilterDropdown
+              label="Floor Plan"
+              activeLabel={floorPlanLabel}
+              isActive={filters.floorPlanFilters.length > 0}
+              width="w-64"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Floor Plan</p>
+                  {filters.floorPlanFilters.length > 0 && (
+                    <button
+                      onClick={() => update({ floorPlanFilters: [] })}
+                      className="text-[10px] font-medium uppercase tracking-wide text-accent hover:text-primary"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {availableFloorPlans.length > 6 && (
+                  <input
+                    type="text"
+                    placeholder="Search floor plans..."
+                    value={floorPlanSearch}
+                    onChange={(e) => setFloorPlanSearch(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
+                  />
+                )}
+                <div className="max-h-48 overflow-y-auto">
+                  {filteredFloorPlans.map(fp => (
+                    <label
+                      key={fp}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-secondary hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.floorPlanFilters.includes(fp)}
+                        onChange={() => toggleFloorPlan(fp)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-accent focus:ring-accent"
+                      />
+                      {fp}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </FilterDropdown>
+          )}
+
+          {/* Orientation */}
+          {availableOrientations.length > 0 && (
+            <FilterDropdown
+              label="Orientation"
+              activeLabel={orientationLabel}
+              isActive={filters.orientationFilters.length > 0}
+              width="w-56"
+            >
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Orientation</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableOrientations.map(o => (
+                    <button
+                      key={o}
+                      onClick={() => toggleOrientation(o)}
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        filters.orientationFilters.includes(o)
+                          ? "bg-accent text-white"
+                          : "bg-gray-100 text-secondary hover:bg-gray-200"
+                      }`}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+                {filters.orientationFilters.length > 0 && (
+                  <button
+                    onClick={() => update({ orientationFilters: [] })}
+                    className="text-xs font-medium text-accent hover:text-primary"
+                  >
+                    Clear orientation
+                  </button>
+                )}
+              </div>
+            </FilterDropdown>
+          )}
+
           {/* More (Sqft + Sort) */}
           <FilterDropdown
             label={moreCount > 0 ? `More +${moreCount}` : "More"}
@@ -337,6 +460,8 @@ export default function FilterBar({
                 priceMax: "",
                 sqftMin: "",
                 sqftMax: "",
+                floorPlanFilters: [],
+                orientationFilters: [],
               })}
               className="whitespace-nowrap text-sm font-medium text-accent hover:text-primary"
             >

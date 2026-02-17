@@ -10,6 +10,8 @@ import {
   AllEnrichmentMaps,
   EnrichmentEntry,
 } from "./analytics-types";
+import { MLSListing } from "./types";
+import { UnitLookupEntry } from "@/data/unitLookup";
 
 const ENRICHMENT_PREFIX = "mls:enrichment:";
 
@@ -58,6 +60,23 @@ export async function writeEnrichmentMap(
       error
     );
     throw error;
+  }
+}
+
+/**
+ * Delete enrichment map for a building.
+ */
+export async function deleteEnrichmentMap(
+  buildingSlug: string
+): Promise<void> {
+  try {
+    await kv.del(getEnrichmentKey(buildingSlug));
+    console.log(`[Enrichment] Deleted enrichment map for ${buildingSlug}`);
+  } catch (error) {
+    console.error(
+      `[Enrichment] Error deleting map for ${buildingSlug}:`,
+      error
+    );
   }
 }
 
@@ -199,10 +218,53 @@ export function enrichListings(
  * Normalize unit number for fuzzy matching.
  * Strips leading zeros, removes common prefixes like '#', trims whitespace.
  */
-function normalizeUnit(unit: string): string {
+export function normalizeUnit(unit: string): string {
   return unit
     .trim()
     .replace(/^#/, "")
     .replace(/^0+/, "")
     .toUpperCase();
+}
+
+/**
+ * Enrich a single active MLS listing with floor plan data from the static unit lookup.
+ * Returns the listing with floorPlan, orientation, and floorPlanSlug populated if a match is found.
+ */
+export function enrichActiveListingWithFloorPlan(
+  listing: MLSListing,
+  buildingLookup: Record<string, UnitLookupEntry>
+): MLSListing {
+  if (!listing.unitNumber) {
+    return listing;
+  }
+
+  // Try exact match first
+  let entry = buildingLookup[listing.unitNumber];
+
+  // Try normalized unit number
+  if (!entry) {
+    const normalized = normalizeUnit(listing.unitNumber);
+    entry = buildingLookup[normalized];
+
+    // Also try matching against normalized versions of the lookup keys
+    if (!entry) {
+      for (const [mapUnit, mapEntry] of Object.entries(buildingLookup)) {
+        if (normalizeUnit(mapUnit) === normalized) {
+          entry = mapEntry;
+          break;
+        }
+      }
+    }
+  }
+
+  if (entry) {
+    return {
+      ...listing,
+      floorPlan: entry.floorPlan,
+      orientation: entry.orientation,
+      floorPlanSlug: entry.floorPlanSlug,
+    };
+  }
+
+  return listing;
 }

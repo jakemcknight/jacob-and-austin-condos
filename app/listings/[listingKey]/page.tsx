@@ -232,6 +232,31 @@ export default async function ListingPage({ params }: ListingPageProps) {
                 </div>
               </div>
 
+              {/* Insight by Jacob — Floor Plan & Orientation */}
+              {listing.floorPlan && (
+                <div className="mt-8 rounded border-l-4 border-accent bg-accent/5 p-5">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-accent">Insight by Jacob</h2>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className="text-sm text-secondary">
+                      <span className="font-medium text-primary">Floor Plan:</span> {listing.floorPlan}
+                    </span>
+                    {listing.orientation && (
+                      <span className="text-sm text-secondary">
+                        <span className="font-medium text-primary">Orientation:</span> {listing.orientation}
+                      </span>
+                    )}
+                  </div>
+                  {listing.floorPlanSlug && buildingSlug && (
+                    <Link
+                      href={`/${buildingSlug}/${listing.floorPlanSlug}`}
+                      className="mt-3 inline-block text-sm font-semibold text-accent hover:text-primary"
+                    >
+                      View {listing.floorPlan} Floor Plan →
+                    </Link>
+                  )}
+                </div>
+              )}
+
               {/* Description / Remarks */}
               {listing.publicRemarks && (
                 <div className="mt-8">

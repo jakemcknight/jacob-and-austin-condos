@@ -59,6 +59,11 @@ export interface MLSListing {
   listOfficeName?: string;
   listOfficePhone?: string;
 
+  // Floor plan enrichment (populated during sync from unitLookup data)
+  floorPlan?: string; // e.g. "A9"
+  orientation?: string; // e.g. "SEc", "N", "W"
+  floorPlanSlug?: string; // e.g. "a9-1br-801sf-floorplan" (for linking to floor plan pages)
+
   // Raw MLS data (for debugging)
   rawData?: Record<string, any>;
 }

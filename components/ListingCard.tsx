@@ -27,6 +27,9 @@ export interface MLSListingDisplay {
   city?: string;
   postalCode?: string;
   yearBuilt?: number;
+  floorPlan?: string;
+  orientation?: string;
+  floorPlanSlug?: string;
 }
 
 interface ListingCardProps {

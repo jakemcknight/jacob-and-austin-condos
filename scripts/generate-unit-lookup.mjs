@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+
+/**
+ * Unit Lookup Generator
+ *
+ * Reads the unit-lookup.csv and generates a TypeScript lookup file (data/unitLookup.ts)
+ * that maps buildingSlug → unitNumber → { floorPlan, orientation, floorPlanSlug }
+ *
+ * This lookup is used during MLS sync to enrich active listings with floor plan data.
+ * The floorPlanSlug is resolved by matching CSV floor plan names against data/floorPlans.ts.
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const CSV_PATH = '/Users/jacobhannusch/Documents/floorplan-data/exports/unit-lookup.csv';
+const PROJECT_ROOT = path.join(__dirname, '..');
+const OUTPUT_FILE = path.join(PROJECT_ROOT, 'data/unitLookup.ts');
+const FLOORPLANS_FILE = path.join(PROJECT_ROOT, 'data/floorPlans.ts');
+
+// CSV building name → building slug mapping
+const BUILDING_NAME_MAP = {
+  '360 Condos': '360-condominiums',
+  '44 East': '44-east',
+  '5th & West': '5th-and-west',
+  '70 Rainey': '70-rainey',
+  'Austin City Lofts': 'austin-city-lofts',
+  'Austin Proper': 'austin-proper-residences',
+  'Natiivo': 'natiivo',
+  'Seaholm Residences': 'seaholm-residences',
+  'Spring Condos': 'spring-condominiums',
+  'The Austonian': 'the-austonian',
+  'The Independent': 'the-independent',
+  'W Residences': 'the-w-residences',
+};
+
+/**
+ * Parse a single CSV line (handles quoted values)
+ */
+function parseLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+/**
+ * Parse CSV file into records
+ */
+function parseCSV(csvContent) {
+  const lines = csvContent.trim().split('\n');
+  const headers = parseLine(lines[0]);
+  const records = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim()) {
+      const values = parseLine(lines[i]);
+      const record = {};
+      headers.forEach((header, index) => {
+        record[header] = values[index] || '';
+      });
+      records.push(record);
+    }
+  }
+
+  return records;
+}
+
+/**
+ * Extract floor plan name→slug mapping from floorPlans.ts
+ * Returns Record<buildingSlug, Record<floorPlanNameUpperCase, floorPlanSlug>>
+ */
+function extractFloorPlanSlugs() {
+  const content = fs.readFileSync(FLOORPLANS_FILE, 'utf-8');
+  const map = {};
+
+  // Parse the TypeScript file to extract building slug → floor plan name → slug
+  let currentBuilding = null;
+  let currentName = null;
+
+  for (const line of content.split('\n')) {
+    // Match building slug key: "360-condominiums": [
+    const buildingMatch = line.match(/^\s+"([a-z0-9-]+)":\s*\[/);
+    if (buildingMatch) {
+      currentBuilding = buildingMatch[1];
+      map[currentBuilding] = {};
+      continue;
+    }
+
+    // Match name field: name: "A1",
+    const nameMatch = line.match(/^\s+name:\s*"([^"]+)"/);
+    if (nameMatch && currentBuilding) {
+      currentName = nameMatch[1];
+      continue;
+    }
+
+    // Match slug field: slug: "a1-1br-748sf-floorplan",
+    const slugMatch = line.match(/^\s+slug:\s*"([^"]+)"/);
+    if (slugMatch && currentBuilding && currentName) {
+      map[currentBuilding][currentName.toUpperCase()] = slugMatch[1];
+      currentName = null;
+      continue;
+    }
+  }
+
+  return map;
+}
+
+// --- Main ---
+
+console.log('Reading CSV...');
+const csvContent = fs.readFileSync(CSV_PATH, 'utf-8');
+const records = parseCSV(csvContent);
+console.log(`Parsed ${records.length} records from CSV`);
+
+console.log('Extracting floor plan slugs from floorPlans.ts...');
+const floorPlanSlugs = extractFloorPlanSlugs();
+
+// Build the lookup: buildingSlug → unitNumber → { floorPlan, orientation, floorPlanSlug }
+const lookup = {};
+let matched = 0;
+let unmatched = 0;
+let noSlug = 0;
+
+for (const record of records) {
+  const buildingName = record['Building'];
+  const unitNumber = record['Unit Number'];
+  const floorPlan = record['Floorplan'];
+  const orientation = record['Orientation'];
+
+  if (!buildingName || buildingName === 'Building') continue; // skip header row if duplicated
+  if (!unitNumber) continue;
+
+  const buildingSlug = BUILDING_NAME_MAP[buildingName];
+  if (!buildingSlug) {
+    console.warn(`  Unknown building: "${buildingName}"`);
+    unmatched++;
+    continue;
+  }
+
+  if (!lookup[buildingSlug]) {
+    lookup[buildingSlug] = {};
+  }
+
+  // Resolve floor plan slug from floorPlans.ts
+  const buildingFPs = floorPlanSlugs[buildingSlug] || {};
+  const fpSlug = buildingFPs[floorPlan.toUpperCase()] || '';
+
+  if (!fpSlug && floorPlan) {
+    noSlug++;
+  }
+
+  lookup[buildingSlug][unitNumber] = {
+    floorPlan,
+    orientation,
+    floorPlanSlug: fpSlug,
+  };
+
+  matched++;
+}
+
+// Generate TypeScript output
+let output = `// Auto-generated by scripts/generate-unit-lookup.mjs
+// DO NOT EDIT MANUALLY - changes will be overwritten
+// Source: ${CSV_PATH}
+// Generated: ${new Date().toISOString()}
+
+export interface UnitLookupEntry {
+  floorPlan: string;
+  orientation: string;
+  floorPlanSlug: string;
+}
+
+export const unitLookup: Record<string, Record<string, UnitLookupEntry>> = {\n`;
+
+const buildingSlugs = Object.keys(lookup).sort();
+for (const slug of buildingSlugs) {
+  const units = lookup[slug];
+  const unitNumbers = Object.keys(units).sort((a, b) => {
+    const numA = parseInt(a, 10);
+    const numB = parseInt(b, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+
+  output += `  "${slug}": {\n`;
+  for (const unit of unitNumbers) {
+    const entry = units[unit];
+    output += `    "${unit}": { floorPlan: "${entry.floorPlan}", orientation: "${entry.orientation}", floorPlanSlug: "${entry.floorPlanSlug}" },\n`;
+  }
+  output += `  },\n`;
+}
+
+output += `};\n`;
+
+fs.writeFileSync(OUTPUT_FILE, output, 'utf-8');
+
+// Print summary
+console.log('\n--- Summary ---');
+console.log(`Buildings: ${buildingSlugs.length}`);
+console.log(`Units matched: ${matched}`);
+console.log(`Unknown buildings: ${unmatched}`);
+console.log(`Floor plans without slug: ${noSlug}`);
+for (const slug of buildingSlugs) {
+  console.log(`  ${slug}: ${Object.keys(lookup[slug]).length} units`);
+}
+console.log(`\nOutput written to: ${OUTPUT_FILE}`);
