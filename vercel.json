@@ -8,6 +8,15 @@
   "functions": {
     "app/api/mls/sync/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/mls/analytics-import/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/mls/enrichment-apply/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/mls/analytics-import-files/route.ts": {
+      "maxDuration": 300
     }
   }
 }

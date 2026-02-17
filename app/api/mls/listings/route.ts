@@ -9,6 +9,18 @@ import { buildings } from "@/data/buildings";
 // Force dynamic rendering - no ISR caching since data is already cached in KV
 export const dynamic = 'force-dynamic';
 
+// Reserved cache key for DT condo listings not matched to a specific building
+const UNMATCHED_SLUG = "_unmatched";
+
+// Strip originating system prefix (e.g. "ACT") from mlsNumber for display
+// Handles both old cached data (with prefix) and new data (already stripped)
+function cleanMlsNumber(listing: any): any {
+  if (listing.mlsNumber && /^[A-Z]+\d/.test(listing.mlsNumber)) {
+    return { ...listing, mlsNumber: listing.mlsNumber.replace(/^[A-Z]+/, "") };
+  }
+  return listing;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -23,13 +35,24 @@ export async function GET(request: NextRequest) {
         const cached = await readMlsCache(building.slug);
         if (cached && cached.data) {
           // Add building metadata to each listing for filtering/display
-          const listingsWithBuilding = cached.data.map((listing: any) => ({
+          const listingsWithBuilding = cached.data.map((listing: any) => cleanMlsNumber({
             ...listing,
             buildingSlug: building.slug,
             buildingName: building.name,
           }));
           allListings.push(...listingsWithBuilding);
         }
+      }
+
+      // Include unmatched DT condo listings (not tied to a specific building)
+      const unmatchedCached = await readMlsCache(UNMATCHED_SLUG);
+      if (unmatchedCached && unmatchedCached.data) {
+        const unmatchedWithMeta = unmatchedCached.data.map((listing: any) => cleanMlsNumber({
+          ...listing,
+          buildingSlug: null,
+          buildingName: listing.buildingName || "Downtown Austin",
+        }));
+        allListings.push(...unmatchedWithMeta);
       }
 
       console.log(`[MLS API] Returning ${allListings.length} total listings across all buildings`);
@@ -56,7 +79,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[MLS API] Cache hit for ${buildingSlug} (${cached.data.length} listings)`);
-    return NextResponse.json(cached.data);
+    return NextResponse.json(cached.data.map(cleanMlsNumber));
   } catch (error) {
     console.error("[MLS API] Error:", error);
 

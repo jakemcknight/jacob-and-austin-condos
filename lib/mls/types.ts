@@ -36,11 +36,28 @@ export interface MLSListing {
   photos?: string[];
   virtualTourUrl?: string;
 
+  // Location details
+  city?: string;
+  postalCode?: string;
+
+  // Description
+  publicRemarks?: string;
+
   // Additional details
   propertyType?: string;
   propertySubType?: string;
   parkingFeatures?: string;
   hoaFee?: number;
+  associationFeeFrequency?: string;
+  yearBuilt?: number;
+  taxAnnualAmount?: number;
+  taxYear?: number;
+
+  // Agent & Office
+  listAgentFullName?: string;
+  listAgentDirectPhone?: string;
+  listOfficeName?: string;
+  listOfficePhone?: string;
 
   // Raw MLS data (for debugging)
   rawData?: Record<string, any>;

@@ -2,10 +2,14 @@
 // Uses Upstash Redis for persistent storage in serverless environment
 
 import { kv } from "@vercel/kv";
+import { unstable_noStore as noStore } from "next/cache";
 import { MLSListing, CachedMlsData } from "./types";
 
 // KV key prefix for MLS cache entries
 const CACHE_PREFIX = "mls:cache:";
+
+// KV key for the listing-to-building reverse index
+const LISTING_INDEX_KEY = "mls:index:listings";
 
 /**
  * Generate KV key for a building's MLS cache
@@ -18,6 +22,7 @@ function getCacheKey(slug: string): string {
  * Read MLS cache for a specific building from Vercel KV
  */
 export async function readMlsCache(slug: string): Promise<CachedMlsData | null> {
+  noStore();
   try {
     const key = getCacheKey(slug);
     const cached = await kv.get<CachedMlsData>(key);
@@ -35,14 +40,16 @@ export async function readMlsCache(slug: string): Promise<CachedMlsData | null> 
 
 /**
  * Strip heavy fields before caching to stay under Upstash 1MB value limit.
- * Removes rawData and limits photos to first 10 per listing.
+ * Removes rawData but keeps all photos — URLs are ~200 bytes each, so even
+ * 40 photos per listing is only ~8KB, well within the 1MB KV limit per building.
+ * Photo bytes are never stored in KV; only fetched on-demand by the photo proxy.
  */
 function trimForCache(listings: MLSListing[]): MLSListing[] {
   return listings.map(listing => {
     const { rawData, ...rest } = listing as any;
     return {
       ...rest,
-      photos: (rest.photos || []).slice(0, 10),
+      photos: rest.photos || [],
     };
   });
 }
@@ -131,6 +138,36 @@ export function isCacheExpired(timestamp: number, ttl: number): boolean {
   const now = Date.now();
   const age = (now - timestamp) / 1000; // Convert to seconds
   return age > ttl;
+}
+
+/**
+ * Write the listing-to-building reverse index to KV.
+ * Maps listingId → buildingSlug so the photo proxy can find any listing's
+ * photos in 2 KV reads instead of scanning all building caches.
+ */
+export async function writeListingIndex(index: Record<string, string>): Promise<void> {
+  try {
+    await kv.set(LISTING_INDEX_KEY, index);
+    console.log(`[MLS Cache] Wrote listing index (${Object.keys(index).length} entries)`);
+  } catch (error) {
+    console.error("[MLS Cache] Error writing listing index:", error);
+    throw error;
+  }
+}
+
+/**
+ * Read the listing-to-building reverse index from KV.
+ * Returns a map of listingId → buildingSlug, or null if not found.
+ */
+export async function readListingIndex(): Promise<Record<string, string> | null> {
+  noStore();
+  try {
+    const index = await kv.get<Record<string, string>>(LISTING_INDEX_KEY);
+    return index || null;
+  } catch (error) {
+    console.error("[MLS Cache] Error reading listing index:", error);
+    return null;
+  }
 }
 
 /**

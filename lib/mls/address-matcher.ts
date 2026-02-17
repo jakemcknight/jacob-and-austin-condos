@@ -92,12 +92,51 @@ export function matchListingToBuilding(mlsAddress: string, buildingName?: string
     console.log(`[Address Matcher]   Top 3: ${top3}`);
   }
 
+  // If fuzzy matching failed, try exact street number matching as fallback
+  // This catches cases like "40 Interstate 35" → "40 N IH 35" where normalization
+  // differs but the street number is unique enough to identify the building
+  if (!bestMatch) {
+    const mlsStreetNum = extractStreetNumber(mlsAddress);
+    if (mlsStreetNum) {
+      for (const building of buildings) {
+        const buildingStreetNum = extractStreetNumber(building.address);
+        if (buildingStreetNum && mlsStreetNum === buildingStreetNum) {
+          // Verify the street names share at least some similarity
+          const mlsStreet = normalizeAddress(mlsAddress).replace(/^\d+\s*/, '');
+          const buildingStreet = normalizeAddress(building.address).replace(/^\d+\s*/, '');
+          // Accept if streets share a common word or if the number is distinctive (3+ digits)
+          if (mlsStreetNum.length >= 3 || streetsShareWord(mlsStreet, buildingStreet)) {
+            bestMatch = {
+              slug: building.slug,
+              score: 0.76,
+              buildingAddress: building.address,
+              mlsAddress,
+              matchType: 'address',
+            };
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Log unmatched addresses for manual review
   if (!bestMatch) {
     logUnmatchedAddress(mlsAddress, normalizedAddr, buildingName);
   }
 
   return bestMatch?.slug || null;
+}
+
+function extractStreetNumber(addr: string): string | null {
+  const match = addr.match(/^(\d+)/);
+  return match ? match[1] : null;
+}
+
+function streetsShareWord(a: string, b: string): boolean {
+  const wordsA = a.split(/\s+/).filter(w => w.length > 1);
+  const wordsB = b.split(/\s+/).filter(w => w.length > 1);
+  return wordsA.some(w => wordsB.includes(w));
 }
 
 /**
@@ -107,12 +146,14 @@ export function matchListingToBuilding(mlsAddress: string, buildingName?: string
 function normalizeAddress(addr: string): string {
   return addr
     .toLowerCase()
+    // Normalize interstate highway variations to "ih"
+    .replace(/\b(interstate\s+highway|interstate\s+hwy|interstate)\b/gi, "ih")
     // Remove common street suffixes
     .replace(/\b(avenue|ave|street|st|road|rd|drive|dr|boulevard|blvd|lane|ln|court|ct|place|pl|way)\b/gi, "")
     // Remove directional indicators
     .replace(/\b(north|south|east|west|n|s|e|w|ne|nw|se|sw)\b/gi, "")
-    // Remove unit indicators
-    .replace(/\b(unit|apt|apartment|#|number|no|ste|suite)\b/gi, "")
+    // Remove unit indicators and everything after them (unit numbers leak into addresses)
+    .replace(/\b(unit|apt|apartment|#|number|no|ste|suite)\b.*/gi, "")
     // Remove special characters
     .replace(/[^\w\s]/g, "")
     // Normalize whitespace

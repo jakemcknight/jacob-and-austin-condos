@@ -2,70 +2,81 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { readMlsCache } from "@/lib/mls/cache";
 import { buildings } from "@/data/buildings";
-import { matchListingToBuilding } from "@/lib/mls/address-matcher";
+import { calculateDaysOnMarket } from "@/lib/format-dom";
 import ContactForm from "@/components/ContactForm";
+import ListingGallery from "@/components/ListingGallery";
+import ShareButton from "@/components/ShareButton";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Dynamic import for SSR safety (Leaflet requires window)
+const BuildingLocationMap = dynamic(
+  () => import("@/components/map/BuildingLocationMap"),
+  { ssr: false, loading: () => (
+    <div className="flex h-full items-center justify-center bg-gray-100">
+      <p className="text-sm uppercase tracking-wider text-accent">Loading map...</p>
+    </div>
+  )}
+);
 
 interface ListingPageProps {
   params: { listingKey: string };
 }
 
-// Helper function to fetch all photos for a listing
-async function fetchAllPhotos(listingKey: string): Promise<string[]> {
-  const accessToken = process.env.MLSGRID_ACCESS_TOKEN;
-  const baseUrl = process.env.MLSGRID_API_URL || "https://api.mlsgrid.com/v2";
+// Strip originating system prefix (e.g. "ACT") from mlsNumber
+function stripMlsPrefix(mlsNumber: string): string {
+  return mlsNumber.replace(/^[A-Z]+/, "");
+}
 
-  if (!accessToken) {
-    return [];
-  }
-
+// Format date string (YYYY-MM-DD) to readable format (Jan 15, 2025)
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
   try {
-    const url = `${baseUrl}/Media?$filter=ResourceRecordKey eq '${listingKey}'&$orderby=Order asc&$select=MediaURL`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 900 }, // Cache for 15 minutes
+    const date = new Date(dateStr + "T00:00:00");
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-
-    if (data.value && Array.isArray(data.value)) {
-      return data.value
-        .filter((item: any) => item.MediaURL)
-        .map((item: any) => item.MediaURL);
-    }
-
-    return [];
-  } catch (error) {
-    console.error(`Error fetching photos for ${listingKey}:`, error);
-    return [];
+  } catch {
+    return dateStr;
   }
+}
+
+/**
+ * Search all building caches + _unmatched for a listing by MLS number.
+ * Matches both prefixed (ACT4582237) and clean (4582237) formats.
+ * Returns { listing, buildingSlug } or { listing: null, buildingSlug: null }.
+ */
+async function findListingByMlsNumber(mlsNumber: string) {
+  const cleanNumber = stripMlsPrefix(mlsNumber);
+
+  // Search all building caches
+  for (const building of buildings) {
+    const cached = await readMlsCache(building.slug);
+    if (cached) {
+      const found = cached.data.find(l => stripMlsPrefix(l.mlsNumber) === cleanNumber);
+      if (found) {
+        return { listing: found, buildingSlug: building.slug };
+      }
+    }
+  }
+
+  // Also search unmatched listings
+  const unmatched = await readMlsCache("_unmatched");
+  if (unmatched) {
+    const found = unmatched.data.find(l => stripMlsPrefix(l.mlsNumber) === cleanNumber);
+    if (found) {
+      return { listing: found, buildingSlug: null as string | null };
+    }
+  }
+
+  return { listing: null, buildingSlug: null as string | null };
 }
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
-  // Find the listing across all building caches
-  let listing = null;
-  let buildingSlug = null;
-
-  for (const building of buildings) {
-    const cached = await readMlsCache(building.slug);
-    if (cached) {
-      const found = cached.data.find(l => l.mlsNumber === params.listingKey);
-      if (found) {
-        listing = found;
-        buildingSlug = building.slug;
-        break;
-      }
-    }
-  }
+  const { listing, buildingSlug } = await findListingByMlsNumber(params.listingKey);
 
   if (!listing) {
     return { title: "Listing Not Found" };
@@ -73,7 +84,13 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
 
   const building = buildings.find(b => b.slug === buildingSlug);
   const title = `${listing.buildingName || building?.name || ""} ${listing.unitNumber ? `#${listing.unitNumber}` : ""} - $${listing.listPrice.toLocaleString()}`;
-  const description = `${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo for ${listing.listingType === "Sale" ? "sale" : "lease"} in downtown Austin. ${listing.livingArea.toLocaleString()} sqft at $${listing.priceSf.toFixed(0)}/sqft. MLS# ${listing.mlsNumber}`;
+  const description = `${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo for ${listing.listingType === "Sale" ? "sale" : "lease"} in downtown Austin. ${listing.livingArea.toLocaleString()} sqft at $${listing.priceSf.toFixed(0)}/sqft. MLS# ${stripMlsPrefix(listing.mlsNumber)}`;
+
+  // OG image: use our photo proxy which has Vercel CDN caching.
+  // Once cached at the edge, it serves reliably regardless of MLSGrid CDN availability.
+  const ogImage = listing.photos && listing.photos.length > 0
+    ? `https://jacobinaustin.com/downtown-condos/api/mls/photo/${listing.listingId}/0`
+    : `https://jacobinaustin.com/downtown-condos/images/og-default.jpg`;
 
   return {
     title,
@@ -81,27 +98,17 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     openGraph: {
       title,
       description,
-      images: listing.photos,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [ogImage],
     },
   };
 }
 
 export default async function ListingPage({ params }: ListingPageProps) {
-  // Find the listing across all building caches
-  let listing = null;
-  let buildingSlug = null;
-
-  for (const building of buildings) {
-    const cached = await readMlsCache(building.slug);
-    if (cached) {
-      const found = cached.data.find(l => l.mlsNumber === params.listingKey);
-      if (found) {
-        listing = found;
-        buildingSlug = building.slug;
-        break;
-      }
-    }
-  }
+  const { listing, buildingSlug } = await findListingByMlsNumber(params.listingKey);
 
   if (!listing) {
     notFound();
@@ -109,53 +116,102 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   const building = buildings.find(b => b.slug === buildingSlug);
 
-  // Fetch all photos for the listing
-  const allPhotos = await fetchAllPhotos(params.listingKey);
+  // Use photos from KV cache (populated by sync cron) — no MLSGrid API call needed
+  const allPhotos = listing.photos || [];
+
+  // Build property details rows (only show if value exists)
+  const propertyDetails: { label: string; value: string }[] = [];
+  propertyDetails.push({ label: "Status", value: listing.status });
+  const dom = calculateDaysOnMarket(listing.listDate);
+  propertyDetails.push({ label: "Days on Market", value: String(dom) });
+  if (listing.listDate) {
+    propertyDetails.push({ label: "List Date", value: formatDate(listing.listDate) });
+  }
+  if (listing.yearBuilt) {
+    propertyDetails.push({ label: "Year Built", value: String(listing.yearBuilt) });
+  }
+  if (listing.propertySubType) {
+    propertyDetails.push({ label: "Property Type", value: listing.propertySubType });
+  }
+  if (listing.hoaFee) {
+    const freq = listing.associationFeeFrequency ? `/${listing.associationFeeFrequency.toLowerCase()}` : "/month";
+    propertyDetails.push({ label: "HOA Fee", value: `$${listing.hoaFee.toLocaleString()}${freq}` });
+  }
+  if (listing.taxAnnualAmount) {
+    const yearStr = listing.taxYear ? ` (${listing.taxYear})` : "";
+    propertyDetails.push({ label: "Tax (Annual)", value: `$${listing.taxAnnualAmount.toLocaleString()}${yearStr}` });
+  }
+  if (listing.parkingFeatures) {
+    propertyDetails.push({ label: "Parking", value: listing.parkingFeatures });
+  }
+
+  // Build listing history timeline
+  const historyEvents: { date: string; label: string; detail: string }[] = [];
+  if (listing.listDate) {
+    const originalPrice = listing.originalListPrice && listing.originalListPrice > 0
+      ? listing.originalListPrice
+      : listing.listPrice;
+    historyEvents.push({
+      date: formatDate(listing.listDate),
+      label: "Listed",
+      detail: `Listed for $${originalPrice.toLocaleString()}`,
+    });
+  }
+  if (listing.originalListPrice && listing.originalListPrice > 0 && listing.originalListPrice !== listing.listPrice) {
+    const diff = listing.listPrice - listing.originalListPrice;
+    const direction = diff > 0 ? "increased" : "reduced";
+    historyEvents.push({
+      date: "",
+      label: `Price ${direction}`,
+      detail: `Price ${direction} to $${listing.listPrice.toLocaleString()}`,
+    });
+  }
+  historyEvents.push({
+    date: "Now",
+    label: listing.status,
+    detail: `${listing.status} · ${dom} days on market`,
+  });
+
+  // Reverse so newest (current status) is at top, list date at bottom
+  historyEvents.reverse();
 
   return (
     <>
-      {/* Hero Image */}
-      <section className="relative h-[60vh] bg-gray-900">
-        {allPhotos.length > 0 ? (
-          <img
-            src={allPhotos[0]}
-            alt={`${listing.buildingName || building?.name} ${listing.unitNumber}`}
-            className="h-full w-full object-cover opacity-90"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <div className="text-6xl">🏙️</div>
-              <p className="mt-4 text-lg uppercase tracking-wider text-gray-400">
-                {listing.buildingName || building?.name}
-              </p>
-            </div>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-        {/* Listing Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <div className="container mx-auto max-w-6xl">
-            <h1 className="text-4xl font-bold md:text-5xl">
-              {listing.buildingName || building?.name}
-              {listing.unitNumber && <span className="ml-2">#{listing.unitNumber}</span>}
-            </h1>
-            <p className="mt-2 text-xl text-gray-200">{listing.address}</p>
-            <div className="mt-4 text-3xl font-bold">
-              ${listing.listPrice.toLocaleString()}
-              {listing.listingType === "Lease" && <span className="text-xl font-normal">/month</span>}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Photo Gallery — tan background with padding below */}
+      <div className="bg-light pb-6 md:pb-8">
+        <ListingGallery
+          listingId={listing.listingId}
+          photos={allPhotos}
+          buildingName={listing.buildingName || building?.name || ""}
+          unitNumber={listing.unitNumber}
+        />
+      </div>
 
       {/* Listing Details */}
-      <section className="section-padding bg-white">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-white px-4 py-6 md:px-6 md:py-8 lg:px-8">
+        <div className="mx-auto max-w-6xl">
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Main Info */}
             <div className="lg:col-span-2">
+              {/* Listing Title + Price */}
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-primary md:text-4xl">
+                  {listing.buildingName || building?.name}
+                  {listing.unitNumber && <span className="ml-2">#{listing.unitNumber}</span>}
+                </h1>
+                <p className="mt-1 text-secondary">
+                  {listing.address}
+                  {listing.unitNumber && ` #${listing.unitNumber}`}
+                  {(listing.city || building?.city) && `, ${listing.city || building?.city}`}
+                  {(building?.state) && `, ${building.state}`}
+                  {(listing.postalCode || building?.zip) && ` ${listing.postalCode || building?.zip}`}
+                </p>
+                <p className="mt-2 text-2xl font-bold text-primary">
+                  ${listing.listPrice.toLocaleString()}
+                  {listing.listingType === "Lease" && <span className="text-lg font-normal">/month</span>}
+                </p>
+              </div>
+
               {/* Key Stats */}
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div className="rounded border border-gray-200 bg-gray-50 p-4 text-center">
@@ -176,60 +232,98 @@ export default async function ListingPage({ params }: ListingPageProps) {
                 </div>
               </div>
 
-              {/* Additional Info */}
-              <div className="mt-8 space-y-4">
-                <div className="border-b border-gray-200 pb-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">MLS Number</h3>
-                  <p className="mt-1 text-lg text-primary">{listing.mlsNumber}</p>
+              {/* Description / Remarks */}
+              {listing.publicRemarks && (
+                <div className="mt-8">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-accent">About This Property</h2>
+                  <p className="mt-3 whitespace-pre-line text-secondary leading-relaxed">
+                    {listing.publicRemarks}
+                  </p>
                 </div>
+              )}
 
-                <div className="border-b border-gray-200 pb-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">Status</h3>
-                  <p className="mt-1 text-lg text-primary">{listing.status}</p>
+              {/* Property Details */}
+              <div className="mt-8">
+                <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">Property Details</h2>
+                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
+                  {propertyDetails.map((row) => (
+                    <div key={row.label} className="flex justify-between border-b border-gray-100 pb-3">
+                      <span className="text-sm text-secondary">{row.label}</span>
+                      <span className="text-sm font-medium text-primary">{row.value}</span>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="border-b border-gray-200 pb-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">Days on Market</h3>
-                  <p className="mt-1 text-lg text-primary">{listing.daysOnMarket}</p>
-                </div>
-
-                {listing.hoaFee && (
-                  <div className="border-b border-gray-200 pb-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">HOA Fee</h3>
-                    <p className="mt-1 text-lg text-primary">${listing.hoaFee.toLocaleString()}/month</p>
-                  </div>
-                )}
-
-                {listing.parkingFeatures && (
-                  <div className="border-b border-gray-200 pb-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">Parking</h3>
-                    <p className="mt-1 text-lg text-primary">{listing.parkingFeatures}</p>
-                  </div>
-                )}
               </div>
 
-              {/* Photo Gallery */}
-              {allPhotos.length > 1 && (
+              {/* Listing History */}
+              {historyEvents.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">Photos</h3>
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                    {allPhotos.slice(1).map((photo, index) => (
-                      <div key={index} className="aspect-[4/3] overflow-hidden rounded border border-gray-200">
-                        <img
-                          src={photo}
-                          alt={`Photo ${index + 2}`}
-                          className="h-full w-full object-cover transition hover:scale-105"
-                        />
-                      </div>
-                    ))}
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">Listing History</h2>
+                  <div className="relative pl-6">
+                    {/* Timeline line */}
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-200" />
+                    <div className="space-y-4">
+                      {historyEvents.map((event, i) => (
+                        <div key={i} className="relative">
+                          {/* Timeline dot */}
+                          <div className={`absolute -left-6 top-1 h-3.5 w-3.5 rounded-full border-2 ${
+                            i === 0
+                              ? "border-zilker bg-zilker"
+                              : "border-gray-300 bg-white"
+                          }`} />
+                          <div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-semibold text-primary">{event.label}</span>
+                              {event.date && (
+                                <span className="text-xs text-secondary">{event.date}</span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-sm text-secondary">{event.detail}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Listing Attribution */}
+              <div className="mt-8 border-t border-gray-200 pt-6 text-sm text-secondary">
+                {(listing.listAgentFullName || listing.listOfficeName) && (
+                  <p>
+                    Listed by:{" "}
+                    {listing.listAgentFullName}
+                    {listing.listAgentDirectPhone && ` (${listing.listAgentDirectPhone})`}
+                    {listing.listOfficeName && (
+                      <>
+                        , {listing.listOfficeName}
+                        {listing.listOfficePhone && ` (${listing.listOfficePhone})`}
+                      </>
+                    )}
+                  </p>
+                )}
+                <p className={listing.listAgentFullName || listing.listOfficeName ? "mt-1" : ""}>
+                  Source: Unlock MLS, MLS#: {stripMlsPrefix(listing.mlsNumber)}
+                </p>
+              </div>
             </div>
 
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-6">
+              <div className="sticky top-24 space-y-4">
+                {/* Building Location Map */}
+                {building && building.coordinates && (
+                  <div className="overflow-hidden rounded border border-gray-200">
+                    <div className="h-[200px] md:h-[250px]">
+                      <BuildingLocationMap
+                        lat={building.coordinates.lat}
+                        lng={building.coordinates.lng}
+                        buildingName={building.name}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Building Link */}
                 {building && (
                   <div className="rounded border border-gray-200 bg-white p-6">
@@ -243,6 +337,15 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     <p className="mt-2 text-sm text-secondary">{building.address}</p>
                   </div>
                 )}
+
+                {/* Share Button */}
+                <ShareButton
+                  title={`${listing.buildingName || building?.name || ""} ${listing.unitNumber ? `#${listing.unitNumber}` : ""} - $${listing.listPrice.toLocaleString()}`}
+                  text={`Check out this ${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo in downtown Austin`}
+                  pageType="listing"
+                  listingId={listing.listingId}
+                  buildingSlug={buildingSlug || undefined}
+                />
 
                 {/* Contact CTA */}
                 <div className="rounded border border-gray-200 bg-gray-50 p-6">

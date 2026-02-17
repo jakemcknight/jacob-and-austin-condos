@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { buildings, getBuildingBySlug } from "@/data/buildings";
 // import { nearbyPlaces } from "@/data/nearbyPlaces";
 import { floorPlans } from "@/data/floorPlans";
+import { readMlsCache } from "@/lib/mls/cache";
 import HeroSection from "@/components/HeroSection";
 import BuildingStats from "@/components/BuildingStats";
 import QuickNav from "@/components/QuickNav";
@@ -24,13 +25,26 @@ export function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const building = getBuildingBySlug(params.slug);
   if (!building) return { title: "Building Not Found" };
 
+  const description = `${building.name} at ${building.address}. ${building.floors} floors, ${building.units} residences. ${building.description}`;
+
+  // Try to find a listing with photos for the OG image
+  const cached = await readMlsCache(building.slug);
+  const listingWithPhotos = cached?.data?.find(l => l.photos && l.photos.length > 0);
+
   return {
     title: `${building.name} | Downtown Austin Condos | Jacob In Austin`,
-    description: `${building.name} at ${building.address}. ${building.floors} floors, ${building.units} residences. ${building.description}`,
+    description,
+    openGraph: {
+      title: `${building.name} | Downtown Austin Condos`,
+      description,
+      images: listingWithPhotos
+        ? [`https://jacobinaustin.com/downtown-condos/api/mls/photo/${listingWithPhotos.listingId}/0`]
+        : ["/images/og-default.jpg"],
+    },
   };
 }
 

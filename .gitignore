@@ -38,3 +38,5 @@ next-env.d.ts
 
 # logs
 /logs/
+data/imports/
+data/imports/

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 interface BuildingCardProps {
   name: string;
@@ -17,22 +20,35 @@ export default function BuildingCard({
   floors,
   units,
   yearBuilt,
+  heroImage,
 }: BuildingCardProps) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <Link
       href={`/${slug}`}
       className="group block overflow-hidden border border-gray-100 bg-white transition-all hover:border-gray-300 hover:shadow-lg"
     >
-      {/* Image Placeholder */}
+      {/* Building Photo */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-        <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 transition-transform duration-500 group-hover:scale-105">
-          <div className="text-center">
-            <div className="text-4xl">🏙️</div>
-            <p className="mt-2 text-xs uppercase tracking-wider text-accent">
-              {name}
-            </p>
+        {!imageError && heroImage ? (
+          <img
+            src={heroImage}
+            alt={`${name} exterior`}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 transition-transform duration-500 group-hover:scale-105">
+            <div className="text-center">
+              <div className="text-4xl">🏙️</div>
+              <p className="mt-2 text-xs uppercase tracking-wider text-accent">
+                {name}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Info */}

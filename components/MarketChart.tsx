@@ -79,7 +79,28 @@ interface ScatterPoint {
   buildingName: string;
   floorPlan: string;
   orientation: string;
+  statusGroup?: string; // "Closed" | "Active" | "Didn't Sell"
 }
+
+// Status-grouped scatter data passed from parent
+export interface StatusScatterListing {
+  statusGroup: string; // "Closed" | "Active" | "Didn't Sell"
+  date: string;
+  price: number;
+  priceSf: number;
+  bedrooms: number;
+  unit: string;
+  buildingName: string;
+  livingArea: number;
+  floorPlan: string;
+  orientation: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  "Closed": "#324A32",      // Zilker green
+  "Active": "#93B9BC",      // Faded Denim
+  "Didn't Sell": "#E1DDD1", // Moontower
+};
 
 interface YearDataPoint {
   year: number;
@@ -177,6 +198,7 @@ interface MarketChartProps {
   activeOrientations?: string[];
   activeFloorPlans?: string[];
   yearRange?: string;
+  statusScatterListings?: StatusScatterListing[];
 }
 
 export default function MarketChart({
@@ -189,6 +211,7 @@ export default function MarketChart({
   activeOrientations = [],
   activeFloorPlans = [],
   yearRange = "",
+  statusScatterListings = [],
 }: MarketChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<ScatterPoint | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -233,6 +256,32 @@ export default function MarketChart({
     });
   }
 
+  // Build status-grouped scatter data (when statusScatterListings provided)
+  const statusScatterByGroup: Record<string, ScatterPoint[]> = {};
+  const useStatusScatter = statusScatterListings.length > 0;
+
+  if (useStatusScatter) {
+    for (const s of statusScatterListings) {
+      if (!activeBedrooms.has(s.bedrooms)) continue;
+      const val = metric === "priceSf" ? s.priceSf : s.price;
+      if (val <= 0) continue;
+      if (!statusScatterByGroup[s.statusGroup]) statusScatterByGroup[s.statusGroup] = [];
+      statusScatterByGroup[s.statusGroup].push({
+        timestamp: new Date(s.date).getTime(),
+        priceSf: s.priceSf,
+        price: s.price,
+        date: s.date,
+        unit: s.unit,
+        bedrooms: s.bedrooms,
+        sqft: s.livingArea,
+        buildingName: s.buildingName,
+        floorPlan: s.floorPlan,
+        orientation: s.orientation,
+        statusGroup: s.statusGroup,
+      });
+    }
+  }
+
   // Build yearly aggregated data (bars + median line points)
   const yearBuckets: Record<number, { priceSfs: number[]; prices: number[]; count: number }> = {};
   for (const t of transactions) {
@@ -259,7 +308,10 @@ export default function MarketChart({
   const scatterKey = metric === "priceSf" ? "priceSf" : "price";
 
   // Compute time domain
-  const allScatter: ScatterPoint[] = Object.values(scatterByBed).flat();
+  const allScatter: ScatterPoint[] = [
+    ...Object.values(scatterByBed).flat(),
+    ...Object.values(statusScatterByGroup).flat(),
+  ];
   const allTimestamps = [
     ...allScatter.map((p) => p.timestamp),
     ...yearData.map((p) => p.timestamp),
@@ -389,8 +441,25 @@ export default function MarketChart({
             />
           )}
 
-          {/* Scatter dots (toggleable) */}
+          {/* Status-colored scatter dots (when status scatter data provided) */}
+          {useStatusScatter &&
+            ["Closed", "Active", "Didn't Sell"]
+              .filter((group) => statusScatterByGroup[group]?.length > 0)
+              .map((group) => (
+                <Scatter
+                  key={`scatter-status-${group}`}
+                  yAxisId="left"
+                  name={group}
+                  data={statusScatterByGroup[group]}
+                  dataKey={scatterKey}
+                  fill={STATUS_COLORS[group] || "#999"}
+                  shape={renderScatterDot}
+                />
+              ))}
+
+          {/* Bedroom-colored scatter dots (legacy, when no status scatter) */}
           {showScatter &&
+            !useStatusScatter &&
             bedroomCounts
               .filter((bed) => activeBedrooms.has(bed) && scatterByBed[bed])
               .map((bed) => (
@@ -423,6 +492,13 @@ export default function MarketChart({
             <p className="text-secondary">
               Unit {hoveredPoint.unit} &middot;{" "}
               {bedroomLabel(hoveredPoint.bedrooms)}
+              {hoveredPoint.statusGroup && (
+                <> &middot;{" "}
+                  <span style={{ color: STATUS_COLORS[hoveredPoint.statusGroup] || "#666" }}>
+                    {hoveredPoint.statusGroup}
+                  </span>
+                </>
+              )}
             </p>
             {hoveredPoint.floorPlan && (
               <p className="text-secondary">
@@ -465,7 +541,7 @@ export default function MarketChart({
       </div>
 
       <p className="mt-3 text-center text-xs text-accent">
-        {showScatter && "Dots show individual transactions · "}
+        {(showScatter || useStatusScatter) && "Dots show individual listings · "}
         Bars show annual transaction volume
         {yearData.length > 1 && ` · Line shows yearly median ${metricLabel}`}
       </p>

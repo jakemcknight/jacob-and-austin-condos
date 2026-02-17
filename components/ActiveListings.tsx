@@ -1,28 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { buildings } from "@/data/buildings";
-
-interface MLSListing {
-  listingId: string;
-  mlsNumber: string;
-  address: string;
-  unitNumber: string;
-  listPrice: number;
-  bedroomsTotal: number;
-  bathroomsTotalInteger: number;
-  livingArea: number;
-  priceSf: number;
-  status: string;
-  listDate: string;
-  daysOnMarket: number;
-  listingType: "Sale" | "Lease";
-  photos?: string[];
-  virtualTourUrl?: string;
-  hoaFee?: number;
-}
+import ListingCard from "./ListingCard";
+import type { MLSListingDisplay as MLSListing } from "./ListingCard";
 
 interface ActiveListingsProps {
   buildingSlug: string;
@@ -34,7 +15,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const [listings, setListings] = useState<MLSListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("price");
+  const [sortBy, setSortBy] = useState<SortOption>("dom");
 
   // Get building name for contact link
   const building = buildings.find(b => b.slug === buildingSlug);
@@ -139,7 +120,8 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
       case "priceSf":
         return b.priceSf - a.priceSf; // High to low
       case "dom":
-        return a.daysOnMarket - b.daysOnMarket; // Low to high
+        // Sort by listDate descending (newest = lowest DOM)
+        return new Date(b.listDate).getTime() - new Date(a.listDate).getTime();
       case "date":
         return new Date(b.listDate).getTime() - new Date(a.listDate).getTime(); // Newest first
       default:
@@ -327,7 +309,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
         {/* Results count and Sort dropdown */}
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm text-secondary">
-            {sortedListings.length} of {listings.length} listings
+            {sortedListings.length} {sortedListings.length === 1 ? "listing" : "listings"}
           </p>
 
           <div className="flex items-center gap-2">
@@ -364,82 +346,4 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   );
 }
 
-function ListingCard({ listing }: { listing: MLSListing }) {
-  return (
-    <Link
-      href={`/listings/${listing.mlsNumber}`}
-      className="group block overflow-hidden border border-gray-200 bg-white transition-shadow hover:shadow-lg"
-    >
-      {/* Photo */}
-      {listing.photos && listing.photos[0] ? (
-        <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-          <Image
-            src={listing.photos[0]}
-            alt={`Unit ${listing.unitNumber}`}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-          {listing.listingType === "Lease" && (
-            <div className="absolute left-2 top-2 bg-denim px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
-              For Lease
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="flex h-48 items-center justify-center bg-gray-100">
-          <p className="text-sm uppercase tracking-wider text-gray-400">No Photo Available</p>
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="p-4">
-        {/* Price */}
-        <p className="mb-2 text-2xl font-bold text-primary">
-          ${listing.listPrice.toLocaleString()}
-          {listing.listingType === "Lease" && <span className="text-sm font-normal">/mo</span>}
-        </p>
-
-        {/* Beds/Baths/Sqft */}
-        <p className="mb-2 text-sm text-secondary">
-          {listing.bedroomsTotal > 0 ? `${listing.bedroomsTotal} bed` : "Studio"} ·{" "}
-          {listing.bathroomsTotalInteger} bath · {listing.livingArea.toLocaleString()} SF
-        </p>
-
-        {/* $/SF */}
-        <p className="mb-3 text-sm font-medium text-accent">
-          ${Math.round(listing.priceSf)}/SF
-        </p>
-
-        {/* Details */}
-        <div className="space-y-1 border-t border-gray-100 pt-3 text-xs text-secondary">
-          {listing.unitNumber && (
-            <p>
-              <span className="font-medium">Unit:</span> {listing.unitNumber}
-            </p>
-          )}
-          <p>
-            <span className="font-medium">Status:</span> {listing.status}
-          </p>
-          <p>
-            <span className="font-medium">Days on Market:</span> {listing.daysOnMarket}
-          </p>
-          {listing.hoaFee && listing.hoaFee > 0 && (
-            <p>
-              <span className="font-medium">HOA:</span> ${listing.hoaFee.toLocaleString()}/mo
-            </p>
-          )}
-          <p>
-            <span className="font-medium">MLS#:</span> {listing.mlsNumber}
-          </p>
-        </div>
-
-        {/* View Details CTA */}
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <span className="text-xs font-medium uppercase tracking-wider text-accent group-hover:text-primary">
-            View Details →
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
+// ListingCard is now imported from ./ListingCard

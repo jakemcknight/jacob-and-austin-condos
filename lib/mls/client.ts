@@ -2,6 +2,7 @@
 // Implements replication pattern per MLSGrid best practices
 
 import { MLSListing, MLSSearchParams, MLSApiResponse } from "./types";
+import { AnalyticsListing } from "./analytics-types";
 
 export interface ReplicationOptions {
   /** Initial import (includes MlgCanView filter) or incremental sync */
@@ -50,16 +51,14 @@ export class MLSGridClient {
    */
   async replicateListings(options: ReplicationOptions): Promise<MLSListing[]> {
     try {
-      const allListings: MLSListing[] = [];
+      // Fetch ALL active listings (no PropertyType filter) to avoid missing any DT listings.
+      // Sale vs Lease is determined client-side from PropertyType field in the response.
+      const allListings = await this.fetchAllListings(options);
 
-      // Fetch both sales and leases from Property resource
-      // MLSGrid includes both in Property, distinguished by PropertyType field
-      const salesListings = await this.fetchListings("Sale", options);
-      const leaseListings = await this.fetchListings("Lease", options);
+      const salesCount = allListings.filter(l => l.listingType === "Sale").length;
+      const leasesCount = allListings.filter(l => l.listingType === "Lease").length;
 
-      allListings.push(...salesListings, ...leaseListings);
-
-      console.log(`[MLSGrid] Replicated ${allListings.length} total listings (${salesListings.length} sales, ${leaseListings.length} leases)`);
+      console.log(`[MLSGrid] Replicated ${allListings.length} total listings (${salesCount} sales, ${leasesCount} leases)`);
       console.log(`[MLSGrid] Total requests made: ${this.requestCount}`);
 
       return allListings;
@@ -70,54 +69,87 @@ export class MLSGridClient {
   }
 
   /**
-   * Fetch listings for a specific listing type (Sale or Lease)
-   * Implements MLSGrid replication pattern with proper filtering
+   * Fetch ALL active DT listings by querying multiple PropertyType values.
+   * Sale vs Lease is determined from the PropertyType field:
+   *   - PropertyType containing "Lease" → Lease
+   *   - Everything else → Sale
    *
-   * Note: Both sales and leases use the Property resource in MLSGrid,
-   * distinguished by PropertyType field ('Residential' vs 'Residential Lease')
+   * We query each known PropertyType separately to avoid fetching the entire
+   * actris dataset (which would cause Cloudflare/Vercel timeouts).
+   * Results are deduplicated by ListingKey.
    */
-  private async fetchListings(
-    listingType: "Sale" | "Lease",
+  private async fetchAllListings(
     options: ReplicationOptions
   ): Promise<MLSListing[]> {
-    const endpoint = "Property"; // Always use Property resource for both sales and leases
+    // PropertyType values for DT (downtown Austin) residential listings.
+    const propertyTypes = [
+      "Residential",
+      "Residential Lease",
+    ];
+
+    const allResults: MLSListing[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const pt of propertyTypes) {
+      console.log(`[MLSGrid] Fetching PropertyType='${pt}'...`);
+      const listings = await this.fetchByPropertyType(pt, options);
+      console.log(`[MLSGrid] PropertyType='${pt}' → ${listings.length} DT listings`);
+
+      // Deduplicate by ListingKey
+      for (const listing of listings) {
+        if (!seenKeys.has(listing.mlsNumber)) {
+          seenKeys.add(listing.mlsNumber);
+          allResults.push(listing);
+        }
+      }
+    }
+
+    // Log PropertyType distribution for DT listings
+    const ptCounts: Record<string, number> = {};
+    for (const listing of allResults) {
+      const pt = listing.propertyType || 'unknown';
+      ptCounts[pt] = (ptCounts[pt] || 0) + 1;
+    }
+    console.log(`[MLSGrid] Total DT listings: ${allResults.length}`);
+    console.log(`[MLSGrid] DT PropertyType distribution:`, JSON.stringify(ptCounts));
+
+    return allResults;
+  }
+
+  /**
+   * Fetch listings for a specific PropertyType value.
+   * Returns only DT (downtown Austin) listings after client-side filtering.
+   */
+  private async fetchByPropertyType(
+    propertyType: string,
+    options: ReplicationOptions
+  ): Promise<MLSListing[]> {
+    const endpoint = "Property";
     const results: MLSListing[] = [];
     let nextUrl: string | null = null;
 
-    // Build OData query filter per MLSGrid requirements
-    // Allowed filter fields: MlgCanView, ModificationTimestamp, OriginatingSystemName,
-    // StandardStatus, ListingId, PropertyType, ListOfficeMlsId
+    // Build OData filter
     const filters = [];
-
-    // 1. OriginatingSystemName - REQUIRED by MLSGrid API (exactly one per request)
-    //    For Unlock MLS (Austin Board of REALTORS), use 'actris'
     filters.push(`OriginatingSystemName eq '${options.originatingSystemName}'`);
-
-    // 2. PropertyType filter - Use standard values from RESO:
-    //    - 'Residential' for sales
-    //    - 'Residential Lease' for leases
-    const propertyType = listingType === "Sale" ? "Residential" : "Residential Lease";
     filters.push(`PropertyType eq '${propertyType}'`);
+    // Include both Active and Active Under Contract (user's MLS shows both as "active")
+    filters.push("(StandardStatus eq 'Active' or StandardStatus eq 'Active Under Contract')");
 
-    // 3. StandardStatus filter - Use standard value 'Active'
-    filters.push("StandardStatus eq 'Active'");
-
-    // 4. Mode-specific filters
     if (options.mode === "initial") {
-      // Initial import: exclude already-deleted records
       filters.push("MlgCanView eq true");
     } else if (options.mode === "incremental" && options.lastSyncTimestamp) {
-      // Incremental: only get changes since last sync (ordered by ModificationTimestamp automatically)
       filters.push(`ModificationTimestamp gt ${options.lastSyncTimestamp}`);
     }
 
-    // Select only essential fields to speed up the query
-    // Include ModificationTimestamp for tracking sync state
+    // Select essential fields — include PropertyType for classification
     const select = [
       "ListingId",
       "ListingKey",
       "StreetNumber",
+      "StreetDirPrefix",
       "StreetName",
+      "StreetSuffix",
+      "StreetDirSuffix",
       "UnitNumber",
       "BuildingName",
       "ListPrice",
@@ -127,89 +159,249 @@ export class MLSGridClient {
       "StandardStatus",
       "ListingContractDate",
       "DaysOnMarket",
+      "PropertyType",
       "PropertySubType",
       "MLSAreaMajor",
       "ModificationTimestamp",
       "MlgCanView",
       "OriginatingSystemName",
+      "City",
+      "PostalCode",
+      "YearBuilt",
+      "ListAgentFullName",
+      "ListAgentDirectPhone",
+      "ListOfficeName",
+      "ListOfficePhone",
+      "PublicRemarks",
+      "TaxAnnualAmount",
+      "TaxYear",
+      "AssociationFeeFrequency",
+      "OriginalListPrice",
     ].join(",");
 
-    // Use $expand=Media to get photos (v2 API requirement)
-    // $top=500 to reduce pagination rounds and stay within Vercel function timeout
     const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=500`;
-
     nextUrl = initialUrl;
 
-    // Handle pagination
     while (nextUrl) {
       const response = await this.makeRequest(nextUrl);
 
       if (response.value && Array.isArray(response.value)) {
-        // Parse listings with photos from expanded Media field
-        const parsed: MLSListing[] = response.value.map(item =>
-          this.parseMLSListing(item, listingType)
-        );
+        const parsed: MLSListing[] = response.value.map(item => {
+          // Classify Sale vs Lease based on PropertyType
+          const pt = (item.PropertyType || "").toLowerCase();
+          const listingType: "Sale" | "Lease" = pt.includes("lease") ? "Lease" : "Sale";
+          return this.parseMLSListing(item, listingType);
+        });
         results.push(...parsed);
       }
 
-      // Check for next page
       nextUrl = response["@odata.nextLink"] || null;
 
-      // Rate limiting: 2-second delay = 0.5 req/sec (MLSGrid warning at 4 req/sec, suspension at 6 req/sec)
-      // 0.5 req/sec is 8x below the warning threshold — safe margin
+      // Rate limiting: minimum 2-second delay between paginated calls
+      // Keeps us well under 4 req/s warning threshold
       if (nextUrl) {
-        this.requestCount++;
-
-        const elapsedSeconds = (Date.now() - this.requestStartTime) / 1000;
-        const requestsPerSecond = this.requestCount / elapsedSeconds;
-
-        console.log(`[MLSGrid] Current rate: ${requestsPerSecond.toFixed(3)} req/sec (${this.requestCount} requests in ${elapsedSeconds.toFixed(1)}s)`);
-
-        if (requestsPerSecond > 1.5) {
-          console.warn(`[MLSGrid] Rate approaching limit: ${requestsPerSecond.toFixed(3)} req/sec - increasing delay`);
-          await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay if approaching limit
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Normal 2 second delay
-        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
-    // Filter client-side: MLSAreaMajor = 'DT' (downtown) and Condominium property subtype
+    // Client-side filter: MLSAreaMajor = 'DT' (downtown Austin)
     const filtered = results.filter(listing => {
       const rawData = (listing as any).rawData;
-
-      // 1. Filter by MLSAreaMajor — only downtown Austin listings
       const area = rawData?.MLSAreaMajor || '';
-      if (area !== 'DT') {
-        return false;
-      }
-
-      // 2. Filter by PropertySubType — only condos/townhouses/townhomes
-      const propertySubType = rawData?.PropertySubType;
-      const subType = (propertySubType || '').toLowerCase();
-      const isCondoType = subType.includes('condo') ||
-                           subType.includes('townhouse') ||
-                           subType.includes('townhome');
-
-      if (!isCondoType && propertySubType) {
-        return false;
-      }
-
-      return true;
+      return area === 'DT';
     });
 
-    console.log(`[MLSGrid] Filter Statistics:`);
-    console.log(`  - Total from API: ${results.length}`);
-    console.log(`  - After DT + Condo filter: ${filtered.length}`);
-    console.log(`  - Rejected: ${results.length - filtered.length}`);
+    console.log(`[MLSGrid] PropertyType='${propertyType}': ${results.length} total → ${filtered.length} DT`);
 
     return filtered;
   }
 
   /**
+   * Fetch analytics listings (Closed, Pending, Withdrawn, Hold) from MLSGrid.
+   * Used by the 15-min sync to capture non-active listing statuses.
+   * NO media expansion — analytics data doesn't need photos.
+   *
+   * @param statuses - Array of StandardStatus values to fetch (e.g., ['Closed', 'Pending'])
+   * @param modificationTimestampGt - Optional ISO 8601 timestamp for incremental fetch
+   */
+  async fetchAnalyticsListings(
+    statuses: string[],
+    modificationTimestampGt?: string
+  ): Promise<AnalyticsListing[]> {
+    const propertyTypes = ["Residential", "Residential Lease"];
+    const allResults: AnalyticsListing[] = [];
+    const seenKeys = new Set<string>();
+
+    // Analytics-specific fields — no Media, adds ClosePrice/CloseDate and lifecycle fields
+    const analyticsSelect = [
+      "ListingId", "ListingKey",
+      "StreetNumber", "StreetDirPrefix", "StreetName", "StreetSuffix", "StreetDirSuffix",
+      "UnitNumber", "BuildingName",
+      "ListPrice", "OriginalListPrice", "ClosePrice", "CloseDate",
+      "PreviousListPrice", "CurrentPrice",
+      "BedroomsTotal", "BathroomsTotalInteger", "LivingArea",
+      "StandardStatus", "ListingContractDate", "DaysOnMarket", "CumulativeDaysOnMarket",
+      "PropertyType", "PropertySubType", "MLSAreaMajor",
+      "ModificationTimestamp", "MlgCanView", "OriginatingSystemName",
+      "StatusChangeTimestamp", "PendingTimestamp", "PurchaseContractDate",
+      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate", "TempOffMarketDate",
+      "AssociationFee", "AssociationFeeFrequency", "YearBuilt",
+      "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
+      "BuyerFinancing",
+    ].join(",");
+
+    // Build status filter
+    const statusFilter = statuses
+      .map(s => `StandardStatus eq '${s}'`)
+      .join(" or ");
+
+    for (const pt of propertyTypes) {
+      const filters = [
+        "OriginatingSystemName eq 'actris'",
+        `PropertyType eq '${pt}'`,
+        `(${statusFilter})`,
+        "MlgCanView eq true",
+      ];
+
+      if (modificationTimestampGt) {
+        filters.push(`ModificationTimestamp gt ${modificationTimestampGt}`);
+      }
+
+      const filterStr = encodeURIComponent(filters.join(" and "));
+      let nextUrl: string | null = `${this.baseUrl}/Property?$filter=${filterStr}&$select=${analyticsSelect}&$top=500`;
+
+      while (nextUrl) {
+        const response = await this.makeRequest(nextUrl);
+
+        if (response.value && Array.isArray(response.value)) {
+          for (const item of response.value) {
+            // Client-side DT filter
+            if (item.MLSAreaMajor !== "DT") continue;
+
+            const id = item.ListingId || item.ListingKey || "";
+            if (seenKeys.has(id)) continue;
+            seenKeys.add(id);
+
+            allResults.push(this.parseAnalyticsListing(item));
+          }
+        }
+
+        nextUrl = response["@odata.nextLink"] || null;
+        if (nextUrl) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+
+    console.log(`[MLSGrid] Analytics fetch: ${allResults.length} DT listings for statuses [${statuses.join(", ")}]`);
+    return allResults;
+  }
+
+  /**
+   * Parse raw MLS data into AnalyticsListing format (no photos, includes lifecycle fields)
+   */
+  private parseAnalyticsListing(data: any): AnalyticsListing {
+    const streetNumber = data.StreetNumber || "";
+    const streetDirPrefix = data.StreetDirPrefix || "";
+    const streetName = data.StreetName || "";
+    const streetSuffix = data.StreetSuffix || "";
+    const streetDirSuffix = data.StreetDirSuffix || "";
+    const rawAddress = [streetNumber, streetDirPrefix, streetName, streetSuffix, streetDirSuffix]
+      .filter(Boolean)
+      .join(" ");
+    const address = rawAddress.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+    const livingArea = parseFloat(data.LivingArea || "0");
+    const listPrice = parseFloat(data.ListPrice || "0");
+    const closePrice = parseFloat(data.ClosePrice || "0") || undefined;
+    const originalListPrice = parseFloat(data.OriginalListPrice || "0") || listPrice;
+
+    // Price per SF: use close price for closed, list price otherwise
+    const priceForPsf = closePrice || listPrice;
+    const priceSf = livingArea > 0 ? priceForPsf / livingArea : 0;
+
+    // CP/LP ratios
+    let cpLp: number | undefined;
+    let cpOlp: number | undefined;
+    if (closePrice && listPrice > 0) cpLp = closePrice / listPrice;
+    if (closePrice && originalListPrice > 0) cpOlp = closePrice / originalListPrice;
+
+    return {
+      listingId: data.ListingId || data.ListingKey || "",
+      buildingSlug: null, // Set by address matcher in sync
+      buildingName: data.BuildingName || "",
+      address,
+      unitNumber: data.UnitNumber || "",
+      listPrice,
+      originalListPrice,
+      closePrice,
+      previousListPrice: parseFloat(data.PreviousListPrice || "0") || undefined,
+      currentPrice: parseFloat(data.CurrentPrice || "0") || undefined,
+      bedroomsTotal: parseInt(data.BedroomsTotal || "0") || 0,
+      bathroomsTotalInteger: parseInt(data.BathroomsTotalInteger || "0") || 0,
+      livingArea,
+      priceSf,
+      status: data.StandardStatus || "Unknown",
+      listingContractDate: data.ListingContractDate || undefined,
+      closeDate: data.CloseDate || undefined,
+      pendingTimestamp: data.PendingTimestamp || undefined,
+      statusChangeTimestamp: data.StatusChangeTimestamp || undefined,
+      priceChangeTimestamp: data.PriceChangeTimestamp || undefined,
+      backOnMarketDate: data.BackOnMarketDate || undefined,
+      offMarketDate: data.OffMarketDate || undefined,
+      tempOffMarketDate: data.TempOffMarketDate || undefined,
+      purchaseContractDate: data.PurchaseContractDate || undefined,
+      daysOnMarket: parseInt(data.DaysOnMarket || "0") || 0,
+      cumulativeDaysOnMarket: parseInt(data.CumulativeDaysOnMarket || "0") || undefined,
+      cpLp,
+      cpOlp,
+      hoaFee: parseFloat(data.AssociationFee || "0") || undefined,
+      associationFeeFrequency: data.AssociationFeeFrequency || undefined,
+      propertyType: data.PropertyType || undefined,
+      propertySubType: data.PropertySubType || undefined,
+      yearBuilt: parseInt(data.YearBuilt || "0") || undefined,
+      listAgentFullName: data.ListAgentFullName || undefined,
+      buyerAgentFullName: data.BuyerAgentFullName || undefined,
+      listOfficeName: data.ListOfficeName || undefined,
+      buyerFinancing: data.BuyerFinancing || undefined,
+      source: "api-sync",
+      importedAt: new Date().toISOString(),
+    };
+  }
+
+  // Hard cap on requests per sync cycle to prevent runaway loops
+  // Raised from 100 to 200 to accommodate analytics fetch alongside active listings
+  private static readonly MAX_REQUESTS_PER_CYCLE = 200;
+
+  /**
    * Make authenticated HTTP request to MLSGrid API
+   * Includes rate limiter safety net:
+   * - Hard cap of 100 requests per sync cycle
+   * - Adaptive delay if rate exceeds 1.5 req/s
+   * - Every request is logged for observability
    */
   private async makeRequest(url: string): Promise<MLSApiResponse> {
+    this.requestCount++;
+
+    // Hard cap — abort if we've made too many requests (prevents runaway loops)
+    if (this.requestCount > MLSGridClient.MAX_REQUESTS_PER_CYCLE) {
+      throw new Error(
+        `[MLSGrid] SAFETY: Request cap exceeded (${this.requestCount}/${MLSGridClient.MAX_REQUESTS_PER_CYCLE}). ` +
+        `Aborting to protect rate limits.`
+      );
+    }
+
+    // Adaptive rate limiting — slow down if we're going too fast
+    const elapsedSeconds = (Date.now() - this.requestStartTime) / 1000;
+    const currentRate = this.requestCount / Math.max(elapsedSeconds, 0.1);
+
+    if (currentRate > 1.5 && this.requestCount > 1) {
+      console.warn(`[MLSGrid] Rate ${currentRate.toFixed(2)} req/s exceeds 1.5 — adding 2s delay`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    console.log(`[MLSGrid] Request #${this.requestCount} (${currentRate.toFixed(3)} req/s)`);
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -253,10 +445,17 @@ export class MLSGridClient {
    * Parse raw MLS data into MLSListing format
    */
   private parseMLSListing(data: any, listingType: "Sale" | "Lease"): MLSListing {
-    // Build full address
+    // Build full address from RESO components
     const streetNumber = data.StreetNumber || "";
+    const streetDirPrefix = data.StreetDirPrefix || "";
     const streetName = data.StreetName || "";
-    const address = `${streetNumber} ${streetName}`.trim();
+    const streetSuffix = data.StreetSuffix || "";
+    const streetDirSuffix = data.StreetDirSuffix || "";
+    const rawAddress = [streetNumber, streetDirPrefix, streetName, streetSuffix, streetDirSuffix]
+      .filter(Boolean)
+      .join(" ");
+    // Title-case: MLS data is often ALL CAPS (e.g. "44 EAST AVE" → "44 East Ave")
+    const address = rawAddress.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
     // Calculate price per SF
     const livingArea = parseFloat(data.LivingArea || "0");
@@ -283,7 +482,7 @@ export class MLSGridClient {
 
     return {
       listingId: data.ListingId || data.ListingKey || "",
-      mlsNumber: data.ListingKey || data.ListingId || "",
+      mlsNumber: (data.ListingId || data.ListingKey || "").replace(/^[A-Z]+/, ""),
       buildingName: data.BuildingName || "",
       address,
       unitNumber: data.UnitNumber || "",
@@ -303,10 +502,21 @@ export class MLSGridClient {
       listingType,
       photos,
       virtualTourUrl: data.VirtualTourURLUnbranded || undefined,
+      city: data.City || undefined,
+      postalCode: data.PostalCode || undefined,
       propertyType: data.PropertyType || undefined,
       propertySubType: data.PropertySubType || undefined,
+      publicRemarks: data.PublicRemarks || undefined,
       parkingFeatures: data.ParkingFeatures || undefined,
       hoaFee: parseFloat(data.AssociationFee || "0") || undefined,
+      associationFeeFrequency: data.AssociationFeeFrequency || undefined,
+      yearBuilt: parseInt(data.YearBuilt || "0") || undefined,
+      taxAnnualAmount: parseFloat(data.TaxAnnualAmount || "0") || undefined,
+      taxYear: parseInt(data.TaxYear || "0") || undefined,
+      listAgentFullName: data.ListAgentFullName || undefined,
+      listAgentDirectPhone: data.ListAgentDirectPhone || undefined,
+      listOfficeName: data.ListOfficeName || undefined,
+      listOfficePhone: data.ListOfficePhone || undefined,
       rawData: data, // Keep for debugging
     };
   }

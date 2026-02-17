@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { MLSGridClient } from "@/lib/mls/client";
-import { writeMlsCache, updateMlsCache, readMlsCache } from "@/lib/mls/cache";
+import { writeMlsCache, readMlsCache, writeListingIndex } from "@/lib/mls/cache";
 import { matchListingToBuilding } from "@/lib/mls/address-matcher";
 import { buildings } from "@/data/buildings";
 import {
@@ -15,9 +15,21 @@ import {
   findLatestTimestamp,
   isSyncInProgress,
 } from "@/lib/mls/sync-state";
+import {
+  upsertAnalyticsListings,
+  readAnalyticsSyncState,
+  writeAnalyticsSyncState,
+  appendListingSnapshots,
+  countAnalyticsListings,
+} from "@/lib/mls/analytics-cache";
+import { readAllEnrichmentMaps, enrichListing } from "@/lib/mls/enrichment";
+import type { AnalyticsListing, AnalyticsSyncState, ListingSnapshot } from "@/lib/mls/analytics-types";
 
 // Disable static optimization - this is a dynamic route
 export const dynamic = "force-dynamic";
+
+// Reserved cache key for DT condo listings that don't match any defined building
+const UNMATCHED_SLUG = "_unmatched";
 
 // Maximum execution time for Vercel (10 min for Pro, 60s for Hobby)
 // Set conservatively to avoid timeouts
@@ -62,22 +74,21 @@ export async function GET(request: NextRequest) {
     console.log("[MLS Sync] Starting MLS replication...");
     await markSyncInProgress();
 
-    // 2. Determine if this is initial import or incremental sync
+    // 2. Always do a full fetch so photo tokens stay fresh (they expire after ~1 hour)
+    // MLSGrid media URLs contain time-limited tokens that expire.
+    // A full fetch is only ~4 API calls (with $top=500), well within rate limits.
     const lastSyncTimestamp = await getLastSyncTimestamp();
     const isInitialImport = !lastSyncTimestamp;
 
     console.log(
-      `[MLS Sync] Mode: ${isInitialImport ? "INITIAL IMPORT" : "INCREMENTAL SYNC"}`
+      `[MLS Sync] Mode: FULL FETCH (${isInitialImport ? "initial import" : "refresh — photo tokens expire hourly"})`
     );
-    if (lastSyncTimestamp) {
-      console.log(`[MLS Sync] Last sync: ${lastSyncTimestamp}`);
-    }
 
-    // 3. Replicate listings from MLSGrid
+    // 3. Replicate listings from MLSGrid — always use "initial" mode to get ALL active listings
+    // This ensures photo tokens are refreshed every sync cycle
     const mlsClient = new MLSGridClient();
     const allListings = await mlsClient.replicateListings({
-      mode: isInitialImport ? "initial" : "incremental",
-      lastSyncTimestamp: lastSyncTimestamp || undefined,
+      mode: "initial",
       originatingSystemName: "actris", // Unlock MLS (Austin Board of REALTORS) uses 'actris'
     });
 
@@ -107,6 +118,8 @@ export async function GET(request: NextRequest) {
     const listingsByBuilding = new Map<string, typeof allListings>();
     let matchedCount = 0;
     let unmatchedCount = 0;
+    const unmatchedLogEntries: Array<{ address: string; buildingName: string; unit: string; listingType: string }> = [];
+    const unmatchedFullListings: typeof allListings = [];
 
     for (const listing of allListings) {
       const buildingSlug = matchListingToBuilding(listing.address, listing.buildingName);
@@ -119,12 +132,25 @@ export async function GET(request: NextRequest) {
         matchedCount++;
       } else {
         unmatchedCount++;
+        unmatchedFullListings.push(listing);
+        unmatchedLogEntries.push({
+          address: listing.address,
+          buildingName: listing.buildingName,
+          unit: listing.unitNumber,
+          listingType: listing.listingType,
+        });
       }
     }
 
     console.log(`[MLS Sync] Address matching results:`);
     console.log(`[MLS Sync]   Matched: ${matchedCount} listings → ${listingsByBuilding.size} buildings`);
     console.log(`[MLS Sync]   Unmatched: ${unmatchedCount} listings`);
+    if (unmatchedLogEntries.length > 0) {
+      console.log(`[MLS Sync]   Unmatched addresses:`);
+      for (const ul of unmatchedLogEntries) {
+        console.log(`[MLS Sync]     "${ul.address}" unit=${ul.unit} building="${ul.buildingName}" type=${ul.listingType}`);
+      }
+    }
 
     // Log building-specific counts
     const buildingEntries = Array.from(listingsByBuilding.entries());
@@ -133,22 +159,34 @@ export async function GET(request: NextRequest) {
       console.log(`[MLS Sync]   ${building?.name || buildingSlug}: ${listings.length} listings`);
     }
 
-    // 5. Update cache for each building
+    // 5. Update cache for each building (always full replace since we fetch all listings)
     let totalCached = 0;
 
-    if (isInitialImport) {
-      // Initial import: replace all caches
-      for (const [buildingSlug, listings] of buildingEntries) {
-        await writeMlsCache(buildingSlug, listings);
-        totalCached += listings.length;
-      }
-    } else {
-      // Incremental sync: update existing caches
-      for (const [buildingSlug, listings] of buildingEntries) {
-        await updateMlsCache(buildingSlug, listings);
-        totalCached += listings.length;
+    for (const [buildingSlug, listings] of buildingEntries) {
+      await writeMlsCache(buildingSlug, listings);
+      totalCached += listings.length;
+    }
+
+    // Also cache unmatched listings so they appear on the /for-sale page
+    if (unmatchedFullListings.length > 0) {
+      await writeMlsCache(UNMATCHED_SLUG, unmatchedFullListings);
+      totalCached += unmatchedFullListings.length;
+    }
+
+    // 5b. Build listing-to-building reverse index for photo proxy lookups
+    //     Maps listingId → buildingSlug so photos can be served from KV cache
+    //     instead of calling the MLSGrid API for every photo request
+    const listingIndex: Record<string, string> = {};
+    for (const [buildingSlug, listings] of buildingEntries) {
+      for (const listing of listings) {
+        listingIndex[listing.listingId] = buildingSlug;
       }
     }
+    for (const listing of unmatchedFullListings) {
+      listingIndex[listing.listingId] = UNMATCHED_SLUG;
+    }
+    await writeListingIndex(listingIndex);
+    console.log(`[MLS Sync] Built listing index: ${Object.keys(listingIndex).length} entries`);
 
     // 6. Find the latest ModificationTimestamp for next sync
     const latestTimestamp = findLatestTimestamp(allListings);
@@ -157,7 +195,7 @@ export async function GET(request: NextRequest) {
     const batchSalesCount = allListings.filter(l => l.listingType === "Sale").length;
     const batchLeasesCount = allListings.filter(l => l.listingType === "Lease").length;
 
-    // 8. Count TOTAL listings across all building caches (not just this batch)
+    // 8. Count TOTAL listings across all building caches + unmatched (not just this batch)
     let totalCachedSales = 0;
     let totalCachedLeases = 0;
 
@@ -169,8 +207,129 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Include unmatched listings in totals
+    const unmatchedCached = await readMlsCache(UNMATCHED_SLUG);
+    if (unmatchedCached && unmatchedCached.data) {
+      totalCachedSales += unmatchedCached.data.filter((l: any) => l.listingType === "Sale").length;
+      totalCachedLeases += unmatchedCached.data.filter((l: any) => l.listingType === "Lease").length;
+    }
+
     // 9. Update sync state with total cache counts and batch counts
     await updateSyncState(totalCachedSales, totalCachedLeases, latestTimestamp, batchSalesCount, batchLeasesCount);
+
+    // ========== ANALYTICS SYNC PHASE ==========
+    // After active listings are synced, fetch recently changed non-active listings
+    // (Closed, Pending, Withdrawn, Hold) for analytics tracking
+    let analyticsResult: Record<string, any> = {};
+
+    try {
+      console.log("[MLS Sync] Starting analytics sync phase...");
+
+      const analyticsSyncState = await readAnalyticsSyncState();
+      const analyticsTimestamp = analyticsSyncState?.lastSyncTimestamp;
+
+      // Fetch recently modified Closed, Pending, Withdrawn, and Hold listings
+      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold"];
+      const analyticsListings = await mlsClient.fetchAnalyticsListings(
+        analyticsStatuses,
+        analyticsTimestamp || undefined
+      );
+
+      console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} listings`);
+
+      // Load enrichment maps for auto-enrichment
+      const enrichmentMaps = await readAllEnrichmentMaps();
+
+      // Address match and enrich each analytics listing
+      const analyticsByBuilding = new Map<string, AnalyticsListing[]>();
+      let analyticsMatched = 0;
+      let analyticsUnmatched = 0;
+
+      for (const listing of analyticsListings) {
+        const slug = matchListingToBuilding(listing.address, listing.buildingName || undefined);
+        if (slug) {
+          listing.buildingSlug = slug;
+          const building = buildings.find(b => b.slug === slug);
+          if (building) listing.buildingName = building.name;
+          analyticsMatched++;
+        } else {
+          analyticsUnmatched++;
+        }
+
+        // Auto-enrich with floor plan/orientation data
+        const enriched = enrichListing(listing, enrichmentMaps);
+        const key = enriched.buildingSlug || "_unmatched";
+        if (!analyticsByBuilding.has(key)) {
+          analyticsByBuilding.set(key, []);
+        }
+        analyticsByBuilding.get(key)!.push(enriched);
+      }
+
+      // Upsert analytics listings into cache
+      let analyticsAdded = 0;
+      let analyticsUpdated = 0;
+
+      for (const [slug, listings] of Array.from(analyticsByBuilding)) {
+        const result = await upsertAnalyticsListings(slug, listings);
+        analyticsAdded += result.added;
+        analyticsUpdated += result.updated;
+      }
+
+      // Capture snapshots of current active/pending listings for lifecycle tracking
+      const snapshots: ListingSnapshot[] = allListings.map(l => ({
+        listingId: l.listingId,
+        capturedAt: new Date().toISOString(),
+        status: l.status,
+        listPrice: l.listPrice,
+        daysOnMarket: l.daysOnMarket,
+      }));
+
+      if (snapshots.length > 0) {
+        await appendListingSnapshots(snapshots);
+      }
+
+      // Update analytics sync state
+      const analyticsCounts = await countAnalyticsListings();
+      const analyticsLatest = analyticsListings.length > 0
+        ? analyticsListings.reduce((latest, l) => {
+            const ts = (l as any).modificationTimestamp || "";
+            return ts > latest ? ts : latest;
+          }, "")
+        : analyticsTimestamp || new Date().toISOString();
+
+      const newAnalyticsSyncState: AnalyticsSyncState = {
+        lastSyncTimestamp: analyticsLatest || new Date().toISOString(),
+        lastSyncDate: new Date().toLocaleString(),
+        closedCount: analyticsCounts.closed,
+        pendingCount: analyticsCounts.pending,
+        otherCount: analyticsCounts.other,
+        totalCount: analyticsCounts.total,
+        status: "success",
+      };
+      await writeAnalyticsSyncState(newAnalyticsSyncState);
+
+      analyticsResult = {
+        analyticsListingsFetched: analyticsListings.length,
+        analyticsMatched,
+        analyticsUnmatched,
+        analyticsAdded,
+        analyticsUpdated,
+        analyticsTotalCached: analyticsCounts.total,
+        snapshotsCaptured: snapshots.length,
+      };
+
+      console.log(
+        `[MLS Sync] Analytics phase: ${analyticsListings.length} fetched, ` +
+        `${analyticsAdded} added, ${analyticsUpdated} updated, ` +
+        `${analyticsCounts.total} total cached`
+      );
+    } catch (analyticsError) {
+      // Analytics sync failure should NOT fail the main sync
+      console.error("[MLS Sync] Analytics phase error (non-fatal):", analyticsError);
+      analyticsResult = {
+        analyticsError: analyticsError instanceof Error ? analyticsError.message : String(analyticsError),
+      };
+    }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
@@ -184,9 +343,12 @@ export async function GET(request: NextRequest) {
       totalCachedLeases,
       totalCachedListings: totalCachedSales + totalCachedLeases,
       buildingsUpdated: listingsByBuilding.size,
+      unmatchedCount: unmatchedLogEntries.length,
+      unmatchedListings: unmatchedLogEntries.slice(0, 50),
       latestTimestamp,
       duration: `${duration}s`,
       nextSyncTimestamp: latestTimestamp,
+      ...analyticsResult,
     };
 
     console.log(`[MLS Sync] Completed successfully in ${duration}s`);

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: "Downtown Austin Condos For Sale | Jacob In Austin",
     description: "Browse all active condos for sale in downtown Austin. Real-time MLS data from 37+ luxury buildings.",
     type: "website",
+    images: ["/images/og-default.jpg"],
   },
 };
 
@@ -53,7 +54,7 @@ export default function ForSalePage() {
       </section>
 
       {/* All Listings Component */}
-      <AllListings listingType="Sale" />
+      <AllListings />
 
       {/* Footer CTA */}
       <section className="border-t border-gray-100 bg-white px-6 py-12 text-center">

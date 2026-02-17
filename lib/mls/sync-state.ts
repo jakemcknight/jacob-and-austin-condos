@@ -3,6 +3,7 @@
 // Uses Vercel KV for persistent storage in serverless environment
 
 import { kv } from "@vercel/kv";
+import { unstable_noStore as noStore } from "next/cache";
 
 const SYNC_STATE_KEY = "mls:sync:state";
 
@@ -23,6 +24,7 @@ export interface SyncState {
  * Read current sync state from Vercel KV
  */
 export async function readSyncState(): Promise<SyncState | null> {
+  noStore();
   try {
     const state = await kv.get<SyncState>(SYNC_STATE_KEY);
     return state;

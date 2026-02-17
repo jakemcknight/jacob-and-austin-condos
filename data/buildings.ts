@@ -53,12 +53,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Situated on Rainey Street, one of Austin's most dynamic entertainment districts, The Modern is surrounded by acclaimed restaurants, craft cocktail bars, and live music venues. The neighborhood sits at the doorstep of Lady Bird Lake's hike-and-bike trail, offering a rare blend of nightlife energy and natural beauty.",
     priceRange: "$450K - $4M",
-    heroImage: "/images/buildings/the-modern-austin.jpg",
-    galleryImages: [
-      "/images/buildings/the-modern-austin-1.jpg",
-      "/images/buildings/the-modern-austin-2.jpg",
-      "/images/buildings/the-modern-austin-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-modern-austin.jpg",
+    galleryImages: [],
   },
   {
     name: "44 East Avenue",
@@ -91,12 +87,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Perched at the edge of the Rainey Street Historic District, 44 East Avenue enjoys front-row access to Lady Bird Lake's scenic trails and the vibrant bar and restaurant scene. The location offers seamless connectivity to downtown's business core, the Convention Center, and South Congress Avenue's eclectic shops.",
     priceRange: "$700K - $7M",
-    heroImage: "/images/buildings/44-east-avenue.jpg",
-    galleryImages: [
-      "/images/buildings/44-east-avenue-1.jpg",
-      "/images/buildings/44-east-avenue-2.jpg",
-      "/images/buildings/44-east-avenue-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/44-east-avenue.jpg",
+    galleryImages: [],
   },
   {
     name: "The Independent",
@@ -131,12 +123,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Located in the West Avenue corridor between downtown and the Seaholm District, The Independent provides easy access to the Pfluger Pedestrian Bridge, Lady Bird Lake trails, and the vibrant Second Street District. The area has become one of Austin's most sought-after neighborhoods, blending urban convenience with waterfront recreation.",
     priceRange: "$400K - $5M",
-    heroImage: "/images/buildings/the-independent.jpg",
-    galleryImages: [
-      "/images/buildings/the-independent-1.jpg",
-      "/images/buildings/the-independent-2.jpg",
-      "/images/buildings/the-independent-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-independent.jpg",
+    galleryImages: [],
   },
   {
     name: "Seaholm Residences",
@@ -169,12 +157,8 @@ export const buildings: Building[] = [
     neighborhood:
       "The Seaholm District is a vibrant mixed-use neighborhood built around the historic Seaholm Power Plant, now home to shops, restaurants, and a public library. Residents enjoy immediate access to Lady Bird Lake's hike-and-bike trail, the Pfluger Bridge, and the bustling Second Street retail corridor. The area is a model of thoughtful urban redevelopment in Austin.",
     priceRange: "$500K - $4M",
-    heroImage: "/images/buildings/seaholm-residences.jpg",
-    galleryImages: [
-      "/images/buildings/seaholm-residences-1.jpg",
-      "/images/buildings/seaholm-residences-2.jpg",
-      "/images/buildings/seaholm-residences-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/seaholm-residences.jpg",
+    galleryImages: [],
   },
   {
     name: "70 Rainey",
@@ -208,12 +192,8 @@ export const buildings: Building[] = [
     neighborhood:
       "The Rainey Street Historic District has transformed from a quiet residential street into one of Austin's most vibrant entertainment destinations, known for its bungalow bars, craft cocktails, and inventive food trucks. Despite its energetic nightlife, the neighborhood retains a unique small-town charm. 70 Rainey sits just steps from Lady Bird Lake's trails, offering an unbeatable combination of urban excitement and lakeside tranquility.",
     priceRange: "$400K - $3.5M",
-    heroImage: "/images/buildings/70-rainey.jpg",
-    galleryImages: [
-      "/images/buildings/70-rainey-1.jpg",
-      "/images/buildings/70-rainey-2.jpg",
-      "/images/buildings/70-rainey-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/70-rainey.jpg",
+    galleryImages: [],
   },
   {
     name: "Austin Proper Residences",
@@ -246,12 +226,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Located at the corner of 2nd Street and Nueces in the heart of downtown Austin, Austin Proper Residences places residents amid the city's premier shopping, dining, and cultural offerings. The Second Street District is home to flagship retail stores, acclaimed restaurants, and the nearby Austin City Hall and Shoal Creek. The building is just blocks from Lady Bird Lake and the vibrant Warehouse District.",
     priceRange: "$600K - $5M",
-    heroImage: "/images/buildings/austin-proper-residences.jpg",
-    galleryImages: [
-      "/images/buildings/austin-proper-residences-1.jpg",
-      "/images/buildings/austin-proper-residences-2.jpg",
-      "/images/buildings/austin-proper-residences-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/austin-proper-residences.jpg",
+    galleryImages: [],
   },
   {
     name: "5th & West",
@@ -282,12 +258,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Nestled along the West Avenue corridor, 5th & West is within walking distance of the Whole Foods flagship store, Shoal Creek Greenbelt, and the eclectic shops and restaurants of Clarksville and the Warehouse District. The location provides easy access to MoPac Expressway and Lady Bird Lake's trail system, making it ideal for active urban living.",
     priceRange: "$350K - $1.2M",
-    heroImage: "/images/buildings/5th-and-west.jpg",
-    galleryImages: [
-      "/images/buildings/5th-and-west-1.jpg",
-      "/images/buildings/5th-and-west-2.jpg",
-      "/images/buildings/5th-and-west-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/5th-and-west.jpg",
+    galleryImages: [],
   },
   {
     name: "Four Seasons Residences",
@@ -320,12 +292,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Positioned on the north shore of Lady Bird Lake in the heart of downtown, the Four Seasons enjoys one of Austin's most coveted addresses. The Congress Avenue Bridge, famous for its nightly bat emergence, is just steps away. Residents are minutes from the Convention Center, 6th Street entertainment district, and the South Congress cultural corridor across the lake.",
     priceRange: "$1M - $10M",
-    heroImage: "/images/buildings/four-seasons-residences.jpg",
-    galleryImages: [
-      "/images/buildings/four-seasons-residences-1.jpg",
-      "/images/buildings/four-seasons-residences-2.jpg",
-      "/images/buildings/four-seasons-residences-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/four-seasons-residences.jpg",
+    galleryImages: [],
   },
   {
     name: "The W Residences",
@@ -358,12 +326,8 @@ export const buildings: Building[] = [
     neighborhood:
       "The W Residences occupies a prime location in the Second Street District, Austin's premier mixed-use neighborhood featuring high-end retail, acclaimed restaurants, and the Austin City Hall. The building is a short walk from Lady Bird Lake, the Warehouse District's galleries and nightlife, and the vibrant energy of Congress Avenue. The area has become the epicenter of upscale urban living in Austin.",
     priceRange: "$500K - $5M",
-    heroImage: "/images/buildings/the-w-residences.jpg",
-    galleryImages: [
-      "/images/buildings/the-w-residences-1.jpg",
-      "/images/buildings/the-w-residences-2.jpg",
-      "/images/buildings/the-w-residences-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-w-residences.jpg",
+    galleryImages: [],
   },
   {
     name: "The Austonian",
@@ -397,12 +361,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Sitting at the corner of Congress Avenue and 2nd Street, The Austonian is at the absolute center of downtown Austin's cultural and commercial life. Congress Avenue, known as the city's main street, connects the Texas State Capitol to Lady Bird Lake, offering world-class dining, shopping, and entertainment along the way. The building's location provides effortless access to everything that makes downtown Austin exceptional.",
     priceRange: "$600K - $8M",
-    heroImage: "/images/buildings/the-austonian.jpg",
-    galleryImages: [
-      "/images/buildings/the-austonian-1.jpg",
-      "/images/buildings/the-austonian-2.jpg",
-      "/images/buildings/the-austonian-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-austonian.jpg",
+    galleryImages: [],
   },
   {
     name: "360 Condominiums",
@@ -435,12 +395,8 @@ export const buildings: Building[] = [
     neighborhood:
       "360 Condominiums sits at the intersection of the Warehouse District and the West Avenue corridor, placing residents within easy reach of downtown's best restaurants, bars, and cultural venues. The location is ideal for those who want walkable access to Whole Foods, the Shoal Creek trail, and the 2nd Street shopping district. The surrounding area continues to evolve with new restaurants and retail destinations.",
     priceRange: "$300K - $2M",
-    heroImage: "/images/buildings/360-condominiums.jpg",
-    galleryImages: [
-      "/images/buildings/360-condominiums-1.jpg",
-      "/images/buildings/360-condominiums-2.jpg",
-      "/images/buildings/360-condominiums-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/360-condominiums.jpg",
+    galleryImages: [],
   },
   {
     name: "The Shore Condominiums",
@@ -473,12 +429,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on Davis Street in the heart of the Rainey Street district, The Shore offers direct access to one of Austin's most talked-about entertainment areas. The neighborhood's converted bungalow bars, food trucks, and upscale restaurants create a unique social scene found nowhere else in the city. Lady Bird Lake's boardwalk and hike-and-bike trail are just a short walk away.",
     priceRange: "$350K - $2.5M",
-    heroImage: "/images/buildings/the-shore-condominiums.jpg",
-    galleryImages: [
-      "/images/buildings/the-shore-condominiums-1.jpg",
-      "/images/buildings/the-shore-condominiums-2.jpg",
-      "/images/buildings/the-shore-condominiums-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-shore-condominiums.jpg",
+    galleryImages: [],
   },
   {
     name: "Austin City Lofts",
@@ -509,12 +461,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Positioned in the West End neighborhood near the intersection of 5th Street and West Avenue, Austin City Lofts provides easy access to downtown's cultural and entertainment offerings. The Whole Foods flagship headquarters is nearby, along with an expanding array of restaurants and shops along West 5th and 6th Streets. The Shoal Creek Greenbelt and Lady Bird Lake trails are both within a short walk.",
     priceRange: "$300K - $900K",
-    heroImage: "/images/buildings/austin-city-lofts.jpg",
-    galleryImages: [
-      "/images/buildings/austin-city-lofts-1.jpg",
-      "/images/buildings/austin-city-lofts-2.jpg",
-      "/images/buildings/austin-city-lofts-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/austin-city-lofts.jpg",
+    galleryImages: [],
   },
   {
     name: "Spring Condominiums",
@@ -547,12 +495,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Spring Condominiums is located in the Market District at the western edge of downtown, adjacent to the Whole Foods headquarters and near the Seaholm District. The area offers walkable access to Shoal Creek, Lady Bird Lake, and an excellent selection of restaurants and retail along West 5th and 6th Streets. The neighborhood continues to benefit from significant investment and new development.",
     priceRange: "$350K - $2.5M",
-    heroImage: "/images/buildings/spring-condominiums.jpg",
-    galleryImages: [
-      "/images/buildings/spring-condominiums-1.jpg",
-      "/images/buildings/spring-condominiums-2.jpg",
-      "/images/buildings/spring-condominiums-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/spring-condominiums.jpg",
+    galleryImages: [],
   },
   {
     name: "Milago",
@@ -585,12 +529,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Milago occupies a coveted position at the southern end of Rainey Street, directly adjacent to Lady Bird Lake and its scenic trail system. The building was a pioneer in the area that has since exploded with restaurants, bars, and new residential towers. Residents enjoy both the energy of the Rainey Street entertainment district and the serenity of the waterfront, with the Convention Center and downtown core just minutes away.",
     priceRange: "$300K - $1.8M",
-    heroImage: "/images/buildings/milago.jpg",
-    galleryImages: [
-      "/images/buildings/milago-1.jpg",
-      "/images/buildings/milago-2.jpg",
-      "/images/buildings/milago-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/milago.jpg",
+    galleryImages: [],
   },
   {
     name: "The Towers of Town Lake",
@@ -623,12 +563,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Situated on the shores of Lady Bird Lake at the eastern edge of downtown, The Towers of Town Lake provide immediate access to the Ann and Roy Butler Hike-and-Bike Trail. The growing East Riverside and East Cesar Chavez neighborhoods are nearby, offering an expanding array of restaurants, coffee shops, and cultural venues. The Waller Creek trail extension has further improved the area's walkability and connectivity to downtown.",
     priceRange: "$250K - $1.5M",
-    heroImage: "/images/buildings/the-towers-of-town-lake.jpg",
-    galleryImages: [
-      "/images/buildings/the-towers-of-town-lake-1.jpg",
-      "/images/buildings/the-towers-of-town-lake-2.jpg",
-      "/images/buildings/the-towers-of-town-lake-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/the-towers-of-town-lake.jpg",
+    galleryImages: [],
   },
   {
     name: "Cambridge Tower",
@@ -660,12 +596,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Cambridge Tower is located on Lavaca Street at the northern edge of downtown, within walking distance of the Texas State Capitol, the Governor's Mansion, and the University of Texas campus. The surrounding area features restaurants and shops along Guadalupe and Lavaca Streets, and the building provides easy access to I-35 and MoPac for commuters. Republic Square Park and the thriving downtown core are just a few blocks south.",
     priceRange: "$200K - $800K",
-    heroImage: "/images/buildings/cambridge-tower.jpg",
-    galleryImages: [
-      "/images/buildings/cambridge-tower-1.jpg",
-      "/images/buildings/cambridge-tower-2.jpg",
-      "/images/buildings/cambridge-tower-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/cambridge-tower.jpg",
+    galleryImages: [],
   },
   {
     name: "Sabine on 5th",
@@ -696,12 +628,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Sabine on 5th occupies a strategic position between downtown's central business district and the burgeoning East Side, near the Waller Creek revitalization corridor. The location provides walkable access to the 6th Street entertainment district, the Convention Center, and the growing collection of restaurants and shops along East 5th and 6th Streets. The building is also near the Palm District, one of Austin's emerging creative neighborhoods.",
     priceRange: "$250K - $800K",
-    heroImage: "/images/buildings/sabine-on-5th.jpg",
-    galleryImages: [
-      "/images/buildings/sabine-on-5th-1.jpg",
-      "/images/buildings/sabine-on-5th-2.jpg",
-      "/images/buildings/sabine-on-5th-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/sabine-on-5th.jpg",
+    galleryImages: [],
   },
   {
     name: "904 West",
@@ -733,12 +661,8 @@ export const buildings: Building[] = [
     neighborhood:
       "904 West is ideally situated on West Avenue between 9th and 10th Streets, providing walkable access to the Whole Foods flagship store, Shoal Creek Hike and Bike Trail, and the restaurants and shops of the West End and Clarksville neighborhoods. The location strikes an excellent balance between downtown convenience and residential tranquility, with easy access to both MoPac and downtown's core.",
     priceRange: "$300K - $1M",
-    heroImage: "/images/buildings/904-west.jpg",
-    galleryImages: [
-      "/images/buildings/904-west-1.jpg",
-      "/images/buildings/904-west-2.jpg",
-      "/images/buildings/904-west-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/904-west.jpg",
+    galleryImages: [],
   },
   {
     name: "Celia's Court",
@@ -769,12 +693,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Celia's Court is nestled in the West End neighborhood at the intersection of downtown Austin and the historic Clarksville district. The location provides walkable access to an excellent selection of restaurants, coffee shops, and boutiques along West 6th Street and Nueces. The building is just blocks from the Whole Foods flagship, Shoal Creek trail, and the vibrant energy of downtown.",
     priceRange: "$350K - $750K",
-    heroImage: "/images/buildings/celias-court.jpg",
-    galleryImages: [
-      "/images/buildings/celias-court-1.jpg",
-      "/images/buildings/celias-court-2.jpg",
-      "/images/buildings/celias-court-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/celias-court.jpg",
+    galleryImages: [],
   },
   {
     name: "Brazos Place",
@@ -807,12 +727,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Brazos Place is situated on Brazos Street in the central business district, surrounded by Austin's finest restaurants, galleries, and cultural institutions. The 6th Street entertainment district and the historic Driskill Hotel are steps away, and the Capitol complex is a short walk north. The location offers unbeatable walkability to virtually everything downtown Austin has to offer.",
     priceRange: "$275K - $1.2M",
-    heroImage: "/images/buildings/brazos-place.jpg",
-    galleryImages: [
-      "/images/buildings/brazos-place-1.jpg",
-      "/images/buildings/brazos-place-2.jpg",
-      "/images/buildings/brazos-place-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/brazos-place.jpg",
+    galleryImages: [],
   },
   {
     name: "5 Fifty Five",
@@ -845,12 +761,8 @@ export const buildings: Building[] = [
     neighborhood:
       "5 Fifty Five is positioned on East 5th Street near the Waller Creek redevelopment zone, an area undergoing a dramatic transformation into a world-class urban park and mixed-use corridor. The Convention Center, Rainey Street, and the 6th Street entertainment district are all within easy walking distance. The building bridges downtown's established core and the emerging East Side, offering residents the best of both worlds.",
     priceRange: "$300K - $900K",
-    heroImage: "/images/buildings/5-fifty-five.jpg",
-    galleryImages: [
-      "/images/buildings/5-fifty-five-1.jpg",
-      "/images/buildings/5-fifty-five-2.jpg",
-      "/images/buildings/5-fifty-five-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/5-fifty-five.jpg",
+    galleryImages: [],
   },
   {
     name: "Nokonah",
@@ -882,12 +794,8 @@ export const buildings: Building[] = [
     neighborhood:
       "Nokonah is located at the corner of West 9th Street and Shoal Creek Boulevard, at the edge of the charming Clarksville neighborhood. The building sits along Shoal Creek, providing residents with immediate access to the creek's hike-and-bike trail and the area's mature tree canopy. The location is walking distance to downtown, Whole Foods, and the eclectic restaurants and galleries of West 6th Street and Clarksville.",
     priceRange: "$400K - $1.5M",
-    heroImage: "/images/buildings/nokonah.jpg",
-    galleryImages: [
-      "/images/buildings/nokonah-1.jpg",
-      "/images/buildings/nokonah-2.jpg",
-      "/images/buildings/nokonah-3.jpg",
-    ],
+    heroImage: "/downtown-condos/images/buildings/nokonah.jpg",
+    galleryImages: [],
   },
   {
     name: "Vesper",
@@ -916,7 +824,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on East Avenue near the Rainey Street Historic District, Vesper offers walkable access to acclaimed restaurants, bars, and Lady Bird Lake's hike-and-bike trail. The Convention Center and downtown core are just minutes away.",
     priceRange: "",
-    heroImage: "/images/buildings/vesper.jpg",
+    heroImage: "/downtown-condos/images/buildings/vesper.jpg",
     galleryImages: [],
   },
   {
@@ -944,7 +852,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Situated on West 5th Street in the Warehouse District, Plaza Lofts is surrounded by some of Austin's best restaurants, galleries, and entertainment venues. The 2nd Street District and Lady Bird Lake are within easy walking distance.",
     priceRange: "",
-    heroImage: "/images/buildings/plaza-lofts.jpg",
+    heroImage: "/downtown-condos/images/buildings/plaza-lofts.jpg",
     galleryImages: [],
   },
   {
@@ -971,7 +879,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on West Avenue near the intersection of 17th Street, 1704 West Condos offers walkable access to the Clarksville neighborhood, Whole Foods flagship store, and the restaurants and shops along West 6th Street.",
     priceRange: "",
-    heroImage: "/images/buildings/1704-west-condos.jpg",
+    heroImage: "/downtown-condos/images/buildings/1704-west-condos.jpg",
     galleryImages: [],
   },
   {
@@ -1001,7 +909,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Positioned on West 17th Street near the Texas State Capitol and the University of Texas campus, The Linden provides easy access to downtown's cultural institutions, restaurants, and entertainment. The Shoal Creek trail and Pease Park are nearby.",
     priceRange: "",
-    heroImage: "/images/buildings/the-linden.jpg",
+    heroImage: "/downtown-condos/images/buildings/the-linden.jpg",
     galleryImages: [],
   },
   {
@@ -1031,7 +939,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on East Avenue at the southern edge of the Rainey Street district, Natiivo is steps from Lady Bird Lake's boardwalk trail, acclaimed restaurants, and the vibrant entertainment scene of Rainey Street.",
     priceRange: "",
-    heroImage: "/images/buildings/natiivo.jpg",
+    heroImage: "/downtown-condos/images/buildings/natiivo.jpg",
     galleryImages: [],
   },
   {
@@ -1058,7 +966,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on West Avenue between 13th and 14th Streets, 1306 West is within walking distance of the Clarksville neighborhood, Whole Foods, and the restaurants and shops of the West End district.",
     priceRange: "",
-    heroImage: "/images/buildings/1306-west.jpg",
+    heroImage: "/downtown-condos/images/buildings/1306-west.jpg",
     galleryImages: [],
   },
   {
@@ -1086,7 +994,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Situated on Colorado Street at the northern edge of downtown, Westgate Tower is within walking distance of the State Capitol, Republic Square Park, and the restaurants and entertainment of the 6th Street corridor.",
     priceRange: "",
-    heroImage: "/images/buildings/westgate-tower.jpg",
+    heroImage: "/downtown-condos/images/buildings/westgate-tower.jpg",
     galleryImages: [],
   },
   {
@@ -1115,7 +1023,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located on Guadalupe Street near the University of Texas campus, Penthouse Condos provides walkable access to the Drag, the Capitol complex, and the restaurants and cultural venues of downtown Austin.",
     priceRange: "",
-    heroImage: "/images/buildings/penthouse-condos.jpg",
+    heroImage: "/downtown-condos/images/buildings/penthouse-condos.jpg",
     galleryImages: [],
   },
   {
@@ -1143,7 +1051,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Positioned on Colorado Street in the heart of downtown, the Brown Building is surrounded by Austin's best restaurants, entertainment venues, and cultural institutions. The 6th Street corridor, Congress Avenue, and Republic Square Park are all within easy walking distance.",
     priceRange: "",
-    heroImage: "/images/buildings/brown-building.jpg",
+    heroImage: "/downtown-condos/images/buildings/brown-building.jpg",
     galleryImages: [],
   },
   {
@@ -1171,7 +1079,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Located along Shoal Creek Boulevard, this community enjoys immediate access to the Shoal Creek Greenbelt trail system. The Clarksville neighborhood, Whole Foods flagship store, and downtown Austin are all nearby.",
     priceRange: "",
-    heroImage: "/images/buildings/terrace-on-shoal-creek.jpg",
+    heroImage: "/downtown-condos/images/buildings/terrace-on-shoal-creek.jpg",
     galleryImages: [],
   },
   {
@@ -1200,7 +1108,7 @@ export const buildings: Building[] = [
     neighborhood:
       "Situated on Lavaca Street near 18th Street, Greenwood Tower is within walking distance of the State Capitol, the University of Texas campus, and the restaurants and shops along Guadalupe Street. The location provides easy access to both downtown and the surrounding neighborhoods.",
     priceRange: "",
-    heroImage: "/images/buildings/greenwood-tower.jpg",
+    heroImage: "/downtown-condos/images/buildings/greenwood-tower.jpg",
     galleryImages: [],
   },
 ];
