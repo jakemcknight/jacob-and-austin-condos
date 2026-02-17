@@ -36,7 +36,13 @@ const BEDROOM_COLORS: Record<number, string> = {
 function bedroomLabel(bed: number): string {
   if (bed === 0) return "Studio";
   if (bed === 1) return "1 Bed";
+  if (bed >= 4) return "4+ Bed";
   return `${bed} Bed`;
+}
+
+// Cap bedrooms at 4 (4+ grouped together)
+function capBedrooms(bed: number): number {
+  return bed >= 4 ? 4 : bed;
 }
 
 function formatDollar(val: number): string {
@@ -148,13 +154,14 @@ export default function DataV2Page() {
   const effectiveBuildings = selectedBuildings.size === 0 ? new Set(allBuildingNames) : selectedBuildings;
 
   // Bedroom counts filtered by building + listing mode (NOT by bedroom — avoids circular dep)
+  // Bedrooms capped at 4 (4+ grouped together)
   const filteredBedroomCounts = useMemo(() => {
     const targetPropertyType = listingMode === "buy" ? "Residential" : "Residential Lease";
     const counts = new Set<number>();
     for (const l of analyticsListings) {
       if (l.propertyType !== targetPropertyType) continue;
       if (!effectiveBuildings.has(l.buildingName)) continue;
-      counts.add(l.bedroomsTotal);
+      counts.add(capBedrooms(l.bedroomsTotal));
     }
     return Array.from(counts).sort((a, b) => a - b);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,7 +196,7 @@ export default function DataV2Page() {
     return analyticsListings.filter((l) => {
       if (l.propertyType !== targetPropertyType) return false;
       if (!effectiveBuildings.has(l.buildingName)) return false;
-      if (!effectiveBedrooms.has(l.bedroomsTotal)) return false;
+      if (!effectiveBedrooms.has(capBedrooms(l.bedroomsTotal))) return false;
       const date = l.closeDate || l.listingContractDate;
       if (!inDateRange(date)) return false;
       return true;
@@ -238,7 +245,7 @@ export default function DataV2Page() {
       buildingName: l.buildingName,
       address: l.address,
       unit: l.unitNumber,
-      bedrooms: l.bedroomsTotal,
+      bedrooms: capBedrooms(l.bedroomsTotal),
       bathrooms: l.bathroomsTotalInteger,
       closeDate: l.closeDate || "",
       closePrice: l.closePrice || 0,
@@ -293,7 +300,7 @@ export default function DataV2Page() {
         date,
         price,
         priceSf,
-        bedrooms: l.bedroomsTotal,
+        bedrooms: capBedrooms(l.bedroomsTotal),
         unit: l.unitNumber,
         buildingName: l.buildingName,
         livingArea: l.livingArea,

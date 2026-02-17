@@ -46,6 +46,7 @@ const BEDROOM_COLORS: Record<number, string> = {
 function bedroomLabel(bed: number): string {
   if (bed === 0) return "Studio";
   if (bed === 1) return "1 Bed";
+  if (bed >= 4) return "4+ Bed";
   return `${bed} Bed`;
 }
 
