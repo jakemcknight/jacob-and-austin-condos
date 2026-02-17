@@ -79,12 +79,12 @@ interface ScatterPoint {
   buildingName: string;
   floorPlan: string;
   orientation: string;
-  statusGroup?: string; // "Closed" | "Active" | "Didn't Sell"
+  statusGroup?: string; // "Closed" | "Active" | "Pending" | "Didn't Sell"
 }
 
 // Status-grouped scatter data passed from parent
 export interface StatusScatterListing {
-  statusGroup: string; // "Closed" | "Active" | "Didn't Sell"
+  statusGroup: string; // "Closed" | "Active" | "Pending" | "Didn't Sell"
   date: string;
   price: number;
   priceSf: number;
@@ -97,9 +97,10 @@ export interface StatusScatterListing {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  "Closed": "#324A32",      // Zilker green
-  "Active": "#93B9BC",      // Faded Denim
-  "Didn't Sell": "#E1DDD1", // Moontower
+  "Closed": "#7AA0A3",      // Darkened denim
+  "Active": "#324A32",      // Zilker green
+  "Pending": "#886752",     // Barton Creek brown
+  "Didn't Sell": "#C4BDA8", // Darkened moontower
 };
 
 interface YearDataPoint {
@@ -384,7 +385,7 @@ export default function MarketChart({
             stroke="#d1d5db"
             width={70}
             label={{
-              value: `Median ${metricLabel}`,
+              value: `Closed Median ${metricLabel}`,
               angle: -90,
               position: "insideLeft",
               style: { fontSize: 11, fill: "#886752" },
@@ -406,7 +407,9 @@ export default function MarketChart({
               style: { fontSize: 11, fill: "#886752" },
             }}
           />
-          <Tooltip content={<CustomTooltip metric={metric} />} />
+          {!useStatusScatter && (
+            <Tooltip content={<CustomTooltip metric={metric} />} />
+          )}
           <Legend
             formatter={(value) => (
               <span className="text-xs uppercase tracking-wider text-secondary">
@@ -431,7 +434,7 @@ export default function MarketChart({
             <Line
               yAxisId="left"
               dataKey={metricKey}
-              name={`Median ${metricLabel}`}
+              name={metric === "priceSf" ? "Closed Median $/SF" : "Closed Median Sale Price"}
               stroke="#324A32"
               strokeWidth={2.5}
               dot={{ r: 4, fill: "#324A32" }}
@@ -443,7 +446,7 @@ export default function MarketChart({
 
           {/* Status-colored scatter dots (when status scatter data provided) */}
           {useStatusScatter &&
-            ["Closed", "Active", "Didn't Sell"]
+            ["Didn't Sell", "Pending", "Active", "Closed"]
               .filter((group) => statusScatterByGroup[group]?.length > 0)
               .map((group) => (
                 <Scatter
@@ -543,7 +546,7 @@ export default function MarketChart({
       <p className="mt-3 text-center text-xs text-accent">
         {(showScatter || useStatusScatter) && "Dots show individual listings · "}
         Bars show annual transaction volume
-        {yearData.length > 1 && ` · Line shows yearly median ${metricLabel}`}
+        {yearData.length > 1 && ` · Line shows yearly closed median ${metricLabel}`}
       </p>
     </div>
   );

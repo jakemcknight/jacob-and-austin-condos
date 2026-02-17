@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import AnalyticsTabs, { TabId } from "@/components/analytics/AnalyticsTabs";
 import SummaryCards from "@/components/analytics/SummaryCards";
 import type { AnalyticsListing } from "@/lib/mls/analytics-types";
-import type { MLSListing } from "@/lib/mls/types";
 import type { StatusScatterListing } from "@/components/MarketChart";
 import {
   median,
@@ -14,9 +12,8 @@ import {
   getLast12MonthsCutoff,
   type YearlyRow,
 } from "@/lib/mls/analytics-computations";
-import { buildings as buildingsData } from "@/data/buildings";
 
-// Lazy-load tab components
+// Lazy-load chart
 const MarketChart = dynamic(() => import("@/components/MarketChart"), {
   ssr: false,
   loading: () => (
@@ -25,9 +22,6 @@ const MarketChart = dynamic(() => import("@/components/MarketChart"), {
     </div>
   ),
 });
-const MarketSnapshot = dynamic(() => import("@/components/analytics/MarketSnapshot"), { ssr: false });
-const PendingAnalysis = dynamic(() => import("@/components/analytics/PendingAnalysis"), { ssr: false });
-const PricingTool = dynamic(() => import("@/components/analytics/PricingTool"), { ssr: false });
 
 const BEDROOM_COLORS: Record<number, string> = {
   0: "#93B9BC",
@@ -48,28 +42,39 @@ function formatDollar(val: number): string {
   return "$" + Math.round(val).toLocaleString();
 }
 
+function formatPsf(val: number, isLease: boolean): string {
+  if (isLease) {
+    return "$" + val.toFixed(2);
+  }
+  return "$" + Math.round(val).toLocaleString();
+}
+
 function formatPct(val: number): string {
   return Math.round(val * 100) + "%";
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function DataV2Page() {
   // Data state
   const [analyticsListings, setAnalyticsListings] = useState<AnalyticsListing[]>([]);
-  const [activeListings, setActiveListings] = useState<MLSListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncInfo, setSyncInfo] = useState<{ lastSync?: string; totalRecords?: number }>({});
-
-  // Tab state
-  const [activeTab, setActiveTab] = useState<TabId>("sold");
+  const [syncInfo, setSyncInfo] = useState<{ lastSync?: string }>({});
 
   // Filter state
   const [listingMode, setListingMode] = useState<"buy" | "lease">("buy");
   const [selectedBuildings, setSelectedBuildings] = useState<Set<string>>(new Set());
   const [activeBedrooms, setActiveBedrooms] = useState<Set<number>>(new Set());
-  const [yearFrom, setYearFrom] = useState(2000);
+  const [yearFrom, setYearFrom] = useState(2015);
   const [yearTo, setYearTo] = useState(new Date().getFullYear());
   const [advancedDates, setAdvancedDates] = useState(false);
-  const [dateFrom, setDateFrom] = useState("2000-01-01");
+  const [dateFrom, setDateFrom] = useState("2015-01-01");
   const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [metric, setMetric] = useState<"priceSf" | "price">("priceSf");
   const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(new Set());
@@ -100,16 +105,12 @@ export default function DataV2Page() {
 
   // Fetch data on mount
   useEffect(() => {
-    Promise.all([
-      fetch("/downtown-condos/api/mls/analytics?status=all").then((r) => r.json()),
-      fetch("/downtown-condos/api/mls/listings").then((r) => r.json()),
-    ])
-      .then(([analyticsRes, activeRes]) => {
+    fetch("/downtown-condos/api/mls/analytics?status=all")
+      .then((r) => r.json())
+      .then((analyticsRes) => {
         setAnalyticsListings(analyticsRes.listings || []);
-        setActiveListings(Array.isArray(activeRes) ? activeRes : []);
         setSyncInfo({
           lastSync: analyticsRes.syncState?.lastSyncDate || analyticsRes.importState?.lastImportDate,
-          totalRecords: analyticsRes.count || 0,
         });
         setLoading(false);
       })
@@ -125,12 +126,6 @@ export default function DataV2Page() {
     return Array.from(names).sort();
   }, [analyticsListings]);
 
-  const bedroomCounts = useMemo(() => {
-    const counts = new Set<number>();
-    for (const l of analyticsListings) counts.add(l.bedroomsTotal);
-    return Array.from(counts).sort((a, b) => a - b);
-  }, [analyticsListings]);
-
   const allYears = useMemo(() => {
     const years = new Set<number>();
     for (const l of analyticsListings) {
@@ -142,7 +137,32 @@ export default function DataV2Page() {
 
   // Effective selections
   const effectiveBuildings = selectedBuildings.size === 0 ? new Set(allBuildingNames) : selectedBuildings;
-  const effectiveBedrooms = activeBedrooms.size === 0 ? new Set(bedroomCounts) : activeBedrooms;
+
+  // Bedroom counts filtered by building + listing mode (NOT by bedroom — avoids circular dep)
+  const filteredBedroomCounts = useMemo(() => {
+    const targetPropertyType = listingMode === "buy" ? "Residential" : "Residential Lease";
+    const counts = new Set<number>();
+    for (const l of analyticsListings) {
+      if (l.propertyType !== targetPropertyType) continue;
+      if (!effectiveBuildings.has(l.buildingName)) continue;
+      counts.add(l.bedroomsTotal);
+    }
+    return Array.from(counts).sort((a, b) => a - b);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyticsListings, listingMode, effectiveBuildings]);
+
+  const effectiveBedrooms = activeBedrooms.size === 0 ? new Set(filteredBedroomCounts) : activeBedrooms;
+
+  // Clean stale bedroom selections when available bedrooms change
+  useEffect(() => {
+    if (activeBedrooms.size > 0) {
+      const valid = new Set(Array.from(activeBedrooms).filter((b) => filteredBedroomCounts.includes(b)));
+      if (valid.size !== activeBedrooms.size) {
+        setActiveBedrooms(valid.size > 0 ? valid : new Set());
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredBedroomCounts]);
 
   // Date range helper
   function inDateRange(dateStr: string | undefined): boolean {
@@ -168,17 +188,6 @@ export default function DataV2Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analyticsListings, listingMode, effectiveBuildings, effectiveBedrooms, yearFrom, yearTo, advancedDates, dateFrom, dateTo]);
 
-  // Status counts for tabs
-  const statusCounts = useMemo(() => {
-    let closed = 0, pending = 0;
-    for (const l of filteredListings) {
-      const s = l.status.toLowerCase();
-      if (s === "closed") closed++;
-      else if (s === "pending") pending++;
-    }
-    return { closed, pending };
-  }, [filteredListings]);
-
   // Closed listings for Sold tab
   const closedListings = useMemo(
     () => filteredListings.filter((l) => l.status === "Closed"),
@@ -192,6 +201,8 @@ export default function DataV2Page() {
     [closedListings, cutoff12]
   );
 
+  const isLease = listingMode === "lease";
+
   const summaryStats = useMemo(() => {
     const prices = last12.map((l) => l.closePrice || 0).filter((p) => p > 0);
     const psfs = last12
@@ -203,7 +214,7 @@ export default function DataV2Page() {
     return {
       count: last12.length,
       medianPrice: Math.round(median(prices)),
-      medianPsf: Math.round(median(psfs)),
+      medianPsf: median(psfs), // raw value — format at display time
       medianDom: Math.round(median(doms)),
       medianCpLp: median(cpLps),
     };
@@ -250,17 +261,19 @@ export default function DataV2Page() {
         group = "Closed";
       } else if (s === "Active" && scatterStatuses.has("Active")) {
         group = "Active";
+      } else if ((s === "Pending" || s === "Active Under Contract") && scatterStatuses.has("Pending")) {
+        group = "Pending";
       } else if (DIDNT_SELL_STATUSES.includes(s) && scatterStatuses.has("Didn't Sell")) {
         group = "Didn't Sell";
       }
 
       if (!group) continue;
 
-      // Closed uses closePrice/closeDate; Active & Didn't Sell use listPrice
+      // Closed uses closePrice/closeDate; others use listPrice and last-updated date
       const price = group === "Closed" ? (l.closePrice || 0) : (l.listPrice || 0);
       const date = group === "Closed"
         ? (l.closeDate || l.listingContractDate || "")
-        : (l.listingContractDate || l.closeDate || "");
+        : (l.priceChangeTimestamp || l.statusChangeTimestamp || l.listingContractDate || "");
 
       if (price <= 0 || !date) continue;
 
@@ -349,7 +362,7 @@ export default function DataV2Page() {
 
   function toggleBedroom(bed: number) {
     setActiveBedrooms((prev) => {
-      const next = new Set(prev.size === 0 ? bedroomCounts : prev);
+      const next = new Set(prev.size === 0 ? filteredBedroomCounts : prev);
       if (next.has(bed)) {
         next.delete(bed);
         if (next.size === 0) next.add(bed);
@@ -359,12 +372,6 @@ export default function DataV2Page() {
       return next;
     });
   }
-
-  // Buildings list for props
-  const buildingsList = useMemo(
-    () => buildingsData.map((b) => ({ slug: b.slug, name: b.name })),
-    []
-  );
 
   if (loading) {
     return (
@@ -385,10 +392,16 @@ export default function DataV2Page() {
 
         {/* Sync info */}
         <div className="mt-2 text-center text-xs text-secondary">
-          {syncInfo.totalRecords ? (
+          {syncInfo.lastSync ? (
             <span>
-              {syncInfo.totalRecords.toLocaleString()} records
-              {syncInfo.lastSync && ` | Last updated: ${syncInfo.lastSync}`}
+              Last updated: {new Date(syncInfo.lastSync).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
             </span>
           ) : (
             <span>No data loaded — <a href="/downtown-condos/data-v2/import" className="text-accent underline">import data</a></span>
@@ -521,7 +534,7 @@ export default function DataV2Page() {
             </div>
           </div>
 
-          {/* Row 2: Bedrooms + Metric toggle */}
+          {/* Row 2: Bedrooms + Metric toggle + Scatter */}
           <div className="flex flex-wrap items-center justify-center gap-4">
             {/* Bedroom selector */}
             <div ref={bedroomRef} className="relative">
@@ -540,7 +553,7 @@ export default function DataV2Page() {
               </button>
               {bedroomOpen && (
                 <div className="absolute left-0 top-full z-30 mt-1 border border-gray-200 bg-white shadow-lg">
-                  {bedroomCounts.map((bed) => (
+                  {filteredBedroomCounts.map((bed) => (
                     <label key={bed} className="flex cursor-pointer items-center gap-2 px-4 py-1.5 text-xs hover:bg-gray-50">
                       <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: BEDROOM_COLORS[bed] || "#666" }} />
                       <input
@@ -576,209 +589,173 @@ export default function DataV2Page() {
               </button>
             </div>
 
-            {/* Status scatter toggles (only for sold tab) */}
-            {activeTab === "sold" && (
-              <div className="flex items-center gap-3">
-                <span className="text-xs uppercase tracking-wider text-accent">Scatter:</span>
-                {[
-                  { key: "Closed", label: "Closed", color: "#324A32" },
-                  { key: "Active", label: "Active", color: "#93B9BC" },
-                  { key: "Didn't Sell", label: "Didn't Sell", color: "#E1DDD1" },
-                ].map(({ key, label, color }) => (
-                  <label key={key} className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
-                    <span className="inline-block h-3 w-3 rounded-full border border-gray-300" style={{ backgroundColor: color }} />
-                    <input
-                      type="checkbox"
-                      checked={scatterStatuses.has(key)}
-                      onChange={() => toggleScatterStatus(key)}
-                      className="accent-primary"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            )}
+            {/* Status scatter toggles */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-wider text-accent">Scatter:</span>
+              {[
+                { key: "Closed", label: "Closed", color: "#7AA0A3" },
+                { key: "Active", label: "Active", color: "#324A32" },
+                { key: "Pending", label: "Pending", color: "#886752" },
+                { key: "Didn't Sell", label: "Didn't Sell", color: "#C4BDA8" },
+              ].map(({ key, label, color }) => (
+                <label key={key} className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
+                  <span className="inline-block h-3 w-3 rounded-full border border-gray-300" style={{ backgroundColor: color }} />
+                  <input
+                    type="checkbox"
+                    checked={scatterStatuses.has(key)}
+                    onChange={() => toggleScatterStatus(key)}
+                    className="accent-primary"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="mt-6">
-          <AnalyticsTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            counts={statusCounts}
+        {/* Content */}
+        <div className="mt-6 space-y-6">
+          {/* Summary Cards */}
+          <SummaryCards
+            cards={[
+              { label: "Transactions (12 Mo)", value: summaryStats.count.toLocaleString() },
+              { label: "Median $/SF (12 Mo)", value: formatPsf(summaryStats.medianPsf, isLease) },
+              { label: "Median Price (12 Mo)", value: formatDollar(summaryStats.medianPrice) },
+              { label: "Median DOM (12 Mo)", value: String(summaryStats.medianDom) },
+              { label: "Median CP/LP (12 Mo)", value: summaryStats.medianCpLp > 0 ? formatPct(summaryStats.medianCpLp) : "---" },
+            ]}
           />
-        </div>
 
-        {/* Tab Content */}
-        <div className="mt-6">
-          {/* === SOLD TAB === */}
-          {activeTab === "sold" && (
-            <div className="space-y-6">
-              {/* Summary Cards */}
-              <SummaryCards
-                cards={[
-                  { label: "Transactions (12 Mo)", value: summaryStats.count.toLocaleString() },
-                  { label: "Median $/SF (12 Mo)", value: `$${summaryStats.medianPsf.toLocaleString()}` },
-                  { label: "Median Price (12 Mo)", value: formatDollar(summaryStats.medianPrice) },
-                  { label: "Median DOM (12 Mo)", value: String(summaryStats.medianDom) },
-                  { label: "Median CP/LP (12 Mo)", value: summaryStats.medianCpLp > 0 ? formatPct(summaryStats.medianCpLp) : "---" },
-                ]}
-              />
+          {/* Chart */}
+          <MarketChart
+            transactions={chartTransactions}
+            metric={metric}
+            showScatter={false}
+            activeBedrooms={activeBedrooms.size === 0 ? new Set(filteredBedroomCounts) : activeBedrooms}
+            bedroomCounts={filteredBedroomCounts}
+            selectedBuildings={Array.from(selectedBuildings)}
+            statusScatterListings={statusScatterListings}
+          />
 
-              {/* Chart */}
-              <MarketChart
-                transactions={chartTransactions}
-                metric={metric}
-                showScatter={false}
-                activeBedrooms={activeBedrooms.size === 0 ? new Set(bedroomCounts) : activeBedrooms}
-                bedroomCounts={bedroomCounts}
-                selectedBuildings={Array.from(selectedBuildings)}
-                statusScatterListings={statusScatterListings}
-              />
+          {/* Yearly Breakdown Table */}
+          <div>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+              Yearly Breakdown
+            </h3>
+            <div className="max-h-[200px] overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-accent text-white">
+                    {["Year", "Med Value", "$/SF", "TXNs", "HOA $/SF", "DOM", "Med SF", "Volume", "CP/LP", "CP/OLP"].map((h) => (
+                      <th key={h} className="whitespace-nowrap px-3 py-2 text-center font-medium uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearlyRows.map((row, i) => (
+                    <tr key={row.year} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className="px-3 py-1.5 text-center font-medium text-primary">{row.year}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{formatDollar(row.medianPrice)}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{formatPsf(row.medianPsf, isLease)}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{row.count}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{formatPsf(row.medianHoaPsf, isLease)}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{row.medianDom}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{Math.round(row.medianSf).toLocaleString()}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{formatDollar(row.totalVolume)}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{row.medianCpLp > 0 ? formatPct(row.medianCpLp) : "---"}</td>
+                      <td className="px-3 py-1.5 text-center text-primary">{row.medianCpOlp > 0 ? formatPct(row.medianCpOlp) : "---"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-              {/* Yearly Breakdown Table */}
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
-                  Yearly Breakdown
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-accent text-white">
-                        {["Year", "Med Value", "$/SF", "TXNs", "HOA $/SF", "DOM", "Med SF", "Volume", "CP/LP", "CP/OLP"].map((h) => (
-                          <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium uppercase tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {yearlyRows.map((row, i) => (
-                        <tr key={row.year} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                          <td className="px-3 py-1.5 font-medium text-primary">{row.year}</td>
-                          <td className="px-3 py-1.5 text-primary">{formatDollar(row.medianPrice)}</td>
-                          <td className="px-3 py-1.5 text-primary">${Math.round(row.medianPsf).toLocaleString()}</td>
-                          <td className="px-3 py-1.5 text-primary">{row.count}</td>
-                          <td className="px-3 py-1.5 text-primary">${row.medianHoaPsf.toFixed(2)}</td>
-                          <td className="px-3 py-1.5 text-primary">{row.medianDom}</td>
-                          <td className="px-3 py-1.5 text-primary">{Math.round(row.medianSf).toLocaleString()}</td>
-                          <td className="px-3 py-1.5 text-primary">{formatDollar(row.totalVolume)}</td>
-                          <td className="px-3 py-1.5 text-primary">{row.medianCpLp > 0 ? formatPct(row.medianCpLp) : "---"}</td>
-                          <td className="px-3 py-1.5 text-primary">{row.medianCpOlp > 0 ? formatPct(row.medianCpOlp) : "---"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* Appreciation */}
+          {appreciation && (
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+                Appreciation ({appreciation.firstYear} – {appreciation.lastYear})
+              </h3>
+              <div className="mb-3 flex items-center gap-3">
+                {(["5", "10", "all", "custom"] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setAppreciationRange(r)}
+                    className={`border px-3 py-1 text-xs uppercase tracking-wider ${
+                      appreciationRange === r ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
+                    }`}
+                  >
+                    {r === "all" ? "All" : r === "custom" ? "Custom" : `${r} Years`}
+                  </button>
+                ))}
+                {appreciationRange === "custom" && (
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={appreciationDateFrom} onChange={(e) => setAppreciationDateFrom(e.target.value)} className="border border-gray-200 bg-white px-2 py-1 text-xs" />
+                    <span className="text-xs text-secondary">to</span>
+                    <input type="date" value={appreciationDateTo} onChange={(e) => setAppreciationDateTo(e.target.value)} className="border border-gray-200 bg-white px-2 py-1 text-xs" />
+                  </div>
+                )}
               </div>
-
-              {/* Appreciation */}
-              {appreciation && (
-                <div>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
-                    Appreciation ({appreciation.firstYear} – {appreciation.lastYear})
-                  </h3>
-                  <div className="mb-3 flex items-center gap-3">
-                    {(["5", "10", "all", "custom"] as const).map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => setAppreciationRange(r)}
-                        className={`border px-3 py-1 text-xs uppercase tracking-wider ${
-                          appreciationRange === r ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
-                        }`}
-                      >
-                        {r === "all" ? "All" : r === "custom" ? "Custom" : `${r} Years`}
-                      </button>
-                    ))}
-                    {appreciationRange === "custom" && (
-                      <div className="flex items-center gap-2">
-                        <input type="date" value={appreciationDateFrom} onChange={(e) => setAppreciationDateFrom(e.target.value)} className="border border-gray-200 bg-white px-2 py-1 text-xs" />
-                        <span className="text-xs text-secondary">to</span>
-                        <input type="date" value={appreciationDateTo} onChange={(e) => setAppreciationDateTo(e.target.value)} className="border border-gray-200 bg-white px-2 py-1 text-xs" />
-                      </div>
-                    )}
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: "Median $/SF", data: appreciation.priceSf },
+                  { label: "Median Value", data: appreciation.value },
+                  { label: "HOA $/SF", data: appreciation.hoaPsf },
+                ].map(({ label, data }) => (
+                  <div key={label} className="border border-gray-200 bg-white p-4">
+                    <p className="text-xs uppercase tracking-wider text-accent">{label}</p>
+                    <p className={`mt-1 text-lg font-bold ${data.totalGainPercent >= 0 ? "text-zilker" : "text-red-600"}`}>
+                      {data.totalGainPercent >= 0 ? "+" : ""}{data.totalGainPercent.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-secondary">
+                      {data.yoyPercent >= 0 ? "+" : ""}{data.yoyPercent.toFixed(1)}% / year
+                    </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {[
-                      { label: "Median $/SF", data: appreciation.priceSf },
-                      { label: "Median Value", data: appreciation.value },
-                      { label: "HOA $/SF", data: appreciation.hoaPsf },
-                    ].map(({ label, data }) => (
-                      <div key={label} className="border border-gray-200 bg-white p-4">
-                        <p className="text-xs uppercase tracking-wider text-accent">{label}</p>
-                        <p className={`mt-1 text-lg font-bold ${data.totalGainPercent >= 0 ? "text-zilker" : "text-red-600"}`}>
-                          {data.totalGainPercent >= 0 ? "+" : ""}{data.totalGainPercent.toFixed(1)}%
-                        </p>
-                        <p className="text-xs text-secondary">
-                          {data.yoyPercent >= 0 ? "+" : ""}{data.yoyPercent.toFixed(1)}% / year
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Closed Transactions Table */}
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
-                  Closed Transactions ({closedListings.length})
-                </h3>
-                <div className="max-h-[600px] overflow-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0">
-                      <tr className="bg-accent text-white">
-                        {["Building", "Unit", "Bed", "Bath", "Price", "$/SF", "Close Date", "HOA", "DOM", "Plan", "Dir", "SF"].map((h) => (
-                          <th key={h} className="whitespace-nowrap px-2 py-2 text-left font-medium uppercase tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedTransactions.map((t, i) => (
-                        <tr key={t.listingId + i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                          <td className="whitespace-nowrap px-2 py-1 text-primary">{t.buildingName}</td>
-                          <td className="px-2 py-1 text-primary">{t.unitNumber}</td>
-                          <td className="px-2 py-1 text-primary">{t.bedroomsTotal}</td>
-                          <td className="px-2 py-1 text-primary">{t.bathroomsTotalInteger}</td>
-                          <td className="whitespace-nowrap px-2 py-1 text-primary">{t.closePrice ? formatDollar(t.closePrice) : "---"}</td>
-                          <td className="px-2 py-1 text-primary">
-                            {t.closePrice && t.livingArea > 0 ? `$${Math.round(t.closePrice / t.livingArea).toLocaleString()}` : "---"}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-1 text-primary">{t.closeDate || "---"}</td>
-                          <td className="px-2 py-1 text-primary">{t.hoaFee ? `$${t.hoaFee.toLocaleString()}` : "---"}</td>
-                          <td className="px-2 py-1 text-primary">{t.daysOnMarket}</td>
-                          <td className="px-2 py-1 text-primary">{t.floorPlan || "---"}</td>
-                          <td className="px-2 py-1 text-primary">{t.orientation || "---"}</td>
-                          <td className="px-2 py-1 text-primary">{t.livingArea > 0 ? t.livingArea.toLocaleString() : "---"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* === MARKET SNAPSHOT TAB === */}
-          {activeTab === "snapshot" && (
-            <MarketSnapshot
-              analyticsListings={filteredListings}
-              activeListings={activeListings}
-              buildings={buildingsList}
-            />
-          )}
-
-          {/* === PENDING TAB === */}
-          {activeTab === "pending" && (
-            <PendingAnalysis analyticsListings={filteredListings} />
-          )}
-
-          {/* === PRICING TOOL TAB === */}
-          {activeTab === "pricing" && (
-            <PricingTool
-              analyticsListings={analyticsListings}
-              activeListings={activeListings}
-              buildings={buildingsList}
-            />
-          )}
+          {/* Closed Transactions Table */}
+          <div>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+              Closed Transactions ({closedListings.length})
+            </h3>
+            <div className="max-h-[280px] overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0">
+                  <tr className="bg-accent text-white">
+                    {["Building", "Unit", "Bed", "Bath", "Price", "$/SF", "Close Date", "HOA", "DOM", "Plan", "Dir", "SF"].map((h) => (
+                      <th key={h} className={`whitespace-nowrap px-2 py-2 font-medium uppercase tracking-wider ${
+                        h === "Building" ? "text-left" : "text-center"
+                      }`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedTransactions.map((t, i) => (
+                    <tr key={t.listingId + i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className="whitespace-nowrap px-2 py-1 text-left text-primary">{t.buildingName}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.unitNumber}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.bedroomsTotal}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.bathroomsTotalInteger}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-center text-primary">{t.closePrice ? formatDollar(t.closePrice) : "---"}</td>
+                      <td className="px-2 py-1 text-center text-primary">
+                        {t.closePrice && t.livingArea > 0 ? formatPsf(t.closePrice / t.livingArea, isLease) : "---"}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1 text-center text-primary">{t.closeDate ? formatDate(t.closeDate) : "---"}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.hoaFee ? `$${t.hoaFee.toLocaleString()}` : "---"}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.daysOnMarket}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.floorPlan || "---"}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.orientation || "---"}</td>
+                      <td className="px-2 py-1 text-center text-primary">{t.livingArea > 0 ? t.livingArea.toLocaleString() : "---"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
