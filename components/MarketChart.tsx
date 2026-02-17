@@ -112,10 +112,11 @@ interface YearDataPoint {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, metric }: any) {
+function CustomTooltip({ active, payload, metric, isLease }: any) {
   if (!active || !payload || !payload.length) return null;
 
   const first = payload[0];
+  const fmtPsfLocal = (v: number) => isLease ? `$${v.toFixed(2)}` : `$${Math.round(v).toLocaleString()}`;
 
   // Year data tooltip (bar or median line)
   if (first.payload.count !== undefined && first.payload.year !== undefined) {
@@ -130,7 +131,7 @@ function CustomTooltip({ active, payload, metric }: any) {
         <p>
           <span className="text-accent">Median $/SF:</span>{" "}
           <span className="font-medium text-primary">
-            ${d.medianPsf.toLocaleString()}
+            {fmtPsfLocal(d.medianPsf)}
           </span>
         </p>
         <p>
@@ -173,7 +174,7 @@ function CustomTooltip({ active, payload, metric }: any) {
         <p>
           <span className="text-accent">$/SF:</span>{" "}
           <span className="font-medium text-primary">
-            ${d.priceSf.toLocaleString()}
+            {fmtPsfLocal(d.priceSf)}
           </span>
         </p>
       )}
@@ -200,6 +201,7 @@ interface MarketChartProps {
   activeFloorPlans?: string[];
   yearRange?: string;
   statusScatterListings?: StatusScatterListing[];
+  isLease?: boolean;
 }
 
 export default function MarketChart({
@@ -213,7 +215,11 @@ export default function MarketChart({
   activeFloorPlans = [],
   yearRange = "",
   statusScatterListings = [],
+  isLease = false,
 }: MarketChartProps) {
+  // Format $/SF: 2 decimals for lease, whole numbers for buy
+  const fmtPsf = (v: number) => isLease ? `$${v.toFixed(2)}` : `$${Math.round(v).toLocaleString()}`;
+
   const [hoveredPoint, setHoveredPoint] = useState<ScatterPoint | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
@@ -297,7 +303,7 @@ export default function MarketChart({
     .map(([yr, bucket]) => ({
       year: Number(yr),
       count: bucket.count,
-      medianPsf: Math.round(median(bucket.priceSfs)),
+      medianPsf: isLease ? Math.round(median(bucket.priceSfs) * 100) / 100 : Math.round(median(bucket.priceSfs)),
       medianPrice: Math.round(median(bucket.prices)),
       timestamp: new Date(Number(yr), 6, 1).getTime(),
     }))
@@ -379,7 +385,7 @@ export default function MarketChart({
             yAxisId="left"
             type="number"
             tickFormatter={(val) =>
-              metric === "priceSf" ? `$${val}` : formatPrice(val)
+              metric === "priceSf" ? fmtPsf(val) : formatPrice(val)
             }
             tick={{ fontSize: 11, fill: "#666" }}
             stroke="#d1d5db"
@@ -408,7 +414,7 @@ export default function MarketChart({
             }}
           />
           {!useStatusScatter && (
-            <Tooltip content={<CustomTooltip metric={metric} />} />
+            <Tooltip content={<CustomTooltip metric={metric} isLease={isLease} />} />
           )}
           <Legend
             formatter={(value) => (
@@ -527,7 +533,7 @@ export default function MarketChart({
               <p>
                 <span className="text-accent">$/SF:</span>{" "}
                 <span className="font-medium text-primary">
-                  ${hoveredPoint.priceSf.toLocaleString()}
+                  {fmtPsf(hoveredPoint.priceSf)}
                 </span>
               </p>
             )}

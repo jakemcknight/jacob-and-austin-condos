@@ -12,6 +12,7 @@ import {
   getLast12MonthsCutoff,
   type YearlyRow,
 } from "@/lib/mls/analytics-computations";
+import { buildings as buildingsData } from "@/data/buildings";
 
 // Lazy-load chart
 const MarketChart = dynamic(() => import("@/components/MarketChart"), {
@@ -108,7 +109,15 @@ export default function DataV2Page() {
     fetch("/downtown-condos/api/mls/analytics?status=all")
       .then((r) => r.json())
       .then((analyticsRes) => {
-        setAnalyticsListings(analyticsRes.listings || []);
+        // Normalize unmatched listings to "Other" so they flow through all analytics
+        const knownNames = new Set(buildingsData.map((b) => b.name));
+        const listings = (analyticsRes.listings || []).map((l: AnalyticsListing) => {
+          if (!l.buildingSlug || l.buildingSlug === "_unmatched" || !knownNames.has(l.buildingName)) {
+            return { ...l, buildingName: "Other" };
+          }
+          return l;
+        });
+        setAnalyticsListings(listings);
         setSyncInfo({
           lastSync: analyticsRes.syncState?.lastSyncDate || analyticsRes.importState?.lastImportDate,
         });
@@ -635,6 +644,7 @@ export default function DataV2Page() {
             bedroomCounts={filteredBedroomCounts}
             selectedBuildings={Array.from(selectedBuildings)}
             statusScatterListings={statusScatterListings}
+            isLease={isLease}
           />
 
           {/* Yearly Breakdown Table */}
