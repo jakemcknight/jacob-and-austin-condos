@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { buildings } from "@/data/buildings";
+import { formatOrientation } from "@/lib/format-dom";
 import ListingCard from "./ListingCard";
 import type { MLSListingDisplay as MLSListing } from "./ListingCard";
 
@@ -333,7 +334,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
                         : "bg-gray-100 text-secondary hover:bg-gray-200"
                     }`}
                   >
-                    {o}
+                    {formatOrientation(o)}
                   </button>
                 ))}
               </div>

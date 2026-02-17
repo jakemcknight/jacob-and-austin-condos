@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import { buildings } from "@/data/buildings";
+import { formatOrientation } from "@/lib/format-dom";
 
 type SortOption = "price" | "priceSf" | "dom" | "date";
 
@@ -133,7 +134,7 @@ export default function FilterBar({
 
   let orientationLabel: string | undefined;
   if (filters.orientationFilters.length > 0) {
-    orientationLabel = filters.orientationFilters.join(", ");
+    orientationLabel = filters.orientationFilters.map(formatOrientation).join(", ");
   }
 
   const filteredBuildings = sortedBuildings.filter(b =>
@@ -382,7 +383,7 @@ export default function FilterBar({
                           : "bg-gray-100 text-secondary hover:bg-gray-200"
                       }`}
                     >
-                      {o}
+                      {formatOrientation(o)}
                     </button>
                   ))}
                 </div>

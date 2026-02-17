@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { readMlsCache } from "@/lib/mls/cache";
 import { buildings } from "@/data/buildings";
-import { calculateDaysOnMarket } from "@/lib/format-dom";
+import { calculateDaysOnMarket, formatOrientation } from "@/lib/format-dom";
 import ContactForm from "@/components/ContactForm";
 import ListingGallery from "@/components/ListingGallery";
 import ShareButton from "@/components/ShareButton";
@@ -242,7 +242,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     </span>
                     {listing.orientation && (
                       <span className="text-sm text-secondary">
-                        <span className="font-medium text-primary">Orientation:</span> {listing.orientation}
+                        <span className="font-medium text-primary">Orientation:</span> {formatOrientation(listing.orientation!)}
                       </span>
                     )}
                   </div>

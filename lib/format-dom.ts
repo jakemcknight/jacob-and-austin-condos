@@ -25,3 +25,43 @@ export function formatDaysOnMarket(days: number): string {
   if (days === 1) return "1 Day on Market";
   return `${days} Days on Market`;
 }
+
+/**
+ * Format orientation abbreviation to human-readable label.
+ *
+ * Abbreviation patterns from unit lookup CSV:
+ *   Single: N, S, E, W
+ *   Combo:  SE, SW
+ *   Corner (suffix "c"): NEc → Northeast Corner, NWc → Northwest Corner, etc.
+ *   Multi-direction corner: NESc → North-East-South Corner, SEWc → South-East-West Corner
+ *   Special: "S, N" → "South, North"
+ */
+const DIRECTION_MAP: Record<string, string> = {
+  N: "North",
+  S: "South",
+  E: "East",
+  W: "West",
+};
+
+export function formatOrientation(abbr: string): string {
+  if (!abbr) return "";
+
+  // Handle comma-separated (e.g. "S, N")
+  if (abbr.includes(",")) {
+    return abbr
+      .split(",")
+      .map((s) => formatOrientation(s.trim()))
+      .join(", ");
+  }
+
+  const isCorner = abbr.endsWith("c");
+  const dirs = isCorner ? abbr.slice(0, -1) : abbr;
+
+  // Expand each capital letter to its full direction name
+  const expanded = dirs
+    .split("")
+    .map((ch) => DIRECTION_MAP[ch] || ch)
+    .join("-");
+
+  return isCorner ? `${expanded} Corner` : expanded;
+}
