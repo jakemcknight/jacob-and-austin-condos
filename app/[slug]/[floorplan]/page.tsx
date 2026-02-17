@@ -112,7 +112,7 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
             <ol className="flex items-center space-x-2">
               <li>
                 <Link
-                  href="/downtown-condos"
+                  href="/"
                   className="text-blue-600 hover:underline"
                 >
                   Buildings
@@ -123,7 +123,7 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
               </li>
               <li>
                 <Link
-                  href={`/downtown-condos/${building.slug}`}
+                  href={`/${building.slug}`}
                   className="text-blue-600 hover:underline"
                 >
                   {building.name}
@@ -223,7 +223,7 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
                 {/* Back to Building Button */}
                 <div className="border-t pt-6">
                   <Link
-                    href={`/downtown-condos/${building.slug}`}
+                    href={`/${building.slug}#floor-plans`}
                     className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-white transition hover:bg-blue-700"
                   >
                     ← View All Floor Plans at {building.name}

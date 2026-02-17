@@ -30,6 +30,26 @@ export default function FloorPlans({
   const [selectedPlan, setSelectedPlan] = useState<FloorPlan | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async (plan: FloorPlan) => {
+    const url = `${window.location.origin}/downtown-condos/${buildingSlug}/${plan.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      const input = document.createElement("input");
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Group floor plans by bedroom count
   const bedroomGroups = useMemo(() => {
@@ -217,6 +237,14 @@ export default function FloorPlans({
                     View Full Screen
                   </button>
                 )}
+
+                {/* Share */}
+                <button
+                  onClick={() => handleShare(selectedPlan)}
+                  className="block w-full border border-gray-300 bg-white py-3 text-center text-xs uppercase tracking-wider text-secondary transition-colors hover:border-primary hover:text-primary"
+                >
+                  {copied ? "Link Copied!" : "Share Floor Plan"}
+                </button>
 
                 {/* Inquire */}
                 <a
