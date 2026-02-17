@@ -563,17 +563,33 @@ export default function DataV2Page() {
               {bedroomOpen && (
                 <div className="absolute left-0 top-full z-30 mt-1 border border-gray-200 bg-white shadow-lg">
                   {filteredBedroomCounts.map((bed) => (
-                    <label key={bed} className="flex cursor-pointer items-center gap-2 px-4 py-1.5 text-xs hover:bg-gray-50">
-                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: BEDROOM_COLORS[bed] || "#666" }} />
-                      <input
-                        type="checkbox"
-                        checked={activeBedrooms.size === 0 || activeBedrooms.has(bed)}
-                        onChange={() => toggleBedroom(bed)}
-                        className="accent-primary"
-                      />
-                      <span className="text-primary">{bedroomLabel(bed)}</span>
-                    </label>
+                    <div key={bed} className="flex items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-50">
+                      <label className="flex flex-1 cursor-pointer items-center gap-2">
+                        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: BEDROOM_COLORS[bed] || "#666" }} />
+                        <input
+                          type="checkbox"
+                          checked={activeBedrooms.size === 0 || activeBedrooms.has(bed)}
+                          onChange={() => toggleBedroom(bed)}
+                          className="accent-primary"
+                        />
+                        <span className="text-primary">{bedroomLabel(bed)}</span>
+                      </label>
+                      <button
+                        onClick={() => setActiveBedrooms(new Set([bed]))}
+                        className="ml-2 text-[10px] tracking-wider text-accent hover:text-primary"
+                      >
+                        only
+                      </button>
+                    </div>
                   ))}
+                  {activeBedrooms.size > 0 && (
+                    <button
+                      onClick={() => setActiveBedrooms(new Set())}
+                      className="w-full border-t border-gray-100 bg-white px-3 py-1.5 text-left text-xs tracking-wider text-accent hover:text-primary"
+                    >
+                      Select All
+                    </button>
+                  )}
                 </div>
               )}
             </div>
