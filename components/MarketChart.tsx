@@ -79,6 +79,7 @@ interface ScatterPoint {
   buildingName: string;
   floorPlan: string;
   orientation: string;
+  dom: number;
   statusGroup?: string; // "Closed" | "Active" | "Pending" | "Didn't Sell"
 }
 
@@ -94,6 +95,7 @@ export interface StatusScatterListing {
   livingArea: number;
   floorPlan: string;
   orientation: string;
+  dom: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -186,6 +188,14 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
           </span>
         </p>
       )}
+      {d.dom > 0 && (
+        <p>
+          <span className="text-accent">DOM:</span>{" "}
+          <span className="font-medium text-primary">
+            {d.dom}
+          </span>
+        </p>
+      )}
     </div>
   );
 }
@@ -260,6 +270,7 @@ export default function MarketChart({
       buildingName: t.buildingName,
       floorPlan: t.floorPlan,
       orientation: t.orientation,
+      dom: t.dom,
     });
   }
 
@@ -284,6 +295,7 @@ export default function MarketChart({
         buildingName: s.buildingName,
         floorPlan: s.floorPlan,
         orientation: s.orientation,
+        dom: s.dom,
         statusGroup: s.statusGroup,
       });
     }
@@ -542,6 +554,14 @@ export default function MarketChart({
                 <span className="text-accent">Size:</span>{" "}
                 <span className="font-medium text-primary">
                   {hoveredPoint.sqft.toLocaleString()} SF
+                </span>
+              </p>
+            )}
+            {hoveredPoint.dom > 0 && (
+              <p>
+                <span className="text-accent">DOM:</span>{" "}
+                <span className="font-medium text-primary">
+                  {hoveredPoint.dom}
                 </span>
               </p>
             )}

@@ -299,6 +299,7 @@ export default function DataV2Page() {
         livingArea: l.livingArea,
         floorPlan: l.floorPlan || "",
         orientation: l.orientation || "",
+        dom: l.daysOnMarket,
       });
     }
 
