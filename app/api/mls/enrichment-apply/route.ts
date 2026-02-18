@@ -55,24 +55,25 @@ export async function POST(_request: NextRequest) {
       const listings = await readAnalyticsListings(slug);
       if (listings.length === 0) continue;
 
-      const before = listings.filter((l) => l.floorPlan || l.orientation).length;
-      const enriched = enrichListings(listings, enrichmentMaps);
-      const after = enriched.filter((l) => l.floorPlan || l.orientation).length;
-      const newlyEnriched = after - before;
+      // Clear orientation from all listings first — only floor plan enrichment should populate it
+      const cleared = listings.map((l) => ({ ...l, orientation: undefined }));
+      const enriched = enrichListings(cleared, enrichmentMaps);
+      const enrichedCount = enriched.filter((l) => l.orientation).length;
 
-      if (newlyEnriched > 0) {
-        await writeAnalyticsListings(slug, enriched);
+      // Always write back since we cleared orientation
+      await writeAnalyticsListings(slug, enriched);
+      if (enrichedCount > 0) {
         buildingsUpdated++;
       }
 
       totalProcessed += listings.length;
-      totalEnriched += newlyEnriched;
+      totalEnriched += enrichedCount;
 
       if (listings.length > 0) {
         buildingResults.push({
           slug,
           processed: listings.length,
-          enriched: newlyEnriched,
+          enriched: enrichedCount,
         });
       }
     }

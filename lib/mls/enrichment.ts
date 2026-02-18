@@ -197,7 +197,7 @@ export function enrichListing(
     return {
       ...listing,
       floorPlan: entry.floorPlan || listing.floorPlan,
-      orientation: entry.orientation || listing.orientation,
+      orientation: entry.orientation || undefined,
     };
   }
 

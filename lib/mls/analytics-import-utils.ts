@@ -246,7 +246,7 @@ export function rowToAnalyticsListing(
     publicRemarks: get("publicRemarks") || undefined,
     privateRemarks: get("privateRemarks") || undefined,
     floorPlan: get("floorPlan") || undefined,
-    orientation: get("orientation") || undefined,
+    // orientation intentionally omitted from CSV import — only populated via floor plan enrichment
     source: "csv-import",
     importedAt: new Date().toISOString(),
   };
