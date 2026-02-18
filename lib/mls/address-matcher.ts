@@ -104,8 +104,8 @@ export function matchListingToBuilding(mlsAddress: string, buildingName?: string
           // Verify the street names share at least some similarity
           const mlsStreet = normalizeAddress(mlsAddress).replace(/^\d+\s*/, '');
           const buildingStreet = normalizeAddress(building.address).replace(/^\d+\s*/, '');
-          // Accept if streets share a common word or if the number is distinctive (3+ digits)
-          if (mlsStreetNum.length >= 3 || streetsShareWord(mlsStreet, buildingStreet)) {
+          // Accept only if streets share a common word (e.g., "ih"/"35" for Interstate 35)
+          if (streetsShareWord(mlsStreet, buildingStreet)) {
             bestMatch = {
               slug: building.slug,
               score: 0.76,
@@ -150,8 +150,9 @@ function normalizeAddress(addr: string): string {
     .replace(/\b(interstate\s+highway|interstate\s+hwy|interstate)\b/gi, "ih")
     // Remove common street suffixes
     .replace(/\b(avenue|ave|street|st|road|rd|drive|dr|boulevard|blvd|lane|ln|court|ct|place|pl|way)\b/gi, "")
-    // Remove directional indicators
-    .replace(/\b(north|south|east|west|n|s|e|w|ne|nw|se|sw)\b/gi, "")
+    // Remove directional PREFIX after street number (e.g., "48 E East" → "48 East", "100 N Lamar" → "100 Lamar")
+    // Only strip 1-2 letter abbreviations (n/s/e/w/ne/nw/se/sw) right after a number
+    .replace(/^(\d+)\s+\b(ne|nw|se|sw|n|s|e|w)\b/gi, "$1")
     // Remove unit indicators and everything after them (unit numbers leak into addresses)
     .replace(/\b(unit|apt|apartment|#|number|no|ste|suite)\b.*/gi, "")
     // Remove special characters

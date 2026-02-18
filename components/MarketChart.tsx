@@ -78,6 +78,7 @@ interface ScatterPoint {
   bedrooms: number;
   sqft: number;
   buildingName: string;
+  address: string;
   floorPlan: string;
   orientation: string;
   dom: number;
@@ -93,6 +94,7 @@ export interface StatusScatterListing {
   bedrooms: number;
   unit: string;
   buildingName: string;
+  address: string;
   livingArea: number;
   floorPlan: string;
   orientation: string;
@@ -151,7 +153,7 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
   const d = first.payload as ScatterPoint;
   return (
     <div className="border border-gray-200 bg-white p-3 text-xs shadow-lg">
-      <p className="font-semibold text-primary">{d.buildingName}</p>
+      <p className="font-semibold text-primary">{d.buildingName === "Other" ? d.address : d.buildingName}</p>
       <p className="text-secondary">
         Unit {d.unit} &middot; {bedroomLabel(d.bedrooms)}
       </p>
@@ -269,6 +271,7 @@ export default function MarketChart({
       bedrooms: t.bedrooms,
       sqft: t.livingArea,
       buildingName: t.buildingName,
+      address: t.address,
       floorPlan: t.floorPlan,
       orientation: t.orientation,
       dom: t.dom,
@@ -294,6 +297,7 @@ export default function MarketChart({
         bedrooms: s.bedrooms,
         sqft: s.livingArea,
         buildingName: s.buildingName,
+        address: s.address,
         floorPlan: s.floorPlan,
         orientation: s.orientation,
         dom: s.dom,
@@ -509,7 +513,7 @@ export default function MarketChart({
             }}
           >
             <p className="font-semibold text-primary">
-              {hoveredPoint.buildingName}
+              {hoveredPoint.buildingName === "Other" ? hoveredPoint.address : hoveredPoint.buildingName}
             </p>
             <p className="text-secondary">
               Unit {hoveredPoint.unit} &middot;{" "}

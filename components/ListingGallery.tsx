@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRetryImages } from "@/lib/use-retry-image";
 
 interface ListingGalleryProps {
   listingId: string;
@@ -17,10 +18,12 @@ export default function ListingGallery({
 }: ListingGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [imageError, setImageError] = useState<Record<number, boolean>>({});
 
-  const photoUrl = (index: number) =>
-    `/downtown-condos/api/mls/photo/${listingId}/${index}`;
+  const basePhotoUrl = useCallback(
+    (index: number) => `/downtown-condos/api/mls/photo/${listingId}/${index}`,
+    [listingId]
+  );
+  const { getSrc: photoUrl, failed: imageError, onError: handleImageError } = useRetryImages(basePhotoUrl);
 
   const goNext = useCallback(() => {
     setSelectedIndex((prev) => Math.min(prev + 1, photos.length - 1));
@@ -56,10 +59,6 @@ export default function ListingGallery({
       document.body.style.overflow = "";
     };
   }, [lightboxOpen]);
-
-  function handleImageError(index: number) {
-    setImageError((prev) => ({ ...prev, [index]: true }));
-  }
 
   function openLightbox(index: number) {
     setSelectedIndex(index);

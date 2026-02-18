@@ -121,12 +121,12 @@ export async function GET(
       console.warn(
         `[Photo Proxy] Media CDN returned ${imageResponse.status} for ${listingKey}/${index} — token may be expired or rate limited`
       );
-      // Return 404 so frontend onError handlers trigger proper "Photo unavailable" UI.
-      // Short cache so the next request retries the CDN once rate limit clears.
+      // Return 404 so frontend onError handlers trigger retry logic.
+      // Very short edge cache so retries with cache-bust bypass quickly.
       return new NextResponse("Photo temporarily unavailable", {
         status: 404,
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30, max-age=30",
+          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=5, max-age=5",
         },
       });
     }
@@ -135,19 +135,20 @@ export async function GET(
     const contentType =
       imageResponse.headers.get("content-type") || "image/jpeg";
 
-    // 5. Return image with aggressive CDN cache headers
-    // s-maxage=600: Vercel CDN caches for 10 minutes
-    // stale-while-revalidate=300: serve stale for 5 more min while refreshing in background
+    // 5. Return image with long CDN cache to prevent rate limiting.
+    // s-maxage=3600: Vercel CDN caches for 1 hour (photo tokens last ~1hr).
+    // stale-while-revalidate=3600: serve stale for 1 more hour while revalidating
+    //   in the background, so users never see a gap even if the token expires.
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Cache-Control":
-          "public, s-maxage=3600, stale-while-revalidate=1800, max-age=60",
+          "public, s-maxage=3600, stale-while-revalidate=3600, max-age=300",
         "CDN-Cache-Control":
-          "public, s-maxage=3600, stale-while-revalidate=1800",
+          "public, s-maxage=3600, stale-while-revalidate=3600",
         "Vercel-CDN-Cache-Control":
-          "public, s-maxage=3600, stale-while-revalidate=1800",
+          "public, s-maxage=3600, stale-while-revalidate=3600",
       },
     });
   } catch (error) {

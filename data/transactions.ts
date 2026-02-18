@@ -639,7 +639,7 @@ export const transactionsByBuilding: Record<string, Transaction[]> = {
     { date: "2024-09-25", price: 575000, pricePerSqft: 718, sqft: 801, bedrooms: 1, unit: "4101" },
     { date: "2024-10-18", price: 790000, pricePerSqft: 707, sqft: 1117, bedrooms: 2, unit: "1216" },
   ],
-  "44-east-avenue": [
+  "44-east": [
     { date: "2023-01-17", price: 690000, pricePerSqft: 976, sqft: 707, bedrooms: 1, unit: "1311" },
     { date: "2023-01-31", price: 675000, pricePerSqft: 1092, sqft: 618, bedrooms: 1, unit: "3103" },
     { date: "2023-03-08", price: 631850, pricePerSqft: 1022, sqft: 618, bedrooms: 1, unit: "3003" },

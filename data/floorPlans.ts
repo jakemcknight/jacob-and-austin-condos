@@ -354,7 +354,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       slug: "ph4-2br-2523sf-floorplan",
     },
   ],
-  "44-east-avenue": [
+  "44-east": [
     {
       name: "A1",
       bedrooms: 0,
@@ -364,7 +364,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 15,
-      imageUrl: "/floorplans/44-east-avenue/a1-0br-481sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a1-0br-481sf-floorplan.png",
       slug: "a1-0br-481sf-floorplan",
     },
     {
@@ -376,7 +376,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/a11-0br-537sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a11-0br-537sf-floorplan.png",
       slug: "a11-0br-537sf-floorplan",
     },
     {
@@ -388,7 +388,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 60,
-      imageUrl: "/floorplans/44-east-avenue/a12-0br-538sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a12-0br-538sf-floorplan.png",
       slug: "a12-0br-538sf-floorplan",
     },
     {
@@ -400,7 +400,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 2,
-      imageUrl: "/floorplans/44-east-avenue/a21s-1br-633sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a21s-1br-633sf-floorplan.png",
       slug: "a21s-1br-633sf-floorplan",
     },
     {
@@ -412,7 +412,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/a2n-1br-614sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a2n-1br-614sf-floorplan.png",
       slug: "a2n-1br-614sf-floorplan",
     },
     {
@@ -424,7 +424,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/a2s-1br-618sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a2s-1br-618sf-floorplan.png",
       slug: "a2s-1br-618sf-floorplan",
     },
     {
@@ -436,7 +436,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 8,
-      imageUrl: "/floorplans/44-east-avenue/a3-1br-632sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a3-1br-632sf-floorplan.png",
       slug: "a3-1br-632sf-floorplan",
     },
     {
@@ -448,7 +448,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 2,
-      imageUrl: "/floorplans/44-east-avenue/a31-1br-651sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a31-1br-651sf-floorplan.png",
       slug: "a31-1br-651sf-floorplan",
     },
     {
@@ -460,7 +460,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/a4-1br-707sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/a4-1br-707sf-floorplan.png",
       slug: "a4-1br-707sf-floorplan",
     },
     {
@@ -472,7 +472,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 14,
-      imageUrl: "/floorplans/44-east-avenue/b11n-2br-796sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b11n-2br-796sf-floorplan.png",
       slug: "b11n-2br-796sf-floorplan",
     },
     {
@@ -484,7 +484,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 14,
-      imageUrl: "/floorplans/44-east-avenue/b11s-2br-796sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b11s-2br-796sf-floorplan.png",
       slug: "b11s-2br-796sf-floorplan",
     },
     {
@@ -496,7 +496,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/b1n-2br-793sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b1n-2br-793sf-floorplan.png",
       slug: "b1n-2br-793sf-floorplan",
     },
     {
@@ -508,7 +508,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/b1s-2br-791sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b1s-2br-791sf-floorplan.png",
       slug: "b1s-2br-791sf-floorplan",
     },
     {
@@ -520,7 +520,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 7,
-      imageUrl: "/floorplans/44-east-avenue/b2-2br-1221sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b2-2br-1221sf-floorplan.png",
       slug: "b2-2br-1221sf-floorplan",
     },
     {
@@ -532,7 +532,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 12,
-      imageUrl: "/floorplans/44-east-avenue/b21-2br-1172sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b21-2br-1172sf-floorplan.png",
       slug: "b21-2br-1172sf-floorplan",
     },
     {
@@ -544,7 +544,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 6,
-      imageUrl: "/floorplans/44-east-avenue/b22-2br-1216sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b22-2br-1216sf-floorplan.png",
       slug: "b22-2br-1216sf-floorplan",
     },
     {
@@ -556,7 +556,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 15,
-      imageUrl: "/floorplans/44-east-avenue/b3-2br-1228sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b3-2br-1228sf-floorplan.png",
       slug: "b3-2br-1228sf-floorplan",
     },
     {
@@ -568,7 +568,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 60,
-      imageUrl: "/floorplans/44-east-avenue/b31-2br-1232sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b31-2br-1232sf-floorplan.png",
       slug: "b31-2br-1232sf-floorplan",
     },
     {
@@ -580,7 +580,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 20,
-      imageUrl: "/floorplans/44-east-avenue/b4-2br-1260sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b4-2br-1260sf-floorplan.png",
       slug: "b4-2br-1260sf-floorplan",
     },
     {
@@ -592,7 +592,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 2,
-      imageUrl: "/floorplans/44-east-avenue/b5-2br-1286sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b5-2br-1286sf-floorplan.png",
       slug: "b5-2br-1286sf-floorplan",
     },
     {
@@ -604,7 +604,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 8,
-      imageUrl: "/floorplans/44-east-avenue/b51-2br-1293sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b51-2br-1293sf-floorplan.png",
       slug: "b51-2br-1293sf-floorplan",
     },
     {
@@ -616,7 +616,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 5,
-      imageUrl: "/floorplans/44-east-avenue/b6-2br-1386sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b6-2br-1386sf-floorplan.png",
       slug: "b6-2br-1386sf-floorplan",
     },
     {
@@ -628,7 +628,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 6,
-      imageUrl: "/floorplans/44-east-avenue/b61-2br-1411sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/b61-2br-1411sf-floorplan.png",
       slug: "b61-2br-1411sf-floorplan",
     },
     {
@@ -640,7 +640,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/c0-3br-1258sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c0-3br-1258sf-floorplan.png",
       slug: "c0-3br-1258sf-floorplan",
     },
     {
@@ -652,7 +652,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/c01-3br-1221sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c01-3br-1221sf-floorplan.png",
       slug: "c01-3br-1221sf-floorplan",
     },
     {
@@ -664,7 +664,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 6,
-      imageUrl: "/floorplans/44-east-avenue/c1-3br-1594sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c1-3br-1594sf-floorplan.png",
       slug: "c1-3br-1594sf-floorplan",
     },
     {
@@ -676,7 +676,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/c2-3br-1751sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c2-3br-1751sf-floorplan.png",
       slug: "c2-3br-1751sf-floorplan",
     },
     {
@@ -688,7 +688,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/c21-3br-1762sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c21-3br-1762sf-floorplan.png",
       slug: "c21-3br-1762sf-floorplan",
     },
     {
@@ -700,7 +700,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 4,
-      imageUrl: "/floorplans/44-east-avenue/c22-3br-1785sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c22-3br-1785sf-floorplan.png",
       slug: "c22-3br-1785sf-floorplan",
     },
     {
@@ -712,7 +712,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 10,
-      imageUrl: "/floorplans/44-east-avenue/c23-3br-1795sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c23-3br-1795sf-floorplan.png",
       slug: "c23-3br-1795sf-floorplan",
     },
     {
@@ -724,7 +724,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 14,
-      imageUrl: "/floorplans/44-east-avenue/c3-3br-1993sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c3-3br-1993sf-floorplan.png",
       slug: "c3-3br-1993sf-floorplan",
     },
     {
@@ -736,7 +736,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 6,
-      imageUrl: "/floorplans/44-east-avenue/c31-3br-1999sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c31-3br-1999sf-floorplan.png",
       slug: "c31-3br-1999sf-floorplan",
     },
     {
@@ -748,7 +748,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 12,
-      imageUrl: "/floorplans/44-east-avenue/c35-3br-2032sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c35-3br-2032sf-floorplan.png",
       slug: "c35-3br-2032sf-floorplan",
     },
     {
@@ -760,7 +760,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 5,
-      imageUrl: "/floorplans/44-east-avenue/c5-3br-2114sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c5-3br-2114sf-floorplan.png",
       slug: "c5-3br-2114sf-floorplan",
     },
     {
@@ -772,7 +772,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 6,
-      imageUrl: "/floorplans/44-east-avenue/c51-3br-2118sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/c51-3br-2118sf-floorplan.png",
       slug: "c51-3br-2118sf-floorplan",
     },
     {
@@ -784,7 +784,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/phc4-3br-2085sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/phc4-3br-2085sf-floorplan.png",
       slug: "phc4-3br-2085sf-floorplan",
     },
     {
@@ -796,7 +796,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 3,
-      imageUrl: "/floorplans/44-east-avenue/phc41-3br-2106sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/phc41-3br-2106sf-floorplan.png",
       slug: "phc41-3br-2106sf-floorplan",
     },
     {
@@ -808,7 +808,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 4,
-      imageUrl: "/floorplans/44-east-avenue/phc6-3br-2556sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/phc6-3br-2556sf-floorplan.png",
       slug: "phc6-3br-2556sf-floorplan",
     },
     {
@@ -820,7 +820,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 1,
-      imageUrl: "/floorplans/44-east-avenue/phc61-3br-3110sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/phc61-3br-3110sf-floorplan.png",
       slug: "phc61-3br-3110sf-floorplan",
     },
     {
@@ -832,7 +832,7 @@ export const floorPlans: Record<string, FloorPlan[]> = {
       orientation: "",
       unitNumbers: "",
       quantity: 5,
-      imageUrl: "/floorplans/44-east-avenue/phd1-4br-2858sf-floorplan.png",
+      imageUrl: "/floorplans/44-east/phd1-4br-2858sf-floorplan.png",
       slug: "phd1-4br-2858sf-floorplan",
     },
   ],

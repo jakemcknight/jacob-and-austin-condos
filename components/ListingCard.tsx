@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { calculateDaysOnMarket, formatDaysOnMarket } from "@/lib/format-dom";
+import { useRetryImage } from "@/lib/use-retry-image";
 
 export interface MLSListingDisplay {
   listingId: string;
@@ -39,7 +39,8 @@ interface ListingCardProps {
 }
 
 export default function ListingCard({ listing, showBuilding = false, compact = false }: ListingCardProps) {
-  const [imageError, setImageError] = useState(false);
+  const photoBaseSrc = `/downtown-condos/api/mls/photo/${listing.listingId}/0`;
+  const { src: photoSrc, failed: imageError, onError: handleImageError } = useRetryImage(photoBaseSrc);
 
   const hasPhoto = listing.photos && listing.photos.length > 0 && !imageError;
 
@@ -52,11 +53,11 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
       {hasPhoto ? (
         <div className={`relative w-full overflow-hidden bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
           <Image
-            src={`/downtown-condos/api/mls/photo/${listing.listingId}/0`}
+            src={photoSrc}
             alt={`Unit ${listing.unitNumber}`}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={() => setImageError(true)}
+            onError={handleImageError}
           />
           {/* Building Badge - Top Left */}
           {showBuilding && listing.buildingName && (

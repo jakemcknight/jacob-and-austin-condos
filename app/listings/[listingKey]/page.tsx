@@ -95,6 +95,9 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   return {
     title,
     description,
+    alternates: {
+      canonical: `/listings/${stripMlsPrefix(listing.mlsNumber)}`,
+    },
     openGraph: {
       title,
       description,
@@ -115,6 +118,58 @@ export default async function ListingPage({ params }: ListingPageProps) {
   }
 
   const building = buildings.find(b => b.slug === buildingSlug);
+
+  // Structured data for SEO — RealEstateListing schema
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: `${listing.buildingName || building?.name || ""} ${listing.unitNumber ? `#${listing.unitNumber}` : ""}`.trim(),
+    description: listing.publicRemarks || `${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo ${listing.listingType === "Sale" ? "for sale" : "for lease"} in downtown Austin`,
+    url: `https://jacobinaustin.com/downtown-condos/listings/${stripMlsPrefix(listing.mlsNumber)}`,
+    datePosted: listing.listDate,
+    about: {
+      "@type": "Apartment",
+      name: `${listing.buildingName || building?.name || ""} Unit ${listing.unitNumber || ""}`.trim(),
+      numberOfRooms: listing.bedroomsTotal,
+      numberOfBathroomsTotal: listing.bathroomsTotalInteger,
+      floorSize: {
+        "@type": "QuantitativeValue",
+        value: listing.livingArea,
+        unitCode: "SQF",
+      },
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: listing.address + (listing.unitNumber ? ` #${listing.unitNumber}` : ""),
+        addressLocality: listing.city || building?.city || "Austin",
+        addressRegion: building?.state || "TX",
+        postalCode: listing.postalCode || building?.zip || "",
+        addressCountry: "US",
+      },
+      ...(building?.coordinates
+        ? {
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: building.coordinates.lat,
+              longitude: building.coordinates.lng,
+            },
+          }
+        : {}),
+      ...(listing.photos && listing.photos.length > 0
+        ? {
+            image: `https://jacobinaustin.com/downtown-condos/api/mls/photo/${listing.listingId}/0`,
+          }
+        : {}),
+    },
+    offers: {
+      "@type": "Offer",
+      price: listing.listPrice,
+      priceCurrency: "USD",
+      availability:
+        listing.status === "Active"
+          ? "https://schema.org/InStock"
+          : "https://schema.org/LimitedAvailability",
+    },
+  };
 
   // Use photos from KV cache (populated by sync cron) — no MLSGrid API call needed
   const allPhotos = listing.photos || [];
@@ -407,6 +462,14 @@ export default async function ListingPage({ params }: ListingPageProps) {
           </Link>
         )}
       </section>
+
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
     </>
   );
 }

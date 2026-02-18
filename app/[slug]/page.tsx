@@ -38,6 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${building.name} | Downtown Austin Condos | Jacob In Austin`,
     description,
+    alternates: {
+      canonical: `/${building.slug}`,
+    },
     openGraph: {
       title: `${building.name} | Downtown Austin Condos`,
       description,
@@ -54,6 +57,32 @@ export default function BuildingPage({ params }: PageProps) {
   if (!building) {
     notFound();
   }
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "ApartmentComplex",
+    name: building.name,
+    description: building.description,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: building.address,
+      addressLocality: building.city,
+      addressRegion: building.state,
+      postalCode: building.zip,
+      addressCountry: "US",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: building.coordinates.lat,
+      longitude: building.coordinates.lng,
+    },
+    numberOfAvailableAccommodation: building.units,
+    amenityFeature: building.amenities.map((a) => ({
+      "@type": "LocationFeatureSpecification",
+      name: a,
+    })),
+    url: `https://jacobinaustin.com/downtown-condos/${building.slug}`,
+  };
 
   return (
     <>
@@ -125,6 +154,14 @@ export default function BuildingPage({ params }: PageProps) {
           ← Back to All Buildings
         </a>
       </section>
+
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
     </>
   );
 }

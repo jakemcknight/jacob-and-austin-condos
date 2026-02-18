@@ -24,7 +24,7 @@ export const buildings: Building[] = [
   {
     name: "The Modern Austin",
     slug: "the-modern-austin",
-    address: "601 Davis St",
+    address: "610 Davis St",
     city: "Austin",
     state: "TX",
     zip: "78701",
@@ -57,8 +57,8 @@ export const buildings: Building[] = [
     galleryImages: [],
   },
   {
-    name: "44 East Avenue",
-    slug: "44-east-avenue",
+    name: "44 East",
+    slug: "44-east",
     address: "44 East Ave",
     city: "Austin",
     state: "TX",
@@ -71,7 +71,7 @@ export const buildings: Building[] = [
     developer: "Intracorp",
     builder: "Flintco",
     description:
-      "44 East Avenue is a landmark 55-story luxury condominium tower offering unparalleled views from the Rainey Street district. Designed by the renowned Pelli Clarke & Partners, the building features a distinctive sculptural form and floor-to-ceiling glass walls. Residences boast chef-grade kitchens, spa-like bathrooms, and expansive private terraces.",
+      "44 East is a landmark 55-story luxury condominium tower offering unparalleled views from the Rainey Street district. Designed by the renowned Pelli Clarke & Partners, the building features a distinctive sculptural form and floor-to-ceiling glass walls. Residences boast chef-grade kitchens, spa-like bathrooms, and expansive private terraces.",
     amenities: [
       "Infinity-edge pool overlooking Lady Bird Lake",
       "Full-floor amenity level",
@@ -85,9 +85,9 @@ export const buildings: Building[] = [
       "Electric vehicle charging stations",
     ],
     neighborhood:
-      "Perched at the edge of the Rainey Street Historic District, 44 East Avenue enjoys front-row access to Lady Bird Lake's scenic trails and the vibrant bar and restaurant scene. The location offers seamless connectivity to downtown's business core, the Convention Center, and South Congress Avenue's eclectic shops.",
+      "Perched at the edge of the Rainey Street Historic District, 44 East enjoys front-row access to Lady Bird Lake's scenic trails and the vibrant bar and restaurant scene. The location offers seamless connectivity to downtown's business core, the Convention Center, and South Congress Avenue's eclectic shops.",
     priceRange: "$700K - $7M",
-    heroImage: "/downtown-condos/images/buildings/44-east-avenue.jpg",
+    heroImage: "/downtown-condos/images/buildings/44-east.jpg",
     galleryImages: [],
   },
   {

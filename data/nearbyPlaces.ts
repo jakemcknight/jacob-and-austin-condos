@@ -30,8 +30,8 @@ export const nearbyPlaces: Record<string, BuildingNearby> = {
     },
   },
 
-  // 3. 44 East Avenue - 44 East Ave (near East Ave / Rainey area)
-  "44-east-avenue": {
+  // 3. 44 East - 44 East Ave (near East Ave / Rainey area)
+  "44-east": {
     coffee: {
       name: "Cenote",
       address: "1010 E Cesar Chavez St",
