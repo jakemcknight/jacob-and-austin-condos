@@ -18,7 +18,7 @@ const DEST_BASE = path.join(__dirname, '..', 'public', 'floorplans');
 // Map source directory names to destination building slugs
 const DIRECTORY_MAP = {
   '360-condos': '360-condominiums',
-  '44-east': '44-east-avenue',
+  '44-east': '44-east',
   '5th--west': '5th-and-west',
   '70-rainey': '70-rainey',
   'austin-city-lofts': 'austin-city-lofts',

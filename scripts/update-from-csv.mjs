@@ -71,7 +71,7 @@ console.log(Array.from(buildingsMap.keys()).sort());
 // Create a mapping of building names to data
 const updates = {
   'The Modern Austin': buildingsMap.get('The Modern'),
-  '44 East Avenue': buildingsMap.get('44 East'),
+  '44 East': buildingsMap.get('44 East'),
   'The Independent': buildingsMap.get('The Independent'),
   '70 Rainey': buildingsMap.get('70 Rainey'),
   'Four Seasons': buildingsMap.get('Four Seasons'),

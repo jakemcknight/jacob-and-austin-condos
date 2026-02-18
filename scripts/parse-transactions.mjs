@@ -12,7 +12,7 @@ const OUTPUT_FILE = join(import.meta.dirname, "..", "data", "transactions.ts");
 // Map CSV building names to our slug system
 const BUILDING_MAP = {
   "360 Condos": "360-condominiums",
-  "44 East": "44-east-avenue",
+  "44 East": "44-east",
   "5th & West": "5th-and-west",
   "70 Rainey": "70-rainey",
   "904 West Condos": "904-west",

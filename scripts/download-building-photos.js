@@ -22,7 +22,7 @@ function getFullSizeUrl(url) {
 // Map of building slug -> best exterior image URL (full-size)
 const BUILDING_IMAGES = {
   "the-modern-austin": "https://modernaustinresidences.com/wp-content/uploads/2025/06/TheModernAustin-Lobby-Ext-Lobby-Bar-cropped-e1750874669679.jpg",
-  "44-east-avenue": getFullSizeUrl("https://towers.wpenginepowered.com/wp-content/uploads/sites/19/44-east-avenue.jpg"),
+  "44-east": getFullSizeUrl("https://towers.wpenginepowered.com/wp-content/uploads/sites/19/44-east-avenue.jpg"),
   "the-independent": getFullSizeUrl("https://towers.wpenginepowered.com/wp-content/uploads/sites/19/independent_main.jpg"),
   "seaholm-residences": getFullSizeUrl("https://towers.wpenginepowered.com/wp-content/uploads/sites/19/Seaholm_Entry_2016.jpg"),
   "70-rainey": getFullSizeUrl("https://towers.wpenginepowered.com/wp-content/uploads/sites/19/70_Rainey_from_the_East.jpg"),

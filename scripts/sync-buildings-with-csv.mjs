@@ -38,7 +38,7 @@ const nameToSlug = {
   "The Independent": "the-independent",
   "70 Rainey": "70-rainey",
   "Seaholm Residences": "seaholm-residences",
-  "44 East": "44-east-avenue",
+  "44 East": "44-east",
   "5th & West": "5th-and-west",
   "Nokonah": "nokonah",
   "360 Condos": "360-condominiums",

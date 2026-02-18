@@ -194,7 +194,7 @@ const csvData = {
 // Create mapping from current building names to CSV names
 const buildingNameMap = {
   'The Modern Austin': 'The Modern',
-  '44 East Avenue': '44 East',
+  '44 East': '44 East',
   'The Independent': 'The Independent',
   '70 Rainey': '70 Rainey',
   'Four Seasons': 'Four Seasons',

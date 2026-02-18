@@ -30,7 +30,7 @@ const BUILDINGS_FILE = path.join(PROJECT_ROOT, 'data/buildings.ts');
 // These override fuzzy matching for cases where CSV uses shortened names
 const MANUAL_BUILDING_MAP = {
   '360 Condos': '360-condominiums',
-  '44 East': '44-east-avenue',
+  '44 East': '44-east',
   'Austin Proper': 'austin-proper-residences',
   'Four Seasons': 'four-seasons-residences',
   'Spring Condos': 'spring-condominiums',
