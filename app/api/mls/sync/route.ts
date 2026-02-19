@@ -17,7 +17,7 @@ import {
 } from "@/lib/mls/sync-state";
 import {
   upsertAnalyticsListings,
-  readAllAnalyticsListings,
+  readAnalyticsListings,
   writeAnalyticsSyncState,
   appendListingSnapshots,
   countAnalyticsListings,
@@ -321,15 +321,32 @@ export async function GET(request: NextRequest) {
       console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings`);
 
       // Detect listings that were Active/Pending in the analytics cache but are no
-      // longer in the active feed — these have changed status and need a fresh fetch
-      const allCachedAnalytics = await readAllAnalyticsListings();
+      // longer in the active feed — these have changed status and need a fresh fetch.
+      // Only check buildings that have current active listings (avoids reading all 38
+      // KV keys / 21K+ listings when most buildings have no status transitions).
       const staleIds: string[] = [];
-      for (const cached of allCachedAnalytics) {
-        const s = (cached.status || "").toLowerCase();
-        if ((s === "active" || s === "active under contract" || s === "pending") &&
-            !currentActiveIds.has(cached.listingId)) {
-          staleIds.push(cached.listingId);
+      const buildingSlugsToCheck = new Set<string>();
+      for (const [slug] of buildingEntries) buildingSlugsToCheck.add(slug);
+      if (unmatchedFullListings.length > 0) buildingSlugsToCheck.add("_unmatched");
+
+      for (const slug of Array.from(buildingSlugsToCheck)) {
+        const cachedListings = await readAnalyticsListings(slug);
+        for (const cached of cachedListings) {
+          const s = (cached.status || "").toLowerCase();
+          if ((s === "active" || s === "active under contract" || s === "pending") &&
+              !currentActiveIds.has(cached.listingId)) {
+            staleIds.push(cached.listingId);
+          }
         }
+      }
+
+      // Cap stale fetches per cycle to prevent overwhelming the API.
+      // With CSV-imported data, there can be hundreds of stale entries initially.
+      // The remainder gets processed in subsequent 15-min sync cycles.
+      const MAX_STALE_FETCH = 50;
+      if (staleIds.length > MAX_STALE_FETCH) {
+        console.warn(`[MLS Sync] Analytics: ${staleIds.length} stale IDs found, processing first ${MAX_STALE_FETCH} this cycle`);
+        staleIds.length = MAX_STALE_FETCH;
       }
 
       console.log(`[MLS Sync] Analytics: ${staleIds.length} listings disappeared from active feed — fetching updated status`);
