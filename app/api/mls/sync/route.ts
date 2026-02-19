@@ -326,10 +326,19 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings`);
+      // De-duplicate: if a listing appears in the analytics fetch (with a non-active
+      // status like Pending/Closed), don't let the converted active version overwrite it
+      const analyticsListingIds = new Set(analyticsListings.map(l => l.listingId));
+      const filteredActiveListings = convertedActiveListings.filter(
+        l => !analyticsListingIds.has(l.listingId)
+      );
 
-      // Combine API-fetched non-active listings with converted active listings
-      const allAnalyticsListings = [...analyticsListings, ...convertedActiveListings];
+      const superseded = convertedActiveListings.length - filteredActiveListings.length;
+      console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings (${superseded} superseded by analytics fetch)`);
+
+      // Combine: analytics-fetched listings (authoritative for status changes) first,
+      // then active listings that don't conflict
+      const allAnalyticsListings = [...analyticsListings, ...filteredActiveListings];
 
       // Load enrichment maps for auto-enrichment
       const enrichmentMaps = await readAllEnrichmentMaps();
