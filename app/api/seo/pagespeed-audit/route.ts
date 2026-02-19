@@ -8,6 +8,7 @@ import { auditAllPages } from "@/lib/seo/pagespeed-client";
 import type { PageSpeedAudit } from "@/lib/seo/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 120; // 2 minutes — PageSpeed audits are slow
 
 export async function GET() {
   try {

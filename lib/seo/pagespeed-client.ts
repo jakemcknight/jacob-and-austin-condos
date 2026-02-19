@@ -123,8 +123,8 @@ export async function auditAllPages(): Promise<PageSpeedResult[]> {
     try {
       const result = await auditUrl(url, "mobile");
       results.push(result);
-      // Small delay between requests to be polite
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Delay between requests to avoid rate limiting (429s)
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     } catch (error) {
       console.error(`[PageSpeed] Failed to audit ${url}:`, error);
       // Continue with remaining URLs
