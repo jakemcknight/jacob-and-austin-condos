@@ -17,7 +17,7 @@ import {
 } from "@/lib/mls/sync-state";
 import {
   upsertAnalyticsListings,
-  readAnalyticsSyncState,
+  readAllAnalyticsListings,
   writeAnalyticsSyncState,
   appendListingSnapshots,
   countAnalyticsListings,
@@ -291,40 +291,61 @@ export async function GET(request: NextRequest) {
     await updateSyncState(totalCachedSales, totalCachedLeases, latestTimestamp, batchSalesCount, batchLeasesCount);
 
     // ========== ANALYTICS SYNC PHASE ==========
-    // After active listings are synced, fetch recently changed non-active listings
-    // (Closed, Pending, Withdrawn, Hold) for analytics tracking
+    // Update analytics cache using the already-fetched active listings data,
+    // plus targeted API calls only for listings that changed away from Active
+    // (Pending, Closed, Withdrawn, etc.)
     let analyticsResult: Record<string, any> = {};
 
     try {
       console.log("[MLS Sync] Starting analytics sync phase...");
 
-      const analyticsSyncState = await readAnalyticsSyncState();
-      const analyticsTimestamp = analyticsSyncState?.lastSyncTimestamp;
-
-      // Fetch recently modified non-active listings (Active/AUC handled by converting already-fetched data)
-      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold", "Expired", "Canceled"];
-      const analyticsListings = await mlsClient.fetchAnalyticsListings(
-        analyticsStatuses,
-        analyticsTimestamp || undefined
-      );
-
-      console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} non-active listings`);
-
-      // Convert already-fetched active listings to analytics format (avoids duplicate API call)
+      // Convert already-fetched active listings to analytics format (no extra API call)
       const convertedActiveListings: AnalyticsListing[] = [];
+      const currentActiveIds = new Set<string>();
       for (const [slug, listings] of buildingEntries) {
         const building = buildings.find(b => b.slug === slug);
         for (const listing of listings) {
+          currentActiveIds.add(listing.listingId);
           convertedActiveListings.push(
             mlsListingToAnalytics(listing, slug, building?.name || listing.buildingName)
           );
         }
       }
       for (const listing of unmatchedFullListings) {
+        currentActiveIds.add(listing.listingId);
         convertedActiveListings.push(
           mlsListingToAnalytics(listing, null, listing.buildingName)
         );
       }
+
+      console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings`);
+
+      // Detect listings that were Active/Pending in the analytics cache but are no
+      // longer in the active feed — these have changed status and need a fresh fetch
+      const allCachedAnalytics = await readAllAnalyticsListings();
+      const staleIds: string[] = [];
+      for (const cached of allCachedAnalytics) {
+        const s = (cached.status || "").toLowerCase();
+        if ((s === "active" || s === "active under contract" || s === "pending") &&
+            !currentActiveIds.has(cached.listingId)) {
+          staleIds.push(cached.listingId);
+        }
+      }
+
+      console.log(`[MLS Sync] Analytics: ${staleIds.length} listings disappeared from active feed — fetching updated status`);
+
+      // Full fetch of all non-active DT listings — no timestamp filter.
+      // This ensures every status change (Pending, Closed, Withdrawn, Expired, etc.)
+      // is captured regardless of when it happened. The MlgCanView filter on the API
+      // side limits results to viewable listings.
+      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold", "Expired", "Canceled"];
+      const analyticsFetchResult = await mlsClient.fetchAnalyticsListings(
+        analyticsStatuses,
+        undefined
+      );
+      const analyticsListings = analyticsFetchResult.listings;
+
+      console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} non-active listings from API`);
 
       // De-duplicate: if a listing appears in the analytics fetch (with a non-active
       // status like Pending/Closed), don't let the converted active version overwrite it
@@ -334,7 +355,7 @@ export async function GET(request: NextRequest) {
       );
 
       const superseded = convertedActiveListings.length - filteredActiveListings.length;
-      console.log(`[MLS Sync] Analytics: converted ${convertedActiveListings.length} active listings (${superseded} superseded by analytics fetch)`);
+      console.log(`[MLS Sync] Analytics: ${superseded} active listings superseded by non-active status from API`);
 
       // Combine: analytics-fetched listings (authoritative for status changes) first,
       // then active listings that don't conflict
@@ -393,11 +414,9 @@ export async function GET(request: NextRequest) {
 
       // Update analytics sync state
       const analyticsCounts = await countAnalyticsListings();
-      // Use the main sync's latest timestamp (always fresh from full fetch)
-      const analyticsLatest = latestTimestamp || analyticsTimestamp || new Date().toISOString();
 
       const newAnalyticsSyncState: AnalyticsSyncState = {
-        lastSyncTimestamp: analyticsLatest || new Date().toISOString(),
+        lastSyncTimestamp: new Date().toISOString(),
         lastSyncDate: new Date().toLocaleString(),
         closedCount: analyticsCounts.closed,
         pendingCount: analyticsCounts.pending,
@@ -411,6 +430,7 @@ export async function GET(request: NextRequest) {
       analyticsResult = {
         analyticsListingsFetched: analyticsListings.length,
         analyticsActiveConverted: convertedActiveListings.length,
+        analyticsStaleDetected: staleIds.length,
         analyticsMatched,
         analyticsUnmatched,
         analyticsAdded,

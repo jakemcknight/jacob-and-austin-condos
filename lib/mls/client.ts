@@ -227,10 +227,11 @@ export class MLSGridClient {
   async fetchAnalyticsListings(
     statuses: string[],
     modificationTimestampGt?: string
-  ): Promise<AnalyticsListing[]> {
+  ): Promise<{ listings: AnalyticsListing[]; latestModificationTimestamp: string | null }> {
     const propertyTypes = ["Residential", "Residential Lease"];
     const allResults: AnalyticsListing[] = [];
     const seenKeys = new Set<string>();
+    let latestModTs: string | null = null;
 
     // Analytics-specific fields — no Media, adds ClosePrice/CloseDate and lifecycle fields
     const analyticsSelect = [
@@ -282,6 +283,12 @@ export class MLSGridClient {
             if (seenKeys.has(id)) continue;
             seenKeys.add(id);
 
+            // Track the latest ModificationTimestamp for incremental sync
+            const modTs = item.ModificationTimestamp;
+            if (modTs && (!latestModTs || modTs > latestModTs)) {
+              latestModTs = modTs;
+            }
+
             allResults.push(this.parseAnalyticsListing(item));
           }
         }
@@ -294,7 +301,7 @@ export class MLSGridClient {
     }
 
     console.log(`[MLSGrid] Analytics fetch: ${allResults.length} DT listings for statuses [${statuses.join(", ")}]`);
-    return allResults;
+    return { listings: allResults, latestModificationTimestamp: latestModTs };
   }
 
   /**
@@ -370,8 +377,9 @@ export class MLSGridClient {
   }
 
   // Hard cap on requests per sync cycle to prevent runaway loops
-  // Raised from 100 to 200 to accommodate analytics fetch alongside active listings
-  private static readonly MAX_REQUESTS_PER_CYCLE = 200;
+  // Set to 500 to accommodate full analytics fetch (all non-active DT listings)
+  // alongside the active listings fetch
+  private static readonly MAX_REQUESTS_PER_CYCLE = 500;
 
   /**
    * Make authenticated HTTP request to MLSGrid API
