@@ -44,12 +44,24 @@ export async function readAnalyticsListings(
   }
 }
 
+/**
+ * Strip large text fields from analytics listings to stay under the 1MB Upstash KV limit.
+ * publicRemarks/privateRemarks can be 500-2000 chars each and aren't needed for analytics.
+ */
+function trimAnalyticsForCache(listings: AnalyticsListing[]): AnalyticsListing[] {
+  return listings.map(listing => {
+    const { publicRemarks, privateRemarks, ...rest } = listing as any;
+    return rest;
+  });
+}
+
 export async function writeAnalyticsListings(
   slug: string,
   listings: AnalyticsListing[]
 ): Promise<void> {
   try {
-    await kv.set(getAnalyticsKey(slug), listings);
+    const trimmed = trimAnalyticsForCache(listings);
+    await kv.set(getAnalyticsKey(slug), trimmed);
     console.log(
       `[Analytics Cache] Wrote ${listings.length} analytics listings for ${slug}`
     );
