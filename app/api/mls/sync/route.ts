@@ -20,7 +20,6 @@ import {
   readAnalyticsListings,
   writeAnalyticsSyncState,
   appendListingSnapshots,
-  countAnalyticsListings,
 } from "@/lib/mls/analytics-cache";
 import { readAllEnrichmentMaps, enrichListing, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
 import { unitLookup } from "@/data/unitLookup";
@@ -418,11 +417,13 @@ export async function GET(request: NextRequest) {
       // Upsert analytics listings into cache
       let analyticsAdded = 0;
       let analyticsUpdated = 0;
+      let analyticsTotalCached = 0;
 
       for (const [slug, listings] of Array.from(analyticsByBuilding)) {
         const result = await upsertAnalyticsListings(slug, listings);
         analyticsAdded += result.added;
         analyticsUpdated += result.updated;
+        analyticsTotalCached += result.total;
       }
 
       // Capture snapshots of current active/pending listings for lifecycle tracking
@@ -438,17 +439,26 @@ export async function GET(request: NextRequest) {
         await appendListingSnapshots(snapshots);
       }
 
-      // Update analytics sync state
-      const analyticsCounts = await countAnalyticsListings();
+      // Count statuses from the listings we processed this cycle
+      // (avoids calling countAnalyticsListings() which reads ALL 21K+ cached listings)
+      let closedCount = 0, pendingCount = 0, activeCount = 0, otherCount = 0;
+      for (const listing of allAnalyticsListings) {
+        const s = (listing.status || "").toLowerCase();
+        if (s === "closed") closedCount++;
+        else if (s === "pending") pendingCount++;
+        else if (s === "active" || s === "active under contract") activeCount++;
+        else otherCount++;
+      }
 
+      // Update analytics sync state
       const newAnalyticsSyncState: AnalyticsSyncState = {
         lastSyncTimestamp: new Date().toISOString(),
         lastSyncDate: new Date().toLocaleString(),
-        closedCount: analyticsCounts.closed,
-        pendingCount: analyticsCounts.pending,
-        activeCount: analyticsCounts.active,
-        otherCount: analyticsCounts.other,
-        totalCount: analyticsCounts.total,
+        closedCount,
+        pendingCount,
+        activeCount,
+        otherCount,
+        totalCount: analyticsTotalCached,
         status: "success",
       };
       await writeAnalyticsSyncState(newAnalyticsSyncState);
@@ -461,14 +471,14 @@ export async function GET(request: NextRequest) {
         analyticsUnmatched,
         analyticsAdded,
         analyticsUpdated,
-        analyticsTotalCached: analyticsCounts.total,
+        analyticsTotalCached,
         snapshotsCaptured: snapshots.length,
       };
 
       console.log(
         `[MLS Sync] Analytics phase: ${analyticsListings.length} API-fetched + ${convertedActiveListings.length} converted active, ` +
         `${analyticsAdded} added, ${analyticsUpdated} updated, ` +
-        `${analyticsCounts.total} total cached`
+        `${analyticsTotalCached} total cached`
       );
     } catch (analyticsError) {
       // Analytics sync failure should NOT fail the main sync
