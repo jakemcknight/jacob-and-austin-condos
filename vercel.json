@@ -3,6 +3,14 @@
     {
       "path": "/downtown-condos/api/mls/sync",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/downtown-condos/api/seo/gsc-sync",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/downtown-condos/api/seo/pagespeed-audit",
+      "schedule": "0 3 * * 0"
     }
   ],
   "functions": {
