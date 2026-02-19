@@ -19,11 +19,10 @@ import {
   upsertAnalyticsListings,
   readAnalyticsListings,
   writeAnalyticsSyncState,
-  appendListingSnapshots,
 } from "@/lib/mls/analytics-cache";
-import { readAllEnrichmentMaps, enrichListing, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
+import { readAllEnrichmentMaps, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
 import { unitLookup } from "@/data/unitLookup";
-import type { AnalyticsListing, AnalyticsSyncState, ListingSnapshot } from "@/lib/mls/analytics-types";
+import type { AnalyticsListing, AnalyticsSyncState } from "@/lib/mls/analytics-types";
 import type { MLSListing } from "@/lib/mls/types";
 
 // Disable static optimization - this is a dynamic route
@@ -386,10 +385,8 @@ export async function GET(request: NextRequest) {
       // then active listings that don't conflict
       const allAnalyticsListings = [...analyticsListings, ...filteredActiveListings];
 
-      // Load enrichment maps for auto-enrichment
-      const enrichmentMaps = await readAllEnrichmentMaps();
-
-      // Address match and enrich each analytics listing
+      // Group listings by building slug for upsert
+      // (skip enrichment and snapshots to keep analytics phase fast and reliable)
       const analyticsByBuilding = new Map<string, AnalyticsListing[]>();
       let analyticsMatched = 0;
       let analyticsUnmatched = 0;
@@ -405,13 +402,11 @@ export async function GET(request: NextRequest) {
           analyticsUnmatched++;
         }
 
-        // Auto-enrich with floor plan/orientation data
-        const enriched = enrichListing(listing, enrichmentMaps);
-        const key = enriched.buildingSlug || "_unmatched";
+        const key = listing.buildingSlug || "_unmatched";
         if (!analyticsByBuilding.has(key)) {
           analyticsByBuilding.set(key, []);
         }
-        analyticsByBuilding.get(key)!.push(enriched);
+        analyticsByBuilding.get(key)!.push(listing);
       }
 
       // Upsert analytics listings into cache
@@ -426,38 +421,14 @@ export async function GET(request: NextRequest) {
         analyticsTotalCached += result.total;
       }
 
-      // Capture snapshots of current active/pending listings for lifecycle tracking
-      const snapshots: ListingSnapshot[] = allListings.map(l => ({
-        listingId: l.listingId,
-        capturedAt: new Date().toISOString(),
-        status: l.status,
-        listPrice: l.listPrice,
-        daysOnMarket: l.daysOnMarket,
-      }));
-
-      if (snapshots.length > 0) {
-        await appendListingSnapshots(snapshots);
-      }
-
-      // Count statuses from the listings we processed this cycle
-      // (avoids calling countAnalyticsListings() which reads ALL 21K+ cached listings)
-      let closedCount = 0, pendingCount = 0, activeCount = 0, otherCount = 0;
-      for (const listing of allAnalyticsListings) {
-        const s = (listing.status || "").toLowerCase();
-        if (s === "closed") closedCount++;
-        else if (s === "pending") pendingCount++;
-        else if (s === "active" || s === "active under contract") activeCount++;
-        else otherCount++;
-      }
-
       // Update analytics sync state
       const newAnalyticsSyncState: AnalyticsSyncState = {
         lastSyncTimestamp: new Date().toISOString(),
         lastSyncDate: new Date().toLocaleString(),
-        closedCount,
-        pendingCount,
-        activeCount,
-        otherCount,
+        closedCount: 0,
+        pendingCount: 0,
+        activeCount: allAnalyticsListings.length,
+        otherCount: 0,
         totalCount: analyticsTotalCached,
         status: "success",
       };
@@ -472,7 +443,6 @@ export async function GET(request: NextRequest) {
         analyticsAdded,
         analyticsUpdated,
         analyticsTotalCached,
-        snapshotsCaptured: snapshots.length,
       };
 
       console.log(
