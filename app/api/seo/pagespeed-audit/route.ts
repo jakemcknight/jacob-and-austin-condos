@@ -7,6 +7,8 @@ import { kv } from "@vercel/kv";
 import { auditAllPages } from "@/lib/seo/pagespeed-client";
 import type { PageSpeedAudit } from "@/lib/seo/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     console.log("[PageSpeed Audit] Starting weekly audit...");

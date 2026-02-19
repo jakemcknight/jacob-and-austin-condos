@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { getSearchPerformance, buildSummary, getDateDaysAgo } from "@/lib/seo/gsc-client";
 
+export const dynamic = "force-dynamic";
+
 const KV_RETENTION_DAYS = 90;
 
 export async function GET() {
