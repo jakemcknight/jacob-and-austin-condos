@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { buildings } from "@/data/buildings";
 import FilterBar from "./filters/FilterBar";
 import type { FilterState } from "./filters/FilterBar";
@@ -19,6 +19,22 @@ const ListingsMap = dynamic(() => import("./map/ListingsMap"), {
   ),
 });
 
+// Page titles per status filter
+const PAGE_TITLES: Record<string, Record<string, string>> = {
+  Sale: {
+    active: "Downtown Austin Condos For Sale",
+    sold: "Recently Sold Downtown Austin Condos",
+    offmarket: "Off-Market Downtown Austin Condos",
+    all: "All Downtown Austin Condos",
+  },
+  Lease: {
+    active: "Downtown Austin Condos For Lease",
+    sold: "Recently Leased Downtown Austin Condos",
+    offmarket: "Off-Market Downtown Austin Condos",
+    all: "All Downtown Austin Condos",
+  },
+};
+
 export default function AllListings() {
   const [listings, setListings] = useState<MLSListingDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +46,7 @@ export default function AllListings() {
 
   const [filters, setFilters] = useState<FilterState>({
     listingTypeFilter: "Sale",
+    statusFilter: "active",
     bedroomFilters: [],
     selectedBuildings: [],
     priceMin: "",
@@ -41,15 +58,11 @@ export default function AllListings() {
     orientationFilters: [],
   });
 
-  useEffect(() => {
-    fetchAllListings();
-  }, []);
-
-  async function fetchAllListings() {
+  const fetchListings = useCallback(async (statusFilter: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/downtown-condos/api/mls/listings`);
+      const response = await fetch(`/downtown-condos/api/mls/listings?status=${statusFilter}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch listings: ${response.statusText}`);
       }
@@ -61,9 +74,14 @@ export default function AllListings() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  // Filter listings
+  // Fetch on mount and when statusFilter changes
+  useEffect(() => {
+    fetchListings(filters.statusFilter);
+  }, [filters.statusFilter, fetchListings]);
+
+  // Filter listings (client-side filters applied on top of server-side status filter)
   const filteredListings = listings.filter(listing => {
     if (listing.listingType !== filters.listingTypeFilter) return false;
 
@@ -122,13 +140,14 @@ export default function AllListings() {
   });
 
   const totalCount = listings.filter(l => l.listingType === filters.listingTypeFilter).length;
+  const pageTitle = PAGE_TITLES[filters.listingTypeFilter]?.[filters.statusFilter] || "Downtown Austin Condos";
 
   if (loading) {
     return (
       <section className="section-padding bg-light">
         <div className="container-narrow">
           <p className="text-center text-sm uppercase tracking-wider text-secondary">
-            Loading active listings...
+            Loading listings...
           </p>
         </div>
       </section>
@@ -143,15 +162,32 @@ export default function AllListings() {
     return (
       <section className="section-padding bg-light">
         <div className="container-narrow">
+          {/* Filter Bar — always show so user can change status filter */}
+          <FilterBar
+            filters={filters}
+            onFiltersChange={setFilters}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            resultCount={0}
+            totalCount={0}
+            availableFloorPlans={[]}
+            availableOrientations={[]}
+          />
           <p className="py-12 text-center text-secondary">
-            No active listings at this time. Check back soon for updates or{" "}
-            <a
-              href="?message=Looking%20for%20a%20downtown%20Austin%20condo#inquiry"
-              className="text-accent underline hover:text-primary"
-            >
-              reach out to find a home off-market
-            </a>
-            .
+            {filters.statusFilter === "active" ? (
+              <>
+                No active listings at this time. Check back soon for updates or{" "}
+                <a
+                  href="?message=Looking%20for%20a%20downtown%20Austin%20condo#inquiry"
+                  className="text-accent underline hover:text-primary"
+                >
+                  reach out to find a home off-market
+                </a>
+                .
+              </>
+            ) : (
+              <>No {filters.statusFilter === "sold" ? "sold" : "off-market"} listings found.</>
+            )}
           </p>
         </div>
       </section>
@@ -164,7 +200,7 @@ export default function AllListings() {
       {viewMode === "list" && (
         <div className="container-narrow pb-2 pt-8">
           <h2 className="mb-4 text-center text-2xl font-bold tracking-tight text-primary md:text-3xl">
-            {filters.listingTypeFilter === "Sale" ? "Downtown Austin Condos For Sale" : "Downtown Austin Condos For Lease"}
+            {pageTitle}
           </h2>
         </div>
       )}

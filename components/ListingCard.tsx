@@ -30,6 +30,10 @@ export interface MLSListingDisplay {
   floorPlan?: string;
   orientation?: string;
   floorPlanSlug?: string;
+  // Off-market metadata (from analytics listings)
+  offMarket?: boolean;
+  originalStatus?: string;
+  statusChangeDate?: string;
 }
 
 interface ListingCardProps {
@@ -38,11 +42,29 @@ interface ListingCardProps {
   compact?: boolean;
 }
 
+// Status badge colors — matches the listing detail page
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  "Active": "bg-zilker text-white",
+  "Active Under Contract": "bg-zilker text-white",
+  "Pending": "bg-yellow-500 text-white",
+  "Closed": "bg-green-600 text-white",
+  "Withdrawn": "bg-gray-500 text-white",
+  "Expired": "bg-gray-500 text-white",
+  "Hold": "bg-gray-500 text-white",
+  "Canceled": "bg-red-500 text-white",
+};
+
 export default function ListingCard({ listing, showBuilding = false, compact = false }: ListingCardProps) {
+  const isOffMarket = listing.offMarket === true;
+  const isClosed = listing.originalStatus === "Closed";
+  const statusDisplay = isClosed ? "Sold" : listing.status;
+  const badgeStyle = STATUS_BADGE_STYLES[listing.status] || "bg-gray-500 text-white";
+
   const photoBaseSrc = `/downtown-condos/api/mls/photo/${listing.listingId}/0`;
   const { src: photoSrc, failed: imageError, onError: handleImageError } = useRetryImage(photoBaseSrc);
 
-  const hasPhoto = listing.photos && listing.photos.length > 0 && !imageError;
+  // Off-market listings from analytics cache have empty photos array — don't show photo proxy
+  const hasPhoto = listing.photos && listing.photos.length > 0 && !imageError && !isOffMarket;
 
   return (
     <Link
@@ -73,8 +95,14 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
           )}
         </div>
       ) : (
-        <div className={`flex items-center justify-center bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
+        <div className={`relative flex items-center justify-center bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
           <p className="text-sm uppercase tracking-wider text-gray-400">No Photo Available</p>
+          {/* Building Badge - Top Left (no-photo state) */}
+          {showBuilding && listing.buildingName && (
+            <div className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-white">
+              {listing.buildingName}
+            </div>
+          )}
         </div>
       )}
 
@@ -82,18 +110,26 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
       <div className={compact ? "p-2.5" : "p-3"}>
         {/* Status + DOM badges */}
         <div className="mb-2 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-zilker px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
-            {listing.status}
+          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide ${badgeStyle}`}>
+            {statusDisplay}
           </span>
-          <span className="rounded-full bg-zilker px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
-            {formatDaysOnMarket(calculateDaysOnMarket(listing.listDate))}
-          </span>
+          {!isOffMarket && (
+            <span className="rounded-full bg-zilker px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
+              {formatDaysOnMarket(calculateDaysOnMarket(listing.listDate))}
+            </span>
+          )}
+          {isOffMarket && listing.daysOnMarket > 0 && (
+            <span className="rounded-full bg-gray-400 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
+              {listing.daysOnMarket} DOM
+            </span>
+          )}
         </div>
 
-        {/* Price */}
-        <p className={`mb-1 font-bold text-primary ${compact ? "text-lg" : "text-xl"}`}>
+        {/* Price — always show list price (close price hidden per Unlock MLS rules) */}
+        <p className={`mb-1 font-bold ${isOffMarket ? "text-secondary" : "text-primary"} ${compact ? "text-lg" : "text-xl"}`}>
           ${listing.listPrice.toLocaleString()}
           {listing.listingType === "Lease" && <span className="text-sm font-normal text-secondary">/mo</span>}
+          {isClosed && <span className="ml-1.5 text-xs font-normal text-gray-500">(list price)</span>}
         </p>
 
         {/* Address line 1 */}

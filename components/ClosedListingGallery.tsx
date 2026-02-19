@@ -7,6 +7,8 @@ interface ClosedListingGalleryProps {
   listingId: string;
   buildingName: string;
   unitNumber?: string;
+  /** Limit the number of photos displayed (e.g. 1 for Closed per Unlock MLS rules) */
+  maxPhotos?: number;
 }
 
 /**
@@ -18,6 +20,7 @@ export default function ClosedListingGallery({
   listingId,
   buildingName,
   unitNumber,
+  maxPhotos,
 }: ClosedListingGalleryProps) {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,14 +29,19 @@ export default function ClosedListingGallery({
     fetch(`/downtown-condos/api/mls/listing-photos/${listingId}`)
       .then((r) => r.json())
       .then((data) => {
-        setPhotoUrls(data.photos || []);
+        let photos = data.photos || [];
+        // Limit photos if maxPhotos is set (e.g. Closed listings per Unlock MLS rules)
+        if (maxPhotos && photos.length > maxPhotos) {
+          photos = photos.slice(0, maxPhotos);
+        }
+        setPhotoUrls(photos);
         setLoading(false);
       })
       .catch(() => {
         setPhotoUrls([]);
         setLoading(false);
       });
-  }, [listingId]);
+  }, [listingId, maxPhotos]);
 
   if (loading) {
     return (

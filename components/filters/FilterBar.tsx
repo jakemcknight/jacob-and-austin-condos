@@ -7,8 +7,11 @@ import { formatOrientation } from "@/lib/format-dom";
 
 type SortOption = "price" | "priceSf" | "dom" | "date";
 
+export type StatusFilter = "active" | "sold" | "offmarket" | "all";
+
 export interface FilterState {
   listingTypeFilter: "Sale" | "Lease";
+  statusFilter: StatusFilter;
   bedroomFilters: number[];
   selectedBuildings: string[];
   priceMin: string;
@@ -89,6 +92,7 @@ export default function FilterBar({
 
   // Active filter counts
   const activeFilterCount =
+    (filters.statusFilter !== "active" ? 1 : 0) +
     filters.bedroomFilters.length +
     filters.selectedBuildings.length +
     filters.floorPlanFilters.length +
@@ -104,6 +108,14 @@ export default function FilterBar({
 
   // Active labels
   const saleLabel = filters.listingTypeFilter === "Lease" ? "For Lease" : "For Sale";
+
+  const statusLabels: Record<StatusFilter, string> = {
+    active: "Active",
+    sold: "Sold",
+    offmarket: "Off Market",
+    all: "All Statuses",
+  };
+  const statusLabel = filters.statusFilter !== "active" ? statusLabels[filters.statusFilter] : undefined;
 
   let priceLabel: string | undefined;
   if (filters.priceMin && filters.priceMax) {
@@ -178,6 +190,38 @@ export default function FilterBar({
               >
                 For Lease
               </button>
+            </div>
+          </FilterDropdown>
+
+          {/* Status */}
+          <FilterDropdown
+            label="Status"
+            activeLabel={statusLabel}
+            isActive={filters.statusFilter !== "active"}
+            width="w-56"
+          >
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Listing Status</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { value: "active" as StatusFilter, label: "Active" },
+                  { value: "sold" as StatusFilter, label: "Sold" },
+                  { value: "offmarket" as StatusFilter, label: "Off Market" },
+                  { value: "all" as StatusFilter, label: "All" },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => update({ statusFilter: value })}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      filters.statusFilter === value
+                        ? "bg-accent text-white"
+                        : "bg-gray-100 text-secondary hover:bg-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </FilterDropdown>
 
@@ -455,6 +499,7 @@ export default function FilterBar({
             <button
               onClick={() => onFiltersChange({
                 ...filters,
+                statusFilter: "active",
                 bedroomFilters: [],
                 selectedBuildings: [],
                 priceMin: "",

@@ -140,12 +140,11 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     };
   }
 
-  // Analytics listing metadata
+  // Analytics listing metadata — no close price per Unlock MLS rules
   const al = analyticsListing!;
   const isClosed = al.status === "Closed";
-  const displayPrice = isClosed && al.closePrice ? al.closePrice : al.listPrice;
   const statusLabel = isClosed ? "Sold" : al.status;
-  const title = `${al.buildingName || building?.name || ""} ${al.unitNumber ? `#${al.unitNumber}` : ""} — ${statusLabel} for $${displayPrice.toLocaleString()}`;
+  const title = `${al.buildingName || building?.name || ""} ${al.unitNumber ? `#${al.unitNumber}` : ""} — ${statusLabel}`;
   const description = `${al.bedroomsTotal} bed, ${al.bathroomsTotalInteger} bath condo ${isClosed ? `sold` : al.status.toLowerCase()} in downtown Austin. ${al.livingArea.toLocaleString()} sqft. ${al.daysOnMarket} days on market. MLS# ${al.listingId}`;
 
   return {
@@ -378,7 +377,8 @@ function renderAnalyticsListing(
 ) {
   const isClosed = al.status === "Closed";
   const isLease = al.propertyType?.toLowerCase().includes("lease");
-  const displayPrice = isClosed && al.closePrice ? al.closePrice : al.listPrice;
+  // Always show list price publicly — close price hidden per Unlock MLS rules
+  const displayPrice = al.listPrice;
   const priceSf = al.livingArea > 0 ? displayPrice / al.livingArea : 0;
 
   // Status badge styling
@@ -394,18 +394,12 @@ function renderAnalyticsListing(
   };
   const badgeClass = statusColors[al.status] || "bg-gray-100 text-gray-700";
 
-  // Property details
+  // Property details — no close price or close/list ratios per Unlock MLS rules
   const propertyDetails: { label: string; value: string }[] = [];
-  propertyDetails.push({ label: "Status", value: al.status });
+  propertyDetails.push({ label: "Status", value: isClosed ? "Sold" : al.status });
   propertyDetails.push({ label: "Days on Market", value: String(al.daysOnMarket) });
   if (al.listingContractDate) propertyDetails.push({ label: "List Date", value: formatDate(al.listingContractDate) });
   if (isClosed && al.closeDate) propertyDetails.push({ label: "Close Date", value: formatDate(al.closeDate) });
-  if (isClosed && al.closePrice && al.listPrice > 0) {
-    propertyDetails.push({ label: "Close/List Ratio", value: `${((al.closePrice / al.listPrice) * 100).toFixed(1)}%` });
-  }
-  if (isClosed && al.closePrice && al.originalListPrice && al.originalListPrice > 0) {
-    propertyDetails.push({ label: "Close/OLP Ratio", value: `${((al.closePrice / al.originalListPrice) * 100).toFixed(1)}%` });
-  }
   if (al.yearBuilt) propertyDetails.push({ label: "Year Built", value: String(al.yearBuilt) });
   if (al.propertySubType) propertyDetails.push({ label: "Property Type", value: al.propertySubType });
   if (al.hoaFee) {
@@ -415,7 +409,7 @@ function renderAnalyticsListing(
   if (al.parkingFeatures) propertyDetails.push({ label: "Parking", value: al.parkingFeatures });
   if (al.buyerFinancing) propertyDetails.push({ label: "Buyer Financing", value: al.buyerFinancing });
 
-  // Build listing history timeline
+  // Build listing history timeline — no close price per Unlock MLS rules
   const historyEvents: { date: string; label: string; detail: string }[] = [];
   if (al.listingContractDate) {
     const origPrice = al.originalListPrice > 0 ? al.originalListPrice : al.listPrice;
@@ -429,8 +423,8 @@ function renderAnalyticsListing(
   if (al.pendingTimestamp) {
     historyEvents.push({ date: formatDate(al.pendingTimestamp), label: "Pending", detail: "Under contract" });
   }
-  if (isClosed && al.closeDate && al.closePrice) {
-    historyEvents.push({ date: formatDate(al.closeDate), label: "Closed", detail: `Sold for $${al.closePrice.toLocaleString()}` });
+  if (isClosed && al.closeDate) {
+    historyEvents.push({ date: formatDate(al.closeDate), label: "Sold", detail: `Sold after ${al.daysOnMarket} days on market` });
   } else if (al.status === "Withdrawn" || al.status === "Expired" || al.status === "Canceled" || al.status === "Hold") {
     const offDate = al.offMarketDate || al.withdrawnDate || al.cancellationDate || al.holdDate || al.statusChangeTimestamp;
     historyEvents.push({ date: offDate ? formatDate(offDate) : "", label: al.status, detail: `${al.status} after ${al.daysOnMarket} days on market` });
@@ -439,12 +433,13 @@ function renderAnalyticsListing(
 
   return (
     <>
-      {/* Photo Gallery — on-demand fetch for closed listings */}
+      {/* Photo Gallery — on-demand fetch; maxPhotos=1 for Closed per Unlock MLS rules */}
       <div className="bg-light pb-6 md:pb-8">
         <ClosedListingGallery
           listingId={al.listingId}
           buildingName={al.buildingName || building?.name || ""}
           unitNumber={al.unitNumber}
+          maxPhotos={isClosed ? 1 : undefined}
         />
       </div>
 
@@ -457,7 +452,7 @@ function renderAnalyticsListing(
               {/* Status Badge + Title + Price */}
               <div className="mb-6">
                 <span className={`inline-block rounded px-3 py-1 text-xs font-semibold uppercase tracking-wider ${badgeClass}`}>
-                  {al.status}
+                  {isClosed ? "Sold" : al.status}
                   {isClosed && al.closeDate && ` · ${formatDate(al.closeDate)}`}
                 </span>
                 <h1 className="mt-3 text-3xl font-bold text-primary md:text-4xl">
@@ -472,28 +467,19 @@ function renderAnalyticsListing(
                   {building?.zip && ` ${building.zip}`}
                 </p>
 
-                {/* Pricing */}
+                {/* Pricing — always list price per Unlock MLS rules */}
                 <div className="mt-3">
-                  {isClosed && al.closePrice ? (
-                    <>
-                      <p className="text-2xl font-bold text-primary">
-                        ${al.closePrice.toLocaleString()}
-                        {isLease && <span className="text-lg font-normal">/month</span>}
-                        <span className="ml-2 text-sm font-normal text-green-700">Sold</span>
-                      </p>
-                      {al.listPrice !== al.closePrice && (
-                        <p className="mt-1 text-sm text-secondary">
-                          Listed at ${al.listPrice.toLocaleString()}
-                          {al.originalListPrice > 0 && al.originalListPrice !== al.listPrice && (
-                            <> (originally ${al.originalListPrice.toLocaleString()})</>
-                          )}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">
-                      ${al.listPrice.toLocaleString()}
-                      {isLease && <span className="text-lg font-normal">/month</span>}
+                  <p className="text-2xl font-bold text-primary">
+                    ${al.listPrice.toLocaleString()}
+                    {isLease && <span className="text-lg font-normal">/month</span>}
+                    {isClosed && <span className="ml-2 text-sm font-normal text-green-700">Sold</span>}
+                  </p>
+                  {isClosed && (
+                    <p className="mt-1 text-xs text-secondary">Last listed price shown per MLS rules</p>
+                  )}
+                  {al.originalListPrice > 0 && al.originalListPrice !== al.listPrice && (
+                    <p className="mt-1 text-sm text-secondary">
+                      Originally listed at ${al.originalListPrice.toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -515,7 +501,7 @@ function renderAnalyticsListing(
                 </div>
                 <div className="rounded border border-gray-200 bg-gray-50 p-4 text-center">
                   <p className="text-2xl font-bold text-primary">${priceSf.toFixed(0)}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wider text-accent">{isClosed ? "Close" : "List"} $/SF</p>
+                  <p className="mt-1 text-xs uppercase tracking-wider text-accent">List $/SF</p>
                 </div>
               </div>
 
@@ -616,10 +602,10 @@ function renderAnalyticsListing(
                   </div>
                 )}
 
-                {/* Share Button */}
+                {/* Share Button — no close price in share text */}
                 <ShareButton
-                  title={`${al.buildingName || building?.name || ""} ${al.unitNumber ? `#${al.unitNumber}` : ""} - ${isClosed ? "Sold" : al.status} $${displayPrice.toLocaleString()}`}
-                  text={`${al.bedroomsTotal} bed, ${al.bathroomsTotalInteger} bath condo in downtown Austin — ${isClosed ? `sold for $${displayPrice.toLocaleString()}` : al.status.toLowerCase()}`}
+                  title={`${al.buildingName || building?.name || ""} ${al.unitNumber ? `#${al.unitNumber}` : ""} — ${isClosed ? "Sold" : al.status}`}
+                  text={`${al.bedroomsTotal} bed, ${al.bathroomsTotalInteger} bath condo in downtown Austin — ${isClosed ? "sold" : al.status.toLowerCase()}`}
                   pageType="listing"
                   listingId={al.listingId}
                   buildingSlug={buildingSlug || undefined}
