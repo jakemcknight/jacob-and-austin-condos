@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import SummaryCards from "@/components/analytics/SummaryCards";
 import type { AnalyticsListing } from "@/lib/mls/analytics-types";
@@ -76,6 +77,8 @@ function normalizeOrientation(raw: string): string {
 const DIRECTION_ORDER = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 export default function DataPage() {
+  const router = useRouter();
+
   // Data state
   const [analyticsListings, setAnalyticsListings] = useState<AnalyticsListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -985,7 +988,11 @@ export default function DataPage() {
                 </thead>
                 <tbody>
                   {sortedTransactions.map((t, i) => (
-                    <tr key={t.listingId + i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <tr
+                      key={t.listingId + i}
+                      className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"} cursor-pointer transition-colors hover:bg-accent/5`}
+                      onClick={() => router.push(`/downtown-condos/listings/${t.listingId}`)}
+                    >
                       <td className="whitespace-nowrap px-2 py-1 text-left text-primary">{t.buildingName === "Other" ? t.address : t.buildingName}</td>
                       <td className="px-2 py-1 text-center text-primary">{t.unitNumber}</td>
                       <td className="px-2 py-1 text-center text-primary">{t.bedroomsTotal}</td>

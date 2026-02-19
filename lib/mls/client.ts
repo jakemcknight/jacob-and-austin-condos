@@ -249,6 +249,7 @@ export class MLSGridClient {
       "AssociationFee", "AssociationFeeFrequency", "YearBuilt",
       "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
       "BuyerFinancing",
+      "PublicRemarks", "ParkingFeatures",
     ].join(",");
 
     // Build status filter
@@ -371,9 +372,32 @@ export class MLSGridClient {
       buyerAgentFullName: data.BuyerAgentFullName || undefined,
       listOfficeName: data.ListOfficeName || undefined,
       buyerFinancing: data.BuyerFinancing || undefined,
+      publicRemarks: data.PublicRemarks || undefined,
+      parkingFeatures: data.ParkingFeatures || undefined,
       source: "api-sync",
       importedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Fetch photo URLs for a specific listing from the MLSGrid Media endpoint.
+   * Used on-demand when viewing closed/historical listing detail pages.
+   * Returns an array of photo URLs sorted by display order, or empty array if none.
+   */
+  async fetchListingPhotos(listingId: string): Promise<string[]> {
+    try {
+      const url = `${this.baseUrl}/Media?$filter=ResourceRecordKey eq '${listingId}'&$orderby=Order asc&$top=25&$select=MediaURL`;
+      const response = await this.makeRequest(url);
+      if (response.value && Array.isArray(response.value)) {
+        return response.value
+          .map((item: any) => item.MediaURL)
+          .filter(Boolean);
+      }
+      return [];
+    } catch (error) {
+      console.error(`[MLSGrid] Error fetching photos for listing ${listingId}:`, error);
+      return [];
+    }
   }
 
   // Hard cap on requests per sync cycle to prevent runaway loops

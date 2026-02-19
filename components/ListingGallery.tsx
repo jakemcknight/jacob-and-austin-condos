@@ -8,6 +8,9 @@ interface ListingGalleryProps {
   photos: string[];
   buildingName: string;
   unitNumber?: string;
+  /** Direct photo URLs (e.g. from on-demand MLSGrid fetch for closed listings).
+   *  When provided, uses photo-proxy endpoint instead of the default photo/{id}/{index} pattern. */
+  photoUrls?: string[];
 }
 
 export default function ListingGallery({
@@ -15,13 +18,19 @@ export default function ListingGallery({
   photos,
   buildingName,
   unitNumber,
+  photoUrls,
 }: ListingGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const basePhotoUrl = useCallback(
-    (index: number) => `/downtown-condos/api/mls/photo/${listingId}/${index}`,
-    [listingId]
+    (index: number) => {
+      if (photoUrls && photoUrls[index]) {
+        return `/downtown-condos/api/mls/photo-proxy?url=${encodeURIComponent(photoUrls[index])}`;
+      }
+      return `/downtown-condos/api/mls/photo/${listingId}/${index}`;
+    },
+    [listingId, photoUrls]
   );
   const { getSrc: photoUrl, failed: imageError, onError: handleImageError } = useRetryImages(basePhotoUrl);
 
