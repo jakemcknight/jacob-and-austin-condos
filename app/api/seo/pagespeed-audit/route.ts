@@ -7,15 +7,7 @@ import { kv } from "@vercel/kv";
 import { auditAllPages } from "@/lib/seo/pagespeed-client";
 import type { PageSpeedAudit } from "@/lib/seo/types";
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-export async function GET(request: Request) {
-  // Verify cron authorization
-  const authHeader = request.headers.get("authorization");
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET() {
   try {
     console.log("[PageSpeed Audit] Starting weekly audit...");
 

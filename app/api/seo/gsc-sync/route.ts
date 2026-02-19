@@ -6,16 +6,9 @@ import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 import { getSearchPerformance, buildSummary, getDateDaysAgo } from "@/lib/seo/gsc-client";
 
-const CRON_SECRET = process.env.CRON_SECRET;
 const KV_RETENTION_DAYS = 90;
 
-export async function GET(request: Request) {
-  // Verify cron authorization
-  const authHeader = request.headers.get("authorization");
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET() {
   try {
     // GSC data has a ~2-3 day lag, so fetch data from 3 days ago
     const targetDate = getDateDaysAgo(3);
