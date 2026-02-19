@@ -3,8 +3,6 @@ import { unstable_noStore as noStore } from "next/cache";
 import { buildings } from "@/data/buildings";
 import { getAllFloorPlanParams } from "@/lib/floor-plans";
 import { readMlsCache } from "@/lib/mls/cache";
-import { getAllPosts } from "@/lib/blog/mdx";
-
 const BASE_URL = "https://jacobinaustin.com/downtown-condos";
 
 // Strip originating system prefix (e.g. "ACT") from mlsNumber
@@ -77,24 +75,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // 5. Blog posts
-  const posts = getAllPosts();
-  const blogPages: MetadataRoute.Sitemap = [
-    // Blog index page
-    {
-      url: `${BASE_URL}/blog`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    // Individual blog posts
-    ...posts.map((post) => ({
-      url: `${BASE_URL}/blog/${post.slug}`,
-      lastModified: new Date(post.date),
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
-  ];
-
-  return [...staticPages, ...buildingPages, ...floorPlanPages, ...listingPages, ...blogPages];
+  return [...staticPages, ...buildingPages, ...floorPlanPages, ...listingPages];
 }
