@@ -334,16 +334,25 @@ export async function GET(request: NextRequest) {
 
       console.log(`[MLS Sync] Analytics: ${staleIds.length} listings disappeared from active feed — fetching updated status`);
 
-      // Full fetch of all non-active DT listings — no timestamp filter.
-      // This ensures every status change (Pending, Closed, Withdrawn, Expired, etc.)
-      // is captured regardless of when it happened. The MlgCanView filter on the API
-      // side limits results to viewable listings.
-      const analyticsStatuses = ["Closed", "Pending", "Withdrawn", "Hold", "Expired", "Canceled"];
-      const analyticsFetchResult = await mlsClient.fetchAnalyticsListings(
-        analyticsStatuses,
-        undefined
-      );
-      const analyticsListings = analyticsFetchResult.listings;
+      // Targeted fetch: only fetch listings that disappeared from the active feed
+      // (i.e. changed status to Closed, Pending, Withdrawn, etc.)
+      // This replaces the previous full fetch of ALL non-active DT listings which
+      // was too broad (years of data) and hit the request cap / timeout silently.
+      let analyticsListings: AnalyticsListing[] = [];
+
+      if (staleIds.length > 0) {
+        analyticsListings = await mlsClient.fetchListingsByIds(staleIds);
+        console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} updated listings for ${staleIds.length} stale IDs`);
+
+        // Log which stale listings were NOT returned by the API
+        const returnedIds = new Set(analyticsListings.map(l => l.listingId));
+        const missingIds = staleIds.filter(id => !returnedIds.has(id));
+        if (missingIds.length > 0) {
+          console.log(`[MLS Sync] Analytics: ${missingIds.length} stale IDs not found in API (may be removed): ${missingIds.join(', ')}`);
+        }
+      } else {
+        console.log(`[MLS Sync] Analytics: no stale listings detected — skipping targeted fetch`);
+      }
 
       console.log(`[MLS Sync] Analytics: fetched ${analyticsListings.length} non-active listings from API`);
 

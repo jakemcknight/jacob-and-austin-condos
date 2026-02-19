@@ -306,6 +306,78 @@ export class MLSGridClient {
   }
 
   /**
+   * Fetch specific listings by their ListingId values.
+   * Used for targeted updates when listings disappear from the active feed
+   * (indicating a status change to Closed, Pending, Withdrawn, etc.)
+   *
+   * No MlgCanView filter — we want the listing regardless of viewability.
+   * No status filter — we want whatever the current status is.
+   * Batches IDs in groups of 10 to keep OData filter URLs reasonable.
+   */
+  async fetchListingsByIds(listingIds: string[]): Promise<AnalyticsListing[]> {
+    if (listingIds.length === 0) return [];
+
+    const results: AnalyticsListing[] = [];
+    const seenKeys = new Set<string>();
+
+    const analyticsSelect = [
+      "ListingId", "ListingKey",
+      "StreetNumber", "StreetDirPrefix", "StreetName", "StreetSuffix", "StreetDirSuffix",
+      "UnitNumber", "BuildingName",
+      "ListPrice", "OriginalListPrice", "ClosePrice", "CloseDate",
+      "PreviousListPrice", "CurrentPrice",
+      "BedroomsTotal", "BathroomsTotalInteger", "LivingArea",
+      "StandardStatus", "ListingContractDate", "DaysOnMarket", "CumulativeDaysOnMarket",
+      "PropertyType", "PropertySubType", "MLSAreaMajor",
+      "ModificationTimestamp", "MlgCanView", "OriginatingSystemName",
+      "StatusChangeTimestamp", "PendingTimestamp", "PurchaseContractDate",
+      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate", "TempOffMarketDate",
+      "AssociationFee", "AssociationFeeFrequency", "YearBuilt",
+      "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
+      "BuyerFinancing",
+      "PublicRemarks", "ParkingFeatures",
+    ].join(",");
+
+    // Batch into groups of 10 to keep OData filter URL length reasonable
+    const BATCH_SIZE = 10;
+
+    for (let i = 0; i < listingIds.length; i += BATCH_SIZE) {
+      const batch = listingIds.slice(i, i + BATCH_SIZE);
+
+      const idFilter = batch
+        .map(id => `ListingId eq '${id}'`)
+        .join(" or ");
+
+      const filters = [
+        "OriginatingSystemName eq 'actris'",
+        `(${idFilter})`,
+      ];
+
+      const filterStr = encodeURIComponent(filters.join(" and "));
+      const url = `${this.baseUrl}/Property?$filter=${filterStr}&$select=${analyticsSelect}&$top=500`;
+
+      const response = await this.makeRequest(url);
+
+      if (response.value && Array.isArray(response.value)) {
+        for (const item of response.value) {
+          const id = item.ListingId || item.ListingKey || "";
+          if (seenKeys.has(id)) continue;
+          seenKeys.add(id);
+          results.push(this.parseAnalyticsListing(item));
+        }
+      }
+
+      // Rate limiting between batches
+      if (i + BATCH_SIZE < listingIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    console.log(`[MLSGrid] Targeted fetch: ${results.length} listings found for ${listingIds.length} IDs`);
+    return results;
+  }
+
+  /**
    * Parse raw MLS data into AnalyticsListing format (no photos, includes lifecycle fields)
    */
   private parseAnalyticsListing(data: any): AnalyticsListing {
