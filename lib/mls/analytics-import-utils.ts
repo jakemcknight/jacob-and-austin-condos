@@ -2,6 +2,7 @@
 // Used by both the browser upload endpoint and the server-side file import endpoint
 
 import { AnalyticsListing } from "@/lib/mls/analytics-types";
+import { normalizeListingId } from "@/lib/mls/analytics-cache";
 
 // Column name aliases — maps various MLS export column names to our internal field names
 export const COLUMN_ALIASES: Record<string, string[]> = {
@@ -200,7 +201,7 @@ export function rowToAnalyticsListing(
   }
 
   return {
-    listingId: listingId || `import-${address}-${get("unitNumber")}`,
+    listingId: normalizeListingId(listingId || `import-${address}-${get("unitNumber")}`),
     buildingSlug: null,
     buildingName: get("buildingName"),
     address,

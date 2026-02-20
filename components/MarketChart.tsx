@@ -541,7 +541,9 @@ export default function MarketChart({
               })}
             </p>
             <p className="mt-1">
-              <span className="text-accent">Price:</span>{" "}
+              <span className="text-accent">
+                {hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" ? "List Price:" : "Price:"}
+              </span>{" "}
               <span className="font-medium text-primary">
                 {formatFullPrice(hoveredPoint.price)}
               </span>
@@ -562,11 +564,16 @@ export default function MarketChart({
                 </span>
               </p>
             )}
-            {hoveredPoint.dom > 0 && (
+            {hoveredPoint.dom >= 0 && (
               <p>
                 <span className="text-accent">DOM:</span>{" "}
-                <span className="font-medium text-primary">
+                <span className={`font-medium text-primary ${
+                  hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" ? "text-base" : ""
+                }`}>
                   {hoveredPoint.dom}
+                  {hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" && (
+                    <span className="ml-1 text-xs font-normal text-secondary">days</span>
+                  )}
                 </span>
               </p>
             )}

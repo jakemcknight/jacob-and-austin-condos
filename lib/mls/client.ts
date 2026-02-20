@@ -3,6 +3,7 @@
 
 import { MLSListing, MLSSearchParams, MLSApiResponse } from "./types";
 import { AnalyticsListing } from "./analytics-types";
+import { normalizeListingId } from "./analytics-cache";
 
 export interface ReplicationOptions {
   /** Initial import (includes MlgCanView filter) or incremental sync */
@@ -245,7 +246,7 @@ export class MLSGridClient {
       "PropertyType", "PropertySubType", "MLSAreaMajor",
       "ModificationTimestamp", "MlgCanView", "OriginatingSystemName",
       "StatusChangeTimestamp", "PendingTimestamp", "PurchaseContractDate",
-      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate", "TempOffMarketDate",
+      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate",
       "AssociationFee", "AssociationFeeFrequency", "YearBuilt",
       "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
       "BuyerFinancing",
@@ -331,7 +332,7 @@ export class MLSGridClient {
       "PropertyType", "PropertySubType", "MLSAreaMajor",
       "ModificationTimestamp", "MlgCanView", "OriginatingSystemName",
       "StatusChangeTimestamp", "PendingTimestamp", "PurchaseContractDate",
-      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate", "TempOffMarketDate",
+      "PriceChangeTimestamp", "BackOnMarketDate", "OffMarketDate",
       "AssociationFee", "AssociationFeeFrequency", "YearBuilt",
       "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
       "BuyerFinancing",
@@ -407,7 +408,7 @@ export class MLSGridClient {
     if (closePrice && originalListPrice > 0) cpOlp = closePrice / originalListPrice;
 
     return {
-      listingId: data.ListingId || data.ListingKey || "",
+      listingId: normalizeListingId(data.ListingId || data.ListingKey || ""),
       buildingSlug: null, // Set by address matcher in sync
       buildingName: data.BuildingName || "",
       address,

@@ -10,6 +10,7 @@ import {
   median,
   computeYearlyBreakdown,
   computeAppreciation,
+  computeAbsorptionRate,
   getLast12MonthsCutoff,
   type YearlyRow,
 } from "@/lib/mls/analytics-computations";
@@ -96,7 +97,9 @@ export default function DataPage() {
   const [dateFrom, setDateFrom] = useState("2015-01-01");
   const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [metric, setMetric] = useState<"priceSf" | "price">("priceSf");
-  const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(new Set());
+  const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(
+    new Set(["Active", "Pending"])
+  );
 
   // Appreciation state
   const [appreciationRange, setAppreciationRange] = useState<"all" | "5" | "10" | "custom">("5");
@@ -308,6 +311,16 @@ export default function DataPage() {
     [filteredListings]
   );
 
+  // Active & Pending listings
+  const activeListings = useMemo(
+    () => filteredListings.filter((l) => l.status === "Active" || l.status === "Active Under Contract"),
+    [filteredListings]
+  );
+  const pendingListings = useMemo(
+    () => filteredListings.filter((l) => l.status === "Pending"),
+    [filteredListings]
+  );
+
   // Last 12 months summary
   const cutoff12 = getLast12MonthsCutoff();
   const last12 = useMemo(
@@ -316,6 +329,34 @@ export default function DataPage() {
   );
 
   const isLease = listingMode === "lease";
+
+  // Active market stats
+  const activeStats = useMemo(() => {
+    const prices = activeListings.map((l) => l.listPrice).filter((p) => p > 0);
+    const psfs = activeListings
+      .map((l) => (l.livingArea > 0 ? l.listPrice / l.livingArea : 0))
+      .filter((p) => p > 0);
+    const doms = activeListings.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+    return {
+      count: activeListings.length,
+      medianPrice: Math.round(median(prices)),
+      medianPsf: median(psfs),
+      medianDom: Math.round(median(doms)),
+    };
+  }, [activeListings]);
+
+  const pendingStats = useMemo(() => {
+    const doms = pendingListings.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+    return {
+      count: pendingListings.length,
+      medianDom: Math.round(median(doms)),
+    };
+  }, [pendingListings]);
+
+  const absorptionRate = useMemo(() => {
+    if (last12.length === 0 || activeListings.length === 0) return null;
+    return computeAbsorptionRate(activeListings.length, last12.length);
+  }, [activeListings.length, last12.length]);
 
   const summaryStats = useMemo(() => {
     const prices = last12.map((l) => l.closePrice || 0).filter((p) => p > 0);
@@ -387,7 +428,7 @@ export default function DataPage() {
       const price = group === "Closed" ? (l.closePrice || 0) : (l.listPrice || 0);
       const date = group === "Closed"
         ? (l.closeDate || l.listingContractDate || "")
-        : (l.priceChangeTimestamp || l.statusChangeTimestamp || l.listingContractDate || "");
+        : (l.listingContractDate || l.statusChangeTimestamp || "");
 
       if (price <= 0 || !date) continue;
 
@@ -865,16 +906,44 @@ export default function DataPage() {
 
         {/* Content */}
         <div className="mt-6 space-y-6">
-          {/* Summary Cards */}
-          <SummaryCards
-            cards={[
-              { label: "Transactions (12 Mo)", value: summaryStats.count.toLocaleString() },
-              { label: "Median $/SF (12 Mo)", value: formatPsf(summaryStats.medianPsf, isLease) },
-              { label: "Median Price (12 Mo)", value: formatDollar(summaryStats.medianPrice) },
-              { label: "Median DOM (12 Mo)", value: String(summaryStats.medianDom) },
-              { label: "Median CP/LP (12 Mo)", value: summaryStats.medianCpLp > 0 ? formatPct(summaryStats.medianCpLp) : "---" },
-            ]}
-          />
+          {/* Current Market Summary */}
+          {(activeStats.count > 0 || pendingStats.count > 0) && (
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+                Current Market
+              </h3>
+              <SummaryCards
+                cards={[
+                  { label: "Active Listings", value: activeStats.count.toLocaleString() },
+                  { label: "Active Ask $/SF", value: activeStats.count > 0 ? formatPsf(activeStats.medianPsf, isLease) : "---" },
+                  { label: "Active Ask Price", value: activeStats.count > 0 ? formatDollar(activeStats.medianPrice) : "---" },
+                  { label: "Active DOM", value: activeStats.count > 0 ? String(activeStats.medianDom) : "---" },
+                  { label: "Pending", value: pendingStats.count.toLocaleString(), subvalue: pendingStats.count > 0 ? `${pendingStats.medianDom} DOM median` : undefined },
+                  ...(absorptionRate ? [{
+                    label: "Absorption Rate",
+                    value: absorptionRate.monthsOfSupply === Infinity ? "N/A" : `${absorptionRate.monthsOfSupply.toFixed(1)} mo`,
+                    subvalue: absorptionRate.monthsOfSupply < 4 ? "Seller's Market" : absorptionRate.monthsOfSupply <= 6 ? "Balanced" : "Buyer's Market",
+                  }] : []),
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Closed Summary Cards */}
+          <div>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+              Closed Transactions (Last 12 Months)
+            </h3>
+            <SummaryCards
+              cards={[
+                { label: "Transactions", value: summaryStats.count.toLocaleString() },
+                { label: "Median $/SF", value: formatPsf(summaryStats.medianPsf, isLease) },
+                { label: "Median Price", value: formatDollar(summaryStats.medianPrice) },
+                { label: "Median DOM", value: String(summaryStats.medianDom) },
+                { label: "Median CP/LP", value: summaryStats.medianCpLp > 0 ? formatPct(summaryStats.medianCpLp) : "---" },
+              ]}
+            />
+          </div>
 
           {/* Chart */}
           <MarketChart
@@ -1014,6 +1083,68 @@ export default function DataPage() {
               </table>
             </div>
           </div>
+
+          {/* Active & Pending Inventory Table */}
+          {(activeListings.length > 0 || pendingListings.length > 0) && (
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
+                Active &amp; Pending Inventory ({activeListings.length + pendingListings.length})
+              </h3>
+              <div className="max-h-[280px] overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0">
+                    <tr className="bg-accent text-white">
+                      {["Building", "Unit", "Bed", "Bath", "Status", "List Price", "$/SF", "DOM", "List Date", "MLS ID"].map((h) => (
+                        <th key={h} className={`whitespace-nowrap px-2 py-2 font-medium uppercase tracking-wider ${
+                          h === "Building" ? "text-left" : "text-center"
+                        }`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...activeListings, ...pendingListings]
+                      .sort((a, b) => (b.daysOnMarket || 0) - (a.daysOnMarket || 0))
+                      .map((t, i) => (
+                        <tr
+                          key={t.listingId + i}
+                          className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"} cursor-pointer transition-colors hover:bg-accent/5`}
+                          onClick={() => router.push(`/downtown-condos/listings/${t.listingId}`)}
+                        >
+                          <td className="whitespace-nowrap px-2 py-1 text-left text-primary">
+                            {t.buildingName === "Other" ? t.address : t.buildingName}
+                          </td>
+                          <td className="px-2 py-1 text-center text-primary">{t.unitNumber}</td>
+                          <td className="px-2 py-1 text-center text-primary">{t.bedroomsTotal}</td>
+                          <td className="px-2 py-1 text-center text-primary">{t.bathroomsTotalInteger}</td>
+                          <td className="px-2 py-1 text-center">
+                            <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                              t.status === "Active" || t.status === "Active Under Contract"
+                                ? "bg-[#324A32]/10 text-[#324A32]"
+                                : "bg-[#886752]/10 text-[#886752]"
+                            }`}>
+                              {t.status === "Active Under Contract" ? "AUC" : t.status}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-1 text-center text-primary">
+                            {formatDollar(t.listPrice)}
+                          </td>
+                          <td className="px-2 py-1 text-center text-primary">
+                            {t.livingArea > 0 ? formatPsf(t.listPrice / t.livingArea, isLease) : "---"}
+                          </td>
+                          <td className="px-2 py-1 text-center text-primary">{t.daysOnMarket}</td>
+                          <td className="whitespace-nowrap px-2 py-1 text-center text-primary">
+                            {t.listingContractDate ? formatDate(t.listingContractDate) : "---"}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-1 text-center text-xs text-secondary">
+                            {t.listingId || "---"}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

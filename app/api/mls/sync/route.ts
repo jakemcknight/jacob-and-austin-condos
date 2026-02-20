@@ -19,6 +19,7 @@ import {
   upsertAnalyticsListings,
   readAnalyticsListings,
   writeAnalyticsSyncState,
+  normalizeListingId,
 } from "@/lib/mls/analytics-cache";
 import { readAllEnrichmentMaps, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
 import { unitLookup } from "@/data/unitLookup";
@@ -48,7 +49,7 @@ function mlsListingToAnalytics(
   const priceSf = listing.livingArea > 0 ? listing.listPrice / listing.livingArea : 0;
 
   return {
-    listingId: listing.listingId,
+    listingId: normalizeListingId(listing.listingId),
     buildingSlug,
     buildingName,
     address: listing.address,
@@ -299,18 +300,19 @@ export async function GET(request: NextRequest) {
 
       // Convert already-fetched active listings to analytics format (no extra API call)
       const convertedActiveListings: AnalyticsListing[] = [];
+      // Use normalized IDs so CSV imports ("4939483") match API data ("ACT4939483")
       const currentActiveIds = new Set<string>();
       for (const [slug, listings] of buildingEntries) {
         const building = buildings.find(b => b.slug === slug);
         for (const listing of listings) {
-          currentActiveIds.add(listing.listingId);
+          currentActiveIds.add(normalizeListingId(listing.listingId));
           convertedActiveListings.push(
             mlsListingToAnalytics(listing, slug, building?.name || listing.buildingName)
           );
         }
       }
       for (const listing of unmatchedFullListings) {
-        currentActiveIds.add(listing.listingId);
+        currentActiveIds.add(normalizeListingId(listing.listingId));
         convertedActiveListings.push(
           mlsListingToAnalytics(listing, null, listing.buildingName)
         );
@@ -320,20 +322,23 @@ export async function GET(request: NextRequest) {
 
       // Detect listings that were Active/Pending in the analytics cache but are no
       // longer in the active feed — these have changed status and need a fresh fetch.
-      // Only check buildings that have current active listings (avoids reading all 38
-      // KV keys / 21K+ listings when most buildings have no status transitions).
+      // Check ALL buildings (not just those with active listings) so CSV-imported
+      // Active/Pending entries in buildings with no current active MLS listings
+      // still get detected as stale and have their status corrected.
       const staleIds: string[] = [];
       const buildingSlugsToCheck = new Set<string>();
-      for (const [slug] of buildingEntries) buildingSlugsToCheck.add(slug);
-      if (unmatchedFullListings.length > 0) buildingSlugsToCheck.add("_unmatched");
+      for (const building of buildings) buildingSlugsToCheck.add(building.slug);
+      buildingSlugsToCheck.add("_unmatched");
+
+      console.log(`[MLS Sync] Analytics: checking ${buildingSlugsToCheck.size} buildings for stale entries`);
 
       for (const slug of Array.from(buildingSlugsToCheck)) {
         const cachedListings = await readAnalyticsListings(slug);
         for (const cached of cachedListings) {
           const s = (cached.status || "").toLowerCase();
           if ((s === "active" || s === "active under contract" || s === "pending") &&
-              !currentActiveIds.has(cached.listingId)) {
-            staleIds.push(cached.listingId);
+              !currentActiveIds.has(normalizeListingId(cached.listingId))) {
+            staleIds.push(normalizeListingId(cached.listingId));
           }
         }
       }
@@ -341,7 +346,7 @@ export async function GET(request: NextRequest) {
       // Cap stale fetches per cycle to prevent overwhelming the API.
       // With CSV-imported data, there can be hundreds of stale entries initially.
       // The remainder gets processed in subsequent 15-min sync cycles.
-      const MAX_STALE_FETCH = 50;
+      const MAX_STALE_FETCH = 100;
       if (staleIds.length > MAX_STALE_FETCH) {
         console.warn(`[MLS Sync] Analytics: ${staleIds.length} stale IDs found, processing first ${MAX_STALE_FETCH} this cycle`);
         staleIds.length = MAX_STALE_FETCH;
@@ -373,9 +378,9 @@ export async function GET(request: NextRequest) {
 
       // De-duplicate: if a listing appears in the analytics fetch (with a non-active
       // status like Pending/Closed), don't let the converted active version overwrite it
-      const analyticsListingIds = new Set(analyticsListings.map(l => l.listingId));
+      const analyticsListingIds = new Set(analyticsListings.map(l => normalizeListingId(l.listingId)));
       const filteredActiveListings = convertedActiveListings.filter(
-        l => !analyticsListingIds.has(l.listingId)
+        l => !analyticsListingIds.has(normalizeListingId(l.listingId))
       );
 
       const superseded = convertedActiveListings.length - filteredActiveListings.length;

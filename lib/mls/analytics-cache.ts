@@ -26,6 +26,15 @@ function getSnapshotKey(yearMonth: string): string {
   return `${SNAPSHOTS_PREFIX}${yearMonth}`;
 }
 
+/**
+ * Normalize a listing ID by stripping alphabetic prefixes (e.g., "ACT4939483" → "4939483").
+ * MLSGrid returns IDs with originating system prefixes, but CSV imports store plain numbers.
+ * Normalizing ensures upsert deduplication works across both sources.
+ */
+export function normalizeListingId(id: string): string {
+  return id.replace(/^[A-Z]+/, "");
+}
+
 // --- Analytics Listings ---
 
 export async function readAnalyticsListings(
@@ -76,8 +85,9 @@ export async function writeAnalyticsListings(
 
 /**
  * Upsert analytics listings into a building's cache.
- * Merges new listings with existing ones, deduplicating by listingId.
- * New data takes precedence over existing data for the same listingId.
+ * Merges new listings with existing ones, deduplicating by normalized listingId
+ * (strips alphabetic prefixes so "ACT4939483" matches "4939483").
+ * New data takes precedence over existing data for the same listing.
  */
 export async function upsertAnalyticsListings(
   slug: string,
@@ -85,21 +95,25 @@ export async function upsertAnalyticsListings(
 ): Promise<{ added: number; updated: number; total: number }> {
   const existing = await readAnalyticsListings(slug);
 
+  // Use normalized IDs for dedup so CSV imports ("4939483") match API data ("ACT4939483")
   const map = new Map<string, AnalyticsListing>();
   for (const listing of existing) {
-    map.set(listing.listingId, listing);
+    map.set(normalizeListingId(listing.listingId), listing);
   }
 
   let added = 0;
   let updated = 0;
 
   for (const listing of newListings) {
-    if (map.has(listing.listingId)) {
+    const normId = normalizeListingId(listing.listingId);
+    // Normalize the stored ID so all entries use the same format going forward
+    listing.listingId = normId;
+    if (map.has(normId)) {
       updated++;
     } else {
       added++;
     }
-    map.set(listing.listingId, listing);
+    map.set(normId, listing);
   }
 
   const merged = Array.from(map.values());
