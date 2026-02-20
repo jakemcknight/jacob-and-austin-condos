@@ -91,7 +91,7 @@ export interface AnalyticsSyncState {
   lastSyncDate: string; // Human-readable
   closedCount: number;
   pendingCount: number;
-  activeCount: number; // Active + Active Under Contract
+  activeCount: number; // Active only (AUC now counted as Pending)
   otherCount: number; // withdrawn, hold, expired, canceled
   totalCount: number;
   status: "success" | "error" | "in_progress";

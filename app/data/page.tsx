@@ -11,8 +11,10 @@ import {
   computeYearlyBreakdown,
   computeAppreciation,
   computeAbsorptionRate,
+  computeBuildingComparisonTable,
   getLast12MonthsCutoff,
   type YearlyRow,
+  type BuildingMarketRow,
 } from "@/lib/mls/analytics-computations";
 import { buildings as buildingsData } from "@/data/buildings";
 
@@ -77,6 +79,17 @@ function normalizeOrientation(raw: string): string {
 
 const DIRECTION_ORDER = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
+/** Pick the most recent lifecycle event date for tooltip display. */
+function getLatestEventDate(l: AnalyticsListing): string {
+  const candidates: string[] = [];
+  if (l.closeDate) candidates.push(l.closeDate);
+  if (l.statusChangeTimestamp) candidates.push(l.statusChangeTimestamp.substring(0, 10));
+  if (l.priceChangeTimestamp) candidates.push(l.priceChangeTimestamp.substring(0, 10));
+  if (l.pendingTimestamp) candidates.push(l.pendingTimestamp.substring(0, 10));
+  if (l.backOnMarketDate) candidates.push(l.backOnMarketDate.substring(0, 10));
+  return candidates.length > 0 ? candidates.sort().pop()! : "";
+}
+
 export default function DataPage() {
   const router = useRouter();
 
@@ -100,6 +113,13 @@ export default function DataPage() {
   const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(
     new Set(["Active", "Pending"])
   );
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"analytics" | "buildings">("analytics");
+
+  // Building comparison sort state
+  const [buildingSortKey, setBuildingSortKey] = useState<keyof BuildingMarketRow>("closedLast12");
+  const [buildingSortAsc, setBuildingSortAsc] = useState(false);
 
   // Appreciation state
   const [appreciationRange, setAppreciationRange] = useState<"all" | "5" | "10" | "custom">("5");
@@ -313,11 +333,11 @@ export default function DataPage() {
 
   // Active & Pending listings
   const activeListings = useMemo(
-    () => filteredListings.filter((l) => l.status === "Active" || l.status === "Active Under Contract"),
+    () => filteredListings.filter((l) => l.status === "Active"),
     [filteredListings]
   );
   const pendingListings = useMemo(
-    () => filteredListings.filter((l) => l.status === "Pending"),
+    () => filteredListings.filter((l) => l.status === "Pending" || l.status === "Active Under Contract"),
     [filteredListings]
   );
 
@@ -424,11 +444,13 @@ export default function DataPage() {
 
       if (!group) continue;
 
-      // Closed uses closePrice/closeDate; others use listPrice and last-updated date
+      // X-axis date: Closed → closeDate, Didn't Sell → off-market date, Active/Pending → original list date
       const price = group === "Closed" ? (l.closePrice || 0) : (l.listPrice || 0);
       const date = group === "Closed"
-        ? (l.closeDate || l.listingContractDate || "")
-        : (l.listingContractDate || l.statusChangeTimestamp || "");
+        ? (l.closeDate || "")
+        : group === "Didn't Sell"
+          ? (l.statusChangeTimestamp?.substring(0, 10) || l.offMarketDate || "")
+          : (l.listingContractDate || "");
 
       if (price <= 0 || !date) continue;
 
@@ -447,6 +469,7 @@ export default function DataPage() {
         floorPlan: l.floorPlan || "",
         orientation: l.orientation || "",
         dom: l.daysOnMarket,
+        lastStatusChange: getLatestEventDate(l),
       });
     }
 
@@ -503,6 +526,35 @@ export default function DataPage() {
       hoaPsf: computeAppreciation(first.medianHoaPsf, last.medianHoaPsf, years),
     };
   }, [yearlyRows, appreciationRange, appreciationDateFrom, appreciationDateTo]);
+
+  // Building comparison table (unfiltered by building/bedroom/date — portfolio-level view)
+  const buildingComparisonRows = useMemo(() => {
+    const targetPropertyType = listingMode === "buy" ? "Residential" : "Residential Lease";
+    const modeFiltered = analyticsListings.filter(
+      (l) => l.propertyType === targetPropertyType
+    );
+    return computeBuildingComparisonTable(
+      modeFiltered,
+      buildingsData.map((b) => ({ slug: b.slug, name: b.name }))
+    );
+  }, [analyticsListings, listingMode]);
+
+  const sortedBuildingRows = useMemo(() => {
+    const rows = buildingComparisonRows.filter(
+      (r) => r.activeCount > 0 || r.pendingCount > 0 || r.closedLast12 > 0
+    );
+    rows.sort((a, b) => {
+      let aVal: string | number = a[buildingSortKey];
+      let bVal: string | number = b[buildingSortKey];
+      if (aVal === Infinity) aVal = 9999;
+      if (bVal === Infinity) bVal = 9999;
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return buildingSortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return buildingSortAsc ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
+    return rows;
+  }, [buildingComparisonRows, buildingSortKey, buildingSortAsc]);
 
   // Toggle helpers
   function toggleBuilding(name: string) {
@@ -583,23 +635,51 @@ export default function DataPage() {
           )}
         </div>
 
+        {/* Tab Navigation */}
+        <div className="mt-6 flex justify-center">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+            <button
+              onClick={() => setActiveTab("analytics")}
+              className={`rounded-md px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "analytics"
+                  ? "bg-accent text-white"
+                  : "text-accent hover:text-primary"
+              }`}
+            >
+              Market Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab("buildings")}
+              className={`rounded-md px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "buildings"
+                  ? "bg-accent text-white"
+                  : "text-accent hover:text-primary"
+              }`}
+            >
+              Building Comparison
+            </button>
+          </div>
+        </div>
+
+        {activeTab === "analytics" && (
+        <>
         {/* Global Filters */}
         <div className="mt-6 space-y-3">
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {/* Buy / Lease toggle */}
-            <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
               <button
                 onClick={() => setListingMode("buy")}
-                className={`border px-3 py-1.5 text-xs uppercase tracking-wider ${
-                  listingMode === "buy" ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
+                className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  listingMode === "buy" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
                 }`}
               >
                 Buy
               </button>
               <button
                 onClick={() => setListingMode("lease")}
-                className={`border px-3 py-1.5 text-xs uppercase tracking-wider ${
-                  listingMode === "lease" ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
+                className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  listingMode === "lease" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
                 }`}
               >
                 Lease
@@ -610,26 +690,30 @@ export default function DataPage() {
             <div ref={buildingRef} className="relative">
               <button
                 onClick={() => setBuildingOpen((v) => !v)}
-                className="flex items-center gap-1 border border-gray-200 bg-white px-4 py-2 text-xs uppercase tracking-wider text-primary"
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  selectedBuildings.size > 0
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-gray-300 bg-white text-primary hover:border-gray-400"
+                }`}
               >
                 {selectedBuildings.size === 0
-                  ? "All Downtown Buildings"
+                  ? "All Buildings"
                   : selectedBuildings.size <= 2
                     ? Array.from(selectedBuildings).join(", ")
                     : `${selectedBuildings.size} buildings`}
-                <svg className="ml-1 h-3 w-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               {buildingOpen && (
-                <div className="absolute left-0 top-full z-30 mt-1 w-64 border border-gray-200 bg-white shadow-lg">
-                  <div className="sticky top-0 border-b border-gray-100 bg-white p-2">
+                <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-4 shadow-xl">
+                  <div className="sticky top-0 border-b border-gray-100 bg-white pb-2">
                     <input
                       type="text"
                       placeholder="Search buildings..."
                       value={buildingSearch}
                       onChange={(e) => setBuildingSearch(e.target.value)}
-                      className="w-full border border-gray-200 px-2 py-1 text-xs text-primary"
+                      className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div className="max-h-64 overflow-y-auto">
@@ -671,21 +755,21 @@ export default function DataPage() {
             <div className="flex items-center gap-2">
               {!advancedDates ? (
                 <>
-                  <label className="text-xs uppercase tracking-wider text-accent">From:</label>
+                  <label className="text-xs font-medium text-secondary">From:</label>
                   <select
                     value={yearFrom}
                     onChange={(e) => setYearFrom(Number(e.target.value))}
-                    className="border border-gray-200 bg-white px-2 py-2 text-xs text-primary"
+                    className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
                   >
                     {allYears.map((y) => (
                       <option key={y} value={y}>{y}</option>
                     ))}
                   </select>
-                  <label className="text-xs uppercase tracking-wider text-accent">To:</label>
+                  <label className="text-xs font-medium text-secondary">To:</label>
                   <select
                     value={yearTo}
                     onChange={(e) => setYearTo(Number(e.target.value))}
-                    className="border border-gray-200 bg-white px-2 py-2 text-xs text-primary"
+                    className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
                   >
                     {allYears.map((y) => (
                       <option key={y} value={y}>{y}</option>
@@ -694,15 +778,15 @@ export default function DataPage() {
                 </>
               ) : (
                 <>
-                  <label className="text-xs uppercase tracking-wider text-accent">From:</label>
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border border-gray-200 bg-white px-2 py-1.5 text-xs text-primary" />
-                  <label className="text-xs uppercase tracking-wider text-accent">To:</label>
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border border-gray-200 bg-white px-2 py-1.5 text-xs text-primary" />
+                  <label className="text-xs font-medium text-secondary">From:</label>
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-accent focus:outline-none" />
+                  <label className="text-xs font-medium text-secondary">To:</label>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-accent focus:outline-none" />
                 </>
               )}
               <button
                 onClick={() => setAdvancedDates((v) => !v)}
-                className="text-[10px] tracking-wider text-accent underline underline-offset-2 hover:text-primary"
+                className="text-xs font-medium text-accent hover:text-primary"
               >
                 {advancedDates ? "Simple" : "Advanced"}
               </button>
@@ -710,12 +794,16 @@ export default function DataPage() {
           </div>
 
           {/* Row 2: Bedrooms + Orientation + Floor Plan + Metric toggle + Scatter */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {/* Bedroom selector */}
             <div ref={bedroomRef} className="relative">
               <button
                 onClick={() => setBedroomOpen((v) => !v)}
-                className="flex items-center gap-1 border border-gray-200 bg-white px-4 py-2 text-xs uppercase tracking-wider text-primary"
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  activeBedrooms.size > 0
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-gray-300 bg-white text-primary hover:border-gray-400"
+                }`}
               >
                 {activeBedrooms.size === 0
                   ? "All Bedrooms"
@@ -727,9 +815,9 @@ export default function DataPage() {
                 </svg>
               </button>
               {bedroomOpen && (
-                <div className="absolute left-0 top-full z-30 mt-1 border border-gray-200 bg-white shadow-lg">
+                <div className="absolute left-0 top-full z-30 mt-2 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
                   {filteredBedroomCounts.map((bed) => (
-                    <div key={bed} className="flex items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-50">
+                    <div key={bed} className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-gray-50">
                       <label className="flex flex-1 cursor-pointer items-center gap-2">
                         <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: BEDROOM_COLORS[bed] || "#666" }} />
                         <input
@@ -762,23 +850,26 @@ export default function DataPage() {
 
             {/* Orientation multi-select */}
             {availableOrientations.length > 0 && (
-              <div ref={orientationRef} className="relative flex items-center gap-2">
-                <label className="text-xs uppercase tracking-wider text-accent">View:</label>
+              <div ref={orientationRef} className="relative">
                 <button
                   onClick={() => setOrientationOpen((v) => !v)}
-                  className="flex items-center gap-1 border border-gray-200 bg-white px-3 py-2 text-xs uppercase tracking-wider text-primary"
+                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    activeOrientations.size > 0
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-300 bg-white text-primary hover:border-gray-400"
+                  }`}
                 >
                   {activeOrientations.size === 0
                     ? "All Views"
                     : Array.from(activeOrientations).join(", ")}
-                  <svg className="ml-1 h-3 w-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {orientationOpen && (
-                  <div className="absolute left-0 top-full z-20 mt-1 border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-2 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
                     {availableOrientations.map((dir) => (
-                      <div key={dir} className="flex items-center justify-between px-3 py-1.5 text-xs uppercase tracking-wider hover:bg-gray-50">
+                      <div key={dir} className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-gray-50">
                         <label className="flex flex-1 cursor-pointer items-center gap-2">
                           <input
                             type="checkbox"
@@ -811,25 +902,28 @@ export default function DataPage() {
 
             {/* Floor Plan multi-select */}
             {availableFloorPlans.length > 0 && (
-              <div ref={floorPlanRef} className="relative flex items-center gap-2">
-                <label className="text-xs uppercase tracking-wider text-accent">Plan:</label>
+              <div ref={floorPlanRef} className="relative">
                 <button
                   onClick={() => setFloorPlanOpen((v) => !v)}
-                  className="flex items-center gap-1 border border-gray-200 bg-white px-3 py-2 text-xs tracking-wider text-primary"
+                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    activeFloorPlans.size > 0
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-300 bg-white text-primary hover:border-gray-400"
+                  }`}
                 >
                   {activeFloorPlans.size === 0
                     ? "All Plans"
                     : activeFloorPlans.size <= 2
                       ? Array.from(activeFloorPlans).join(", ")
                       : `${activeFloorPlans.size} plans`}
-                  <svg className="ml-1 h-3 w-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {floorPlanOpen && (
-                  <div className="absolute left-0 top-full z-20 mt-1 max-h-60 w-80 overflow-y-auto border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-2 max-h-60 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
                     {availableFloorPlans.map((plan) => (
-                      <div key={plan.key} className="flex items-center justify-between px-3 py-1.5 text-xs tracking-wider hover:bg-gray-50">
+                      <div key={plan.key} className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-gray-50">
                         <label className="flex flex-1 cursor-pointer items-center gap-2">
                           <input
                             type="checkbox"
@@ -861,19 +955,19 @@ export default function DataPage() {
             )}
 
             {/* Metric toggle */}
-            <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
               <button
                 onClick={() => setMetric("priceSf")}
-                className={`border px-3 py-1.5 text-xs uppercase tracking-wider ${
-                  metric === "priceSf" ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
+                className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  metric === "priceSf" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
                 }`}
               >
                 $/SF
               </button>
               <button
                 onClick={() => setMetric("price")}
-                className={`border px-3 py-1.5 text-xs uppercase tracking-wider ${
-                  metric === "price" ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
+                className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  metric === "price" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
                 }`}
               >
                 {listingMode === "buy" ? "Sale Price" : "Lease Price"}
@@ -906,41 +1000,46 @@ export default function DataPage() {
 
         {/* Content */}
         <div className="mt-6 space-y-6">
-          {/* Current Market Summary */}
-          {(activeStats.count > 0 || pendingStats.count > 0) && (
-            <div>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
-                Current Market
-              </h3>
-              <SummaryCards
-                cards={[
-                  { label: "Active Listings", value: activeStats.count.toLocaleString() },
-                  { label: "Active Ask $/SF", value: activeStats.count > 0 ? formatPsf(activeStats.medianPsf, isLease) : "---" },
-                  { label: "Active Ask Price", value: activeStats.count > 0 ? formatDollar(activeStats.medianPrice) : "---" },
-                  { label: "Active DOM", value: activeStats.count > 0 ? String(activeStats.medianDom) : "---" },
-                  { label: "Pending", value: pendingStats.count.toLocaleString(), subvalue: pendingStats.count > 0 ? `${pendingStats.medianDom} DOM median` : undefined },
-                  ...(absorptionRate ? [{
-                    label: "Absorption Rate",
-                    value: absorptionRate.monthsOfSupply === Infinity ? "N/A" : `${absorptionRate.monthsOfSupply.toFixed(1)} mo`,
-                    subvalue: absorptionRate.monthsOfSupply < 4 ? "Seller's Market" : absorptionRate.monthsOfSupply <= 6 ? "Balanced" : "Buyer's Market",
-                  }] : []),
-                ]}
-              />
-            </div>
-          )}
-
-          {/* Closed Summary Cards */}
+          {/* Market Summary — consolidated cards */}
           <div>
             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-secondary">
-              Closed Transactions (Last 12 Months)
+              Market Summary
             </h3>
             <SummaryCards
               cards={[
-                { label: "Transactions", value: summaryStats.count.toLocaleString() },
-                { label: "Median $/SF", value: formatPsf(summaryStats.medianPsf, isLease) },
-                { label: "Median Price", value: formatDollar(summaryStats.medianPrice) },
-                { label: "Median DOM", value: String(summaryStats.medianDom) },
-                { label: "Median CP/LP", value: summaryStats.medianCpLp > 0 ? formatPct(summaryStats.medianCpLp) : "---" },
+                {
+                  label: "Active",
+                  value: activeStats.count.toLocaleString(),
+                  subvalue: absorptionRate
+                    ? absorptionRate.monthsOfSupply === Infinity
+                      ? "N/A supply"
+                      : `${absorptionRate.monthsOfSupply.toFixed(1)} mo supply`
+                    : undefined,
+                },
+                {
+                  label: "Pending",
+                  value: pendingStats.count.toLocaleString(),
+                  subvalue: pendingStats.count > 0 ? `${pendingStats.medianDom} DOM median` : undefined,
+                },
+                {
+                  label: "Closed (12 Mo)",
+                  value: summaryStats.count.toLocaleString(),
+                },
+                {
+                  label: "Median $/SF",
+                  value: formatPsf(summaryStats.medianPsf, isLease),
+                  subvalue: activeStats.count > 0 ? `${formatPsf(activeStats.medianPsf, isLease)} ask` : undefined,
+                },
+                {
+                  label: "Median Price",
+                  value: formatDollar(summaryStats.medianPrice),
+                  subvalue: activeStats.count > 0 ? `${formatDollar(activeStats.medianPrice)} ask` : undefined,
+                },
+                {
+                  label: "Median DOM",
+                  value: String(summaryStats.medianDom),
+                  subvalue: summaryStats.medianCpLp > 0 ? `${formatPct(summaryStats.medianCpLp)} CP/LP` : undefined,
+                },
               ]}
             />
           </div>
@@ -1118,11 +1217,13 @@ export default function DataPage() {
                           <td className="px-2 py-1 text-center text-primary">{t.bathroomsTotalInteger}</td>
                           <td className="px-2 py-1 text-center">
                             <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                              t.status === "Active" || t.status === "Active Under Contract"
+                              t.status === "Active"
                                 ? "bg-[#324A32]/10 text-[#324A32]"
-                                : "bg-[#886752]/10 text-[#886752]"
+                                : t.status === "Pending" || t.status === "Active Under Contract"
+                                  ? "bg-yellow-500/10 text-yellow-700"
+                                  : "bg-[#886752]/10 text-[#886752]"
                             }`}>
-                              {t.status === "Active Under Contract" ? "AUC" : t.status}
+                              {t.status === "Active Under Contract" ? "Pending" : t.status}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-2 py-1 text-center text-primary">
@@ -1146,6 +1247,92 @@ export default function DataPage() {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {activeTab === "buildings" && (
+          <div className="mt-6">
+            {/* Buy/Lease toggle */}
+            <div className="mb-4 flex items-center justify-center">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                <button
+                  onClick={() => setListingMode("buy")}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    listingMode === "buy" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                  }`}
+                >
+                  Buy
+                </button>
+                <button
+                  onClick={() => setListingMode("lease")}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    listingMode === "lease" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                  }`}
+                >
+                  Lease
+                </button>
+              </div>
+            </div>
+
+            {/* Building Comparison Table */}
+            <div className="overflow-auto rounded-lg border border-gray-200">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-accent text-white">
+                    {([
+                      ["buildingName", "Building"],
+                      ["medianPrice", "Med Price (12 Mo)"],
+                      ["medianHoaPsf", "HOA $/SF"],
+                      ["activeCount", "Active"],
+                      ["pendingCount", "Pending"],
+                      ["closedLast12", "Closed (12 Mo)"],
+                      ["absorptionRate", "Absorption"],
+                      ["avgDom", "Avg DOM"],
+                      ["medianPsf", "Median $/SF"],
+                      ["medianSf", "Med SF"],
+                    ] as [keyof BuildingMarketRow, string][]).map(([key, label]) => (
+                      <th
+                        key={key}
+                        onClick={() => {
+                          if (buildingSortKey === key) setBuildingSortAsc(!buildingSortAsc);
+                          else { setBuildingSortKey(key); setBuildingSortAsc(false); }
+                        }}
+                        className={`cursor-pointer whitespace-nowrap px-3 py-2.5 font-bold uppercase tracking-wider select-none ${
+                          key === "buildingName" ? "text-left" : "text-right"
+                        } ${buildingSortKey === key ? "bg-accent/90" : ""}`}
+                      >
+                        {label}
+                        {buildingSortKey === key ? (buildingSortAsc ? " \u25B2" : " \u25BC") : ""}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedBuildingRows.map((row, i) => (
+                    <tr
+                      key={row.buildingSlug}
+                      className={`border-b border-gray-100 transition-colors hover:bg-accent/5 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                    >
+                      <td className="whitespace-nowrap px-3 py-2 font-medium text-primary">{row.buildingName}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianPrice > 0 ? formatDollar(row.medianPrice) : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianHoaPsf > 0 ? `$${row.medianHoaPsf.toFixed(2)}` : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.activeCount || "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.pendingCount || "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.closedLast12 || "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.absorptionRate === Infinity ? "N/A" : row.absorptionRate > 0 ? `${row.absorptionRate.toFixed(1)} mo` : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.avgDom > 0 ? Math.round(row.avgDom).toString() : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianPsf > 0 ? formatPsf(row.medianPsf, isLease) : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianSf > 0 ? Math.round(row.medianSf).toLocaleString() : "--"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-center text-xs text-secondary">
+              {sortedBuildingRows.length} buildings with activity · Click column headers to sort
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

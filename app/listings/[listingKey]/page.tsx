@@ -385,6 +385,7 @@ function renderAnalyticsListing(
   const statusColors: Record<string, string> = {
     "Closed": "bg-green-100 text-green-800",
     "Pending": "bg-yellow-100 text-yellow-800",
+    "Active Under Contract": "bg-yellow-100 text-yellow-800",
     "Active": "bg-blue-100 text-blue-800",
     "Withdrawn": "bg-gray-100 text-gray-700",
     "Expired": "bg-gray-100 text-gray-700",
@@ -395,7 +396,8 @@ function renderAnalyticsListing(
 
   // Property details — no close price or close/list ratios per Unlock MLS rules
   const propertyDetails: { label: string; value: string }[] = [];
-  propertyDetails.push({ label: "Status", value: isClosed ? "Sold" : al.status });
+  const displayStatus = al.status === "Active Under Contract" ? "Pending" : al.status;
+  propertyDetails.push({ label: "Status", value: isClosed ? "Sold" : displayStatus });
   propertyDetails.push({ label: "Days on Market", value: String(al.daysOnMarket) });
   if (al.listingContractDate) propertyDetails.push({ label: "List Date", value: formatDate(al.listingContractDate) });
   if (isClosed && al.closeDate) propertyDetails.push({ label: "Close Date", value: formatDate(al.closeDate) });

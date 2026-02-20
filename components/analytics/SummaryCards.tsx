@@ -13,11 +13,11 @@ interface SummaryCardsProps {
 
 export default function SummaryCards({ cards }: SummaryCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="rounded border border-gray-200 bg-white px-4 py-3"
+          className="rounded-lg border border-gray-200 bg-white px-4 py-3"
         >
           <p className="text-[10px] font-bold uppercase tracking-wider text-secondary">
             {card.label}

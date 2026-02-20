@@ -83,6 +83,7 @@ interface ScatterPoint {
   orientation: string;
   dom: number;
   statusGroup?: string; // "Closed" | "Active" | "Pending" | "Didn't Sell"
+  lastStatusChange?: string; // latest event date for tooltip display
 }
 
 // Status-grouped scatter data passed from parent
@@ -99,6 +100,7 @@ export interface StatusScatterListing {
   floorPlan: string;
   orientation: string;
   dom: number;
+  lastStatusChange?: string; // latest event date for tooltip display
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -302,6 +304,7 @@ export default function MarketChart({
         orientation: s.orientation,
         dom: s.dom,
         statusGroup: s.statusGroup,
+        lastStatusChange: s.lastStatusChange,
       });
     }
   }
@@ -535,11 +538,23 @@ export default function MarketChart({
               </p>
             )}
             <p className="mt-1 text-secondary">
+              {hoveredPoint.statusGroup === "Closed" ? "Closed" : "Listed"}:{" "}
               {new Date(hoveredPoint.date).toLocaleDateString("en-US", {
                 month: "short",
+                day: "numeric",
                 year: "numeric",
               })}
             </p>
+            {hoveredPoint.lastStatusChange && hoveredPoint.statusGroup !== "Closed" && (
+              <p className="text-secondary">
+                Last Activity:{" "}
+                {new Date(hoveredPoint.lastStatusChange).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
             <p className="mt-1">
               <span className="text-accent">
                 {hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" ? "List Price:" : "Price:"}

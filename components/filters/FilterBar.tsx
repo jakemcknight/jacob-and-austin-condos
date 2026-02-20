@@ -7,7 +7,7 @@ import { formatOrientation } from "@/lib/format-dom";
 
 type SortOption = "price" | "priceSf" | "dom" | "date";
 
-export type StatusFilter = "active" | "sold" | "offmarket" | "all";
+export type StatusFilter = "active" | "pending" | "all";
 
 export interface FilterState {
   listingTypeFilter: "Sale" | "Lease";
@@ -111,9 +111,8 @@ export default function FilterBar({
 
   const statusLabels: Record<StatusFilter, string> = {
     active: "Active",
-    sold: "Sold",
-    offmarket: "Off Market",
-    all: "All Statuses",
+    pending: "Pending",
+    all: "All",
   };
   const statusLabel = filters.statusFilter !== "active" ? statusLabels[filters.statusFilter] : undefined;
 
@@ -205,8 +204,7 @@ export default function FilterBar({
               <div className="flex flex-wrap gap-2">
                 {([
                   { value: "active" as StatusFilter, label: "Active" },
-                  { value: "sold" as StatusFilter, label: "Sold" },
-                  { value: "offmarket" as StatusFilter, label: "Off Market" },
+                  { value: "pending" as StatusFilter, label: "Pending" },
                   { value: "all" as StatusFilter, label: "All" },
                 ]).map(({ value, label }) => (
                   <button

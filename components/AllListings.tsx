@@ -23,14 +23,12 @@ const ListingsMap = dynamic(() => import("./map/ListingsMap"), {
 const PAGE_TITLES: Record<string, Record<string, string>> = {
   Sale: {
     active: "Downtown Austin Condos For Sale",
-    sold: "Recently Sold Downtown Austin Condos",
-    offmarket: "Off-Market Downtown Austin Condos",
+    pending: "Pending Downtown Austin Condos",
     all: "All Downtown Austin Condos",
   },
   Lease: {
     active: "Downtown Austin Condos For Lease",
-    sold: "Recently Leased Downtown Austin Condos",
-    offmarket: "Off-Market Downtown Austin Condos",
+    pending: "Pending Downtown Austin Condos",
     all: "All Downtown Austin Condos",
   },
 };
@@ -186,7 +184,7 @@ export default function AllListings() {
                 .
               </>
             ) : (
-              <>No {filters.statusFilter === "sold" ? "sold" : "off-market"} listings found.</>
+              <>No {filters.statusFilter === "pending" ? "pending" : "matching"} listings found.</>
             )}
           </p>
         </div>

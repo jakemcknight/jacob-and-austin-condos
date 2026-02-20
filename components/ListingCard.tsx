@@ -46,6 +46,7 @@ interface ListingCardProps {
 const STATUS_BADGE_STYLES: Record<string, string> = {
   "Active": "bg-zilker text-white",
   "Pending": "bg-yellow-500 text-white",
+  "Active Under Contract": "bg-yellow-500 text-white",
   "Closed": "bg-green-600 text-white",
   "Withdrawn": "bg-gray-500 text-white",
   "Expired": "bg-gray-500 text-white",
@@ -56,7 +57,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 export default function ListingCard({ listing, showBuilding = false, compact = false }: ListingCardProps) {
   const isOffMarket = listing.offMarket === true;
   const isClosed = listing.originalStatus === "Closed";
-  const statusDisplay = isClosed ? "Sold" : listing.status;
+  const statusDisplay = isClosed ? "Sold" : listing.status === "Active Under Contract" ? "Pending" : listing.status;
   const badgeStyle = STATUS_BADGE_STYLES[listing.status] || "bg-gray-500 text-white";
 
   const photoBaseSrc = `/downtown-condos/api/mls/photo/${listing.listingId}/0`;

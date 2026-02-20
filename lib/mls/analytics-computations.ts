@@ -484,6 +484,9 @@ export interface BuildingMarketRow {
   medianPsf: number;
   absorptionRate: number;
   avgDom: number;
+  medianPrice: number;
+  medianHoaPsf: number;
+  medianSf: number;
 }
 
 export function computeBuildingMarketTable(
@@ -521,6 +524,18 @@ export function computeBuildingMarketTable(
     const closedDoms = closed12
       .map((l) => l.daysOnMarket)
       .filter((d) => d >= 0);
+    const closedPrices = closed12
+      .map((l) => l.closePrice || 0)
+      .filter((p) => p > 0);
+    const closedSfs = closed12
+      .map((l) => l.livingArea)
+      .filter((s) => s > 0);
+    const buildingListings = analyticsListings.filter(
+      (l) => l.buildingSlug === building.slug
+    );
+    const hoaPsfs = buildingListings
+      .map((l) => (l.hoaFee && l.livingArea > 0 ? l.hoaFee / l.livingArea : 0))
+      .filter((h) => h > 0);
 
     const monthlyRate = closed12.length / 12;
 
@@ -534,6 +549,61 @@ export function computeBuildingMarketTable(
       absorptionRate:
         monthlyRate > 0 ? active.length / monthlyRate : Infinity,
       avgDom: mean(closedDoms),
+      medianPrice: median(closedPrices),
+      medianHoaPsf: median(hoaPsfs),
+      medianSf: median(closedSfs),
+    };
+  });
+}
+
+/**
+ * Building comparison table computed purely from AnalyticsListing[].
+ * Used by the /data page's Building Comparison tab — no MLSListing[] dependency.
+ */
+export function computeBuildingComparisonTable(
+  analyticsListings: AnalyticsListing[],
+  buildingsData: Array<{ slug: string; name: string }>
+): BuildingMarketRow[] {
+  const cutoffDate = new Date();
+  cutoffDate.setMonth(cutoffDate.getMonth() - 12);
+  const cutoff = cutoffDate.toISOString().substring(0, 10);
+
+  return buildingsData.map((building) => {
+    const buildingListings = analyticsListings.filter(
+      (l) => l.buildingSlug === building.slug
+    );
+    const active = buildingListings.filter(
+      (l) => l.status === "Active" || l.status === "Active Under Contract"
+    );
+    const pending = buildingListings.filter((l) => l.status === "Pending");
+    const closed12 = buildingListings.filter(
+      (l) => l.status === "Closed" && l.closeDate && l.closeDate >= cutoff
+    );
+
+    const closedPrices = closed12.map((l) => l.closePrice || 0).filter((p) => p > 0);
+    const closedPsfs = closed12
+      .map((l) => (l.closePrice && l.livingArea > 0 ? l.closePrice / l.livingArea : 0))
+      .filter((p) => p > 0);
+    const closedDoms = closed12.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+    const closedSfs = closed12.map((l) => l.livingArea).filter((s) => s > 0);
+    const hoaPsfs = buildingListings
+      .map((l) => (l.hoaFee && l.livingArea > 0 ? l.hoaFee / l.livingArea : 0))
+      .filter((h) => h > 0);
+
+    const monthlyRate = closed12.length / 12;
+
+    return {
+      buildingSlug: building.slug,
+      buildingName: building.name,
+      activeCount: active.length,
+      pendingCount: pending.length,
+      closedLast12: closed12.length,
+      medianPsf: median(closedPsfs),
+      absorptionRate: monthlyRate > 0 ? active.length / monthlyRate : Infinity,
+      avgDom: mean(closedDoms),
+      medianPrice: median(closedPrices),
+      medianHoaPsf: median(hoaPsfs),
+      medianSf: median(closedSfs),
     };
   });
 }

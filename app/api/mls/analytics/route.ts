@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     if (status !== "all") {
       const statusMap: Record<string, string[]> = {
         closed: ["Closed"],
-        pending: ["Pending"],
+        pending: ["Pending", "Active Under Contract"],
         offmarket: ["Withdrawn", "Hold", "Expired", "Canceled", "Deleted"],
-        active: ["Active", "Active Under Contract"],
+        active: ["Active"],
       };
 
       const allowedStatuses = statusMap[status];

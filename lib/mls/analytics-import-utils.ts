@@ -273,7 +273,7 @@ export function normalizeStatus(raw: string): string {
   const s = raw.toLowerCase().trim();
   if (s.includes("closed") || s.includes("sold")) return "Closed";
   if (s.includes("pending")) return "Pending";
-  if (s.includes("active under contract")) return "Active Under Contract";
+  if (s.includes("active under contract")) return "Pending";
   if (s.includes("active")) return "Active";
   if (s.includes("withdrawn")) return "Withdrawn";
   if (s.includes("hold")) return "Hold";
