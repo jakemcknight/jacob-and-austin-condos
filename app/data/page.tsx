@@ -540,9 +540,7 @@ export default function DataPage() {
   }, [analyticsListings, listingMode]);
 
   const sortedBuildingRows = useMemo(() => {
-    const rows = buildingComparisonRows.filter(
-      (r) => r.activeCount > 0 || r.pendingCount > 0 || r.closedLast12 > 0
-    );
+    const rows = [...buildingComparisonRows];
     rows.sort((a, b) => {
       let aVal: string | number = a[buildingSortKey];
       let bVal: string | number = b[buildingSortKey];
@@ -1281,6 +1279,7 @@ export default function DataPage() {
                   <tr className="bg-accent text-white">
                     {([
                       ["buildingName", "Building"],
+                      ["medianPsf", "Median $/SF"],
                       ["medianPrice", "Med Price (12 Mo)"],
                       ["medianHoaPsf", "HOA $/SF"],
                       ["activeCount", "Active"],
@@ -1288,7 +1287,6 @@ export default function DataPage() {
                       ["closedLast12", "Closed (12 Mo)"],
                       ["absorptionRate", "Absorption"],
                       ["avgDom", "Avg DOM"],
-                      ["medianPsf", "Median $/SF"],
                       ["medianSf", "Med SF"],
                     ] as [keyof BuildingMarketRow, string][]).map(([key, label]) => (
                       <th
@@ -1314,22 +1312,22 @@ export default function DataPage() {
                       className={`border-b border-gray-100 transition-colors hover:bg-accent/5 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                     >
                       <td className="whitespace-nowrap px-3 py-2 font-medium text-primary">{row.buildingName}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.medianPrice > 0 ? formatDollar(row.medianPrice) : "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.medianHoaPsf > 0 ? `$${row.medianHoaPsf.toFixed(2)}` : "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.activeCount || "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.pendingCount || "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.closedLast12 || "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.absorptionRate === Infinity ? "N/A" : row.absorptionRate > 0 ? `${row.absorptionRate.toFixed(1)} mo` : "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.avgDom > 0 ? Math.round(row.avgDom).toString() : "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.medianPsf > 0 ? formatPsf(row.medianPsf, isLease) : "--"}</td>
-                      <td className="px-3 py-2 text-right text-primary">{row.medianSf > 0 ? Math.round(row.medianSf).toLocaleString() : "--"}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianPsf > 0 ? formatPsf(row.medianPsf, isLease) : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianPrice > 0 ? formatDollar(row.medianPrice) : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianHoaPsf > 0 ? `$${row.medianHoaPsf.toFixed(2)}` : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.activeCount > 0 ? row.activeCount : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.pendingCount > 0 ? row.pendingCount : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.closedLast12 > 0 ? row.closedLast12 : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.absorptionRate === Infinity ? <span className="text-secondary">N/A</span> : row.absorptionRate > 0 ? `${row.absorptionRate.toFixed(1)} mo` : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.avgDom > 0 ? Math.round(row.avgDom).toString() : <span className="text-secondary">--</span>}</td>
+                      <td className="px-3 py-2 text-right text-primary">{row.medianSf > 0 ? Math.round(row.medianSf).toLocaleString() : <span className="text-secondary">--</span>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <p className="mt-2 text-center text-xs text-secondary">
-              {sortedBuildingRows.length} buildings with activity · Click column headers to sort
+              {sortedBuildingRows.length} buildings · Last 12 months · Click column headers to sort
             </p>
           </div>
         )}
