@@ -6,7 +6,7 @@ import { AnalyticsListing } from "./analytics-types";
 import { normalizeListingId } from "./analytics-cache";
 
 export interface ReplicationOptions {
-  /** Initial import (includes MlgCanView filter) or incremental sync */
+  /** Initial full import or incremental sync */
   mode: "initial" | "incremental";
   /** Last sync timestamp for incremental syncs (ISO 8601 format) */
   lastSyncTimestamp?: string;
@@ -31,7 +31,7 @@ export class MLSGridClient {
 
   /**
    * Replicate listings from MLSGrid using best practices
-   * - Initial mode: Fetch all active listings with MlgCanView=true
+   * - Initial mode: Fetch all active + pending listings (MlgCanView filtered client-side)
    * - Incremental mode: Fetch only changes since lastSyncTimestamp
    *
    * MLSGrid Rate Limits (WARNING THRESHOLDS):
@@ -136,9 +136,9 @@ export class MLSGridClient {
     // Include Active, Active Under Contract, and Pending (all displayed on the site)
     filters.push("(StandardStatus eq 'Active' or StandardStatus eq 'Active Under Contract' or StandardStatus eq 'Pending')");
 
-    if (options.mode === "initial") {
-      filters.push("MlgCanView eq true");
-    } else if (options.mode === "incremental" && options.lastSyncTimestamp) {
+    // MlgCanView filtering moved to client-side so Pending listings
+    // with MlgCanView=false are not excluded at the API level
+    if (options.mode === "incremental" && options.lastSyncTimestamp) {
       filters.push(`ModificationTimestamp gt ${options.lastSyncTimestamp}`);
     }
 
@@ -207,8 +207,11 @@ export class MLSGridClient {
       }
     }
 
-    // Client-side filter: MLSAreaMajor = 'DT' (downtown Austin)
-    // Also filter out Flex/Coming Soon listings (MlsStatus not filterable via OData)
+    // Client-side filters:
+    // 1. MLSAreaMajor = 'DT' (downtown Austin) — not OData-filterable
+    // 2. Flex/Coming Soon listings — MlsStatus not OData-filterable
+    // 3. MlgCanView=false — exclude unless Pending (Pending listings lose
+    //    MlgCanView when they go under contract but we still display them)
     const filtered = results.filter(listing => {
       const rawData = (listing as any).rawData;
       const area = rawData?.MLSAreaMajor || '';
@@ -216,6 +219,9 @@ export class MLSGridClient {
       const mlsStatus = (rawData?.MlsStatus || '').toLowerCase();
       if (mlsStatus === 'flex' || mlsStatus === 'coming soon') {
         console.log(`[MLSGrid] Skipping Flex/Coming Soon listing: ${listing.listingId} (MlsStatus='${rawData?.MlsStatus}')`);
+        return false;
+      }
+      if (rawData?.MlgCanView === false && listing.status !== "Pending") {
         return false;
       }
       return true;
