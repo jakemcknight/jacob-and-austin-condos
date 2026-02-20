@@ -345,8 +345,17 @@ export class MLSGridClient {
     for (let i = 0; i < listingIds.length; i += BATCH_SIZE) {
       const batch = listingIds.slice(i, i + BATCH_SIZE);
 
+      // MLSGrid stores ListingId with originating system prefix (e.g., "ACT4939483" for actris).
+      // IDs may arrive normalized (no prefix) from CSV imports or internal dedup.
+      // Query both formats to ensure we find the listing regardless of source.
       const idFilter = batch
-        .map(id => `ListingId eq '${id}'`)
+        .flatMap(id => {
+          const clauses = [`ListingId eq '${id}'`];
+          if (/^\d+$/.test(id)) {
+            clauses.push(`ListingId eq 'ACT${id}'`);
+          }
+          return clauses;
+        })
         .join(" or ");
 
       const filters = [
