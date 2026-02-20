@@ -12,9 +12,14 @@ import {
   computeAppreciation,
   computeAbsorptionRate,
   computeBuildingComparisonTable,
+  computeYoYYTD,
+  computeYoYRolling12,
+  computeMonthlyYoY,
   getLast12MonthsCutoff,
   type YearlyRow,
   type BuildingMarketRow,
+  type YoYResult,
+  type MonthlyYoYRow,
 } from "@/lib/mls/analytics-computations";
 import { buildings as buildingsData } from "@/data/buildings";
 
@@ -111,15 +116,19 @@ export default function DataPage() {
   const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [metric, setMetric] = useState<"priceSf" | "price">("priceSf");
   const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(
-    new Set(["Active", "Pending"])
+    new Set<string>()
   );
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"analytics" | "buildings">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "buildings" | "yoy">("analytics");
 
   // Building comparison sort state
   const [buildingSortKey, setBuildingSortKey] = useState<keyof BuildingMarketRow>("closedLast12");
   const [buildingSortAsc, setBuildingSortAsc] = useState(false);
+
+  // YoY state
+  const [yoyPeriod, setYoyPeriod] = useState<"ytd" | "rolling" | "monthly">("ytd");
+  const [monthlyMetric, setMonthlyMetric] = useState<"closings" | "medianPrice" | "medianPsf" | "pendings">("closings");
 
   // Appreciation state
   const [appreciationRange, setAppreciationRange] = useState<"all" | "5" | "10" | "custom">("5");
@@ -554,6 +563,21 @@ export default function DataPage() {
     return rows;
   }, [buildingComparisonRows, buildingSortKey, buildingSortAsc]);
 
+  // YoY computations (unfiltered by building/bedroom — portfolio-level view)
+  const yoyModeListings = useMemo(() => {
+    const targetPropertyType = listingMode === "buy" ? "Residential" : "Residential Lease";
+    return analyticsListings.filter((l) => l.propertyType === targetPropertyType);
+  }, [analyticsListings, listingMode]);
+
+  const yoyYTD = useMemo(() => computeYoYYTD(yoyModeListings), [yoyModeListings]);
+  const yoyRolling = useMemo(() => computeYoYRolling12(yoyModeListings), [yoyModeListings]);
+  const monthlyYoY = useMemo(
+    () => computeMonthlyYoY(yoyModeListings, monthlyMetric),
+    [yoyModeListings, monthlyMetric]
+  );
+
+  const activeYoYResult: YoYResult | null = yoyPeriod === "ytd" ? yoyYTD : yoyPeriod === "rolling" ? yoyRolling : null;
+
   // Toggle helpers
   function toggleBuilding(name: string) {
     setSelectedBuildings((prev) => {
@@ -655,6 +679,16 @@ export default function DataPage() {
               }`}
             >
               Building Comparison
+            </button>
+            <button
+              onClick={() => setActiveTab("yoy")}
+              className={`rounded-md px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "yoy"
+                  ? "bg-accent text-white"
+                  : "text-accent hover:text-primary"
+              }`}
+            >
+              Year over Year
             </button>
           </div>
         </div>
@@ -1329,6 +1363,238 @@ export default function DataPage() {
             <p className="mt-2 text-center text-xs text-secondary">
               {sortedBuildingRows.length} buildings · Last 12 months · Click column headers to sort
             </p>
+          </div>
+        )}
+
+        {activeTab === "yoy" && (
+          <div className="mt-6">
+            {/* Buy/Lease toggle + Period toggle */}
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-4">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                <button
+                  onClick={() => setListingMode("buy")}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    listingMode === "buy" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                  }`}
+                >
+                  Buy
+                </button>
+                <button
+                  onClick={() => setListingMode("lease")}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    listingMode === "lease" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                  }`}
+                >
+                  Lease
+                </button>
+              </div>
+
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                {([
+                  ["ytd", "YTD"],
+                  ["rolling", "Rolling 12 Mo"],
+                  ["monthly", "Monthly"],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setYoyPeriod(key)}
+                    className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                      yoyPeriod === key ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* YTD and Rolling modes: Summary cards + comparison table */}
+            {activeYoYResult && (yoyPeriod === "ytd" || yoyPeriod === "rolling") && (
+              <div className="space-y-6">
+                {/* Change summary cards */}
+                <SummaryCards
+                  cards={[
+                    {
+                      label: "Closings",
+                      value: activeYoYResult.periods[0]?.closedCount.toLocaleString() || "0",
+                      subvalue: activeYoYResult.changes.closedCount != null
+                        ? `${activeYoYResult.changes.closedCount >= 0 ? "+" : ""}${activeYoYResult.changes.closedCount.toFixed(1)}% vs prior`
+                        : undefined,
+                      trend: activeYoYResult.changes.closedCount != null
+                        ? activeYoYResult.changes.closedCount >= 0 ? "up" : "down"
+                        : "neutral",
+                    },
+                    {
+                      label: "Pendings",
+                      value: activeYoYResult.periods[0]?.pendingCount.toLocaleString() || "0",
+                      subvalue: activeYoYResult.changes.pendingCount != null
+                        ? `${activeYoYResult.changes.pendingCount >= 0 ? "+" : ""}${activeYoYResult.changes.pendingCount.toFixed(1)}% vs prior`
+                        : undefined,
+                      trend: activeYoYResult.changes.pendingCount != null
+                        ? activeYoYResult.changes.pendingCount >= 0 ? "up" : "down"
+                        : "neutral",
+                    },
+                    {
+                      label: "Median Price",
+                      value: activeYoYResult.periods[0]?.medianPrice > 0
+                        ? formatDollar(activeYoYResult.periods[0].medianPrice)
+                        : "--",
+                      subvalue: activeYoYResult.changes.medianPrice != null
+                        ? `${activeYoYResult.changes.medianPrice >= 0 ? "+" : ""}${activeYoYResult.changes.medianPrice.toFixed(1)}% vs prior`
+                        : undefined,
+                      trend: activeYoYResult.changes.medianPrice != null
+                        ? activeYoYResult.changes.medianPrice >= 0 ? "up" : "down"
+                        : "neutral",
+                    },
+                    {
+                      label: "Median $/SF",
+                      value: activeYoYResult.periods[0]?.medianPsf > 0
+                        ? formatPsf(activeYoYResult.periods[0].medianPsf, isLease)
+                        : "--",
+                      subvalue: activeYoYResult.changes.medianPsf != null
+                        ? `${activeYoYResult.changes.medianPsf >= 0 ? "+" : ""}${activeYoYResult.changes.medianPsf.toFixed(1)}% vs prior`
+                        : undefined,
+                      trend: activeYoYResult.changes.medianPsf != null
+                        ? activeYoYResult.changes.medianPsf >= 0 ? "up" : "down"
+                        : "neutral",
+                    },
+                  ]}
+                />
+
+                {/* Comparison table */}
+                <div className="overflow-auto rounded-lg border border-gray-200">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-accent text-white">
+                        <th className="whitespace-nowrap px-4 py-2.5 text-left font-bold uppercase tracking-wider">Period</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Closings</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Pendings</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Med Price</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Med $/SF</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Med DOM</th>
+                        <th className="whitespace-nowrap px-4 py-2.5 text-right font-bold uppercase tracking-wider">Volume</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeYoYResult.periods.map((p, i) => (
+                        <tr
+                          key={p.label}
+                          className={`border-b border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 0 ? "font-semibold" : ""}`}
+                        >
+                          <td className="whitespace-nowrap px-4 py-2 text-primary">{p.label}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.closedCount}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.pendingCount}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.medianPrice > 0 ? formatDollar(p.medianPrice) : "--"}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.medianPsf > 0 ? formatPsf(p.medianPsf, isLease) : "--"}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.medianDom > 0 ? Math.round(p.medianDom) : "--"}</td>
+                          <td className="px-4 py-2 text-right text-primary">{p.totalVolume > 0 ? formatDollar(p.totalVolume) : "--"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Monthly mode: metric toggle + monthly grid */}
+            {yoyPeriod === "monthly" && (
+              <div className="space-y-4">
+                {/* Metric toggle */}
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                    {([
+                      ["closings", "Closings"],
+                      ["medianPrice", "Med Price"],
+                      ["medianPsf", "Med $/SF"],
+                      ["pendings", "Pendings"],
+                    ] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setMonthlyMetric(key)}
+                        className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                          monthlyMetric === key ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Monthly grid table */}
+                <div className="overflow-auto rounded-lg border border-gray-200">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-accent text-white">
+                        <th className="whitespace-nowrap px-3 py-2.5 text-left font-bold uppercase tracking-wider">Year</th>
+                        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
+                          <th key={m} className="whitespace-nowrap px-2 py-2.5 text-center font-bold uppercase tracking-wider">{m}</th>
+                        ))}
+                        <th className="whitespace-nowrap px-3 py-2.5 text-right font-bold uppercase tracking-wider">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyYoY.map((row, i) => {
+                        const isCount = monthlyMetric === "closings" || monthlyMetric === "pendings";
+                        const currentMonth = new Date().getMonth() + 1;
+                        const isCurrentYear = row.year === new Date().getFullYear();
+                        return (
+                          <tr
+                            key={row.year}
+                            className={`border-b border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 0 ? "font-semibold" : ""}`}
+                          >
+                            <td className="whitespace-nowrap px-3 py-2 font-medium text-primary">{row.year}</td>
+                            {row.months.map((cell) => {
+                              const isFuture = isCurrentYear && cell.month > currentMonth;
+                              let display: string;
+                              if (isFuture) {
+                                display = "--";
+                              } else if (cell.value === 0) {
+                                display = isCount ? "0" : "--";
+                              } else if (isCount) {
+                                display = cell.value.toString();
+                              } else if (monthlyMetric === "medianPrice") {
+                                display = formatDollar(cell.value);
+                              } else {
+                                display = formatPsf(cell.value, isLease);
+                              }
+
+                              // Color coding for count metrics: highlight high/low relative to row
+                              const nonZeroValues = row.months
+                                .filter((c) => !(isCurrentYear && c.month > currentMonth) && c.value > 0)
+                                .map((c) => c.value);
+                              const maxVal = nonZeroValues.length > 0 ? Math.max(...nonZeroValues) : 0;
+                              const cellBg = isCount && !isFuture && cell.value > 0 && maxVal > 0
+                                ? `rgba(122, 160, 163, ${(cell.value / maxVal) * 0.3})`
+                                : undefined;
+
+                              return (
+                                <td
+                                  key={cell.month}
+                                  className={`px-2 py-2 text-center ${isFuture ? "text-gray-300" : "text-primary"}`}
+                                  style={cellBg ? { backgroundColor: cellBg } : undefined}
+                                >
+                                  {display}
+                                </td>
+                              );
+                            })}
+                            <td className="whitespace-nowrap px-3 py-2 text-right font-medium text-primary">
+                              {isCount ? row.total : row.total > 0 ? `${row.total} txns` : "--"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="text-center text-xs text-secondary">
+                  {monthlyMetric === "closings" || monthlyMetric === "pendings"
+                    ? "Cell shading indicates relative volume within each year"
+                    : "Total column shows transaction count for context"}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

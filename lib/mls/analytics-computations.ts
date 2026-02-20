@@ -473,6 +473,279 @@ export function computeYoYComparison(
   };
 }
 
+// --- Year-over-Year Metrics (YTD, Rolling 12, Monthly) ---
+
+export interface YoYPeriodMetrics {
+  label: string; // "2026", "2025", "Last 12 Mo", etc.
+  closedCount: number;
+  pendingCount: number; // listings that went pending in the period
+  medianPrice: number;
+  medianPsf: number;
+  medianDom: number;
+  totalVolume: number;
+}
+
+export interface YoYResult {
+  periods: YoYPeriodMetrics[];
+  changes: {
+    closedCount: number | null; // % change vs previous period
+    pendingCount: number | null;
+    medianPrice: number | null;
+    medianPsf: number | null;
+  };
+}
+
+export interface MonthlyYoYRow {
+  year: number;
+  months: MonthCell[];
+  total: number;
+}
+
+export interface MonthCell {
+  month: number; // 1-12
+  value: number; // count, price, or psf depending on metric
+}
+
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return current > 0 ? 100 : null;
+  return ((current - previous) / previous) * 100;
+}
+
+/** YTD comparison: Jan 1 through today's month/day for each year. */
+export function computeYoYYTD(
+  listings: AnalyticsListing[],
+  yearsBack: number = 4
+): YoYResult {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const todayMD = (now.getMonth() + 1).toString().padStart(2, "0") + "-" +
+    now.getDate().toString().padStart(2, "0");
+
+  const periods: YoYPeriodMetrics[] = [];
+
+  for (let y = currentYear; y >= currentYear - yearsBack + 1; y--) {
+    const start = `${y}-01-01`;
+    const end = `${y}-${todayMD}`;
+
+    // Closings in this YTD window
+    const closed = listings.filter(
+      (l) =>
+        l.status === "Closed" &&
+        l.closeDate &&
+        l.closeDate >= start &&
+        l.closeDate <= end
+    );
+
+    // Pendings that went pending in this window
+    const pending = listings.filter((l) => {
+      if (l.status !== "Pending" && l.status !== "Active Under Contract") return false;
+      const pDate = l.pendingTimestamp?.substring(0, 10) || l.statusChangeTimestamp?.substring(0, 10);
+      return pDate && pDate >= start && pDate <= end;
+    });
+
+    // Also count closed listings that WENT pending in this window
+    const closedWentPending = listings.filter((l) => {
+      if (l.status !== "Closed") return false;
+      const pDate = l.pendingTimestamp?.substring(0, 10);
+      return pDate && pDate >= start && pDate <= end;
+    });
+
+    const allPendingCount = pending.length + closedWentPending.length;
+
+    const prices = closed.map((l) => l.closePrice || 0).filter((p) => p > 0);
+    const psfs = closed
+      .map((l) => (l.closePrice && l.livingArea > 0 ? l.closePrice / l.livingArea : 0))
+      .filter((p) => p > 0);
+    const doms = closed.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+
+    periods.push({
+      label: `${y} YTD`,
+      closedCount: closed.length,
+      pendingCount: allPendingCount,
+      medianPrice: median(prices),
+      medianPsf: median(psfs),
+      medianDom: median(doms),
+      totalVolume: prices.reduce((a, b) => a + b, 0),
+    });
+  }
+
+  const current = periods[0];
+  const previous = periods.length > 1 ? periods[1] : null;
+
+  return {
+    periods,
+    changes: {
+      closedCount: previous ? pctChange(current.closedCount, previous.closedCount) : null,
+      pendingCount: previous ? pctChange(current.pendingCount, previous.pendingCount) : null,
+      medianPrice: previous ? pctChange(current.medianPrice, previous.medianPrice) : null,
+      medianPsf: previous ? pctChange(current.medianPsf, previous.medianPsf) : null,
+    },
+  };
+}
+
+/** Rolling 12-month comparison: last 12 months vs prior 12 months. */
+export function computeYoYRolling12(
+  listings: AnalyticsListing[]
+): YoYResult {
+  const now = new Date();
+  const last12Start = new Date(now);
+  last12Start.setMonth(last12Start.getMonth() - 12);
+  const prior12Start = new Date(now);
+  prior12Start.setMonth(prior12Start.getMonth() - 24);
+
+  const last12Cutoff = last12Start.toISOString().substring(0, 10);
+  const prior12Cutoff = prior12Start.toISOString().substring(0, 10);
+  const todayCutoff = now.toISOString().substring(0, 10);
+
+  function computePeriod(
+    label: string,
+    startDate: string,
+    endDate: string
+  ): YoYPeriodMetrics {
+    const closed = listings.filter(
+      (l) =>
+        l.status === "Closed" &&
+        l.closeDate &&
+        l.closeDate >= startDate &&
+        l.closeDate <= endDate
+    );
+
+    const pending = listings.filter((l) => {
+      const isPending = l.status === "Pending" || l.status === "Active Under Contract";
+      if (!isPending) return false;
+      const pDate = l.pendingTimestamp?.substring(0, 10) || l.statusChangeTimestamp?.substring(0, 10);
+      return pDate && pDate >= startDate && pDate <= endDate;
+    });
+
+    const closedWentPending = listings.filter((l) => {
+      if (l.status !== "Closed") return false;
+      const pDate = l.pendingTimestamp?.substring(0, 10);
+      return pDate && pDate >= startDate && pDate <= endDate;
+    });
+
+    const prices = closed.map((l) => l.closePrice || 0).filter((p) => p > 0);
+    const psfs = closed
+      .map((l) => (l.closePrice && l.livingArea > 0 ? l.closePrice / l.livingArea : 0))
+      .filter((p) => p > 0);
+    const doms = closed.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+
+    return {
+      label,
+      closedCount: closed.length,
+      pendingCount: pending.length + closedWentPending.length,
+      medianPrice: median(prices),
+      medianPsf: median(psfs),
+      medianDom: median(doms),
+      totalVolume: prices.reduce((a, b) => a + b, 0),
+    };
+  }
+
+  const current = computePeriod("Last 12 Mo", last12Cutoff, todayCutoff);
+  const previous = computePeriod("Prior 12 Mo", prior12Cutoff, last12Cutoff);
+
+  return {
+    periods: [current, previous],
+    changes: {
+      closedCount: pctChange(current.closedCount, previous.closedCount),
+      pendingCount: pctChange(current.pendingCount, previous.pendingCount),
+      medianPrice: pctChange(current.medianPrice, previous.medianPrice),
+      medianPsf: pctChange(current.medianPsf, previous.medianPsf),
+    },
+  };
+}
+
+/** Monthly breakdown by year — for the grid view. */
+export function computeMonthlyYoY(
+  listings: AnalyticsListing[],
+  metricMode: "closings" | "medianPrice" | "medianPsf" | "pendings",
+  yearsBack: number = 4
+): MonthlyYoYRow[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const rows: MonthlyYoYRow[] = [];
+
+  for (let y = currentYear; y >= currentYear - yearsBack + 1; y--) {
+    const months: MonthCell[] = [];
+    let yearTotal = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const mStr = m.toString().padStart(2, "0");
+      const monthStart = `${y}-${mStr}-01`;
+      // Last day of month
+      const lastDay = new Date(y, m, 0).getDate();
+      const monthEnd = `${y}-${mStr}-${lastDay.toString().padStart(2, "0")}`;
+
+      // Future months get 0
+      if (y === currentYear && m > now.getMonth() + 1) {
+        months.push({ month: m, value: 0 });
+        continue;
+      }
+
+      let value = 0;
+
+      if (metricMode === "closings") {
+        const closed = listings.filter(
+          (l) =>
+            l.status === "Closed" &&
+            l.closeDate &&
+            l.closeDate >= monthStart &&
+            l.closeDate <= monthEnd
+        );
+        value = closed.length;
+        yearTotal += value;
+      } else if (metricMode === "pendings") {
+        // Count listings that went pending in this month
+        const pending = listings.filter((l) => {
+          const pDate = l.pendingTimestamp?.substring(0, 10) ||
+            (l.status === "Pending" || l.status === "Active Under Contract"
+              ? l.statusChangeTimestamp?.substring(0, 10)
+              : undefined);
+          return pDate && pDate >= monthStart && pDate <= monthEnd;
+        });
+        // Also count closed that went pending in this month
+        const closedPending = listings.filter((l) => {
+          if (l.status !== "Closed") return false;
+          const pDate = l.pendingTimestamp?.substring(0, 10);
+          return pDate && pDate >= monthStart && pDate <= monthEnd;
+        });
+        value = pending.length + closedPending.length;
+        yearTotal += value;
+      } else if (metricMode === "medianPrice") {
+        const closed = listings.filter(
+          (l) =>
+            l.status === "Closed" &&
+            l.closeDate &&
+            l.closeDate >= monthStart &&
+            l.closeDate <= monthEnd
+        );
+        const prices = closed.map((l) => l.closePrice || 0).filter((p) => p > 0);
+        value = median(prices);
+        // For price/psf metrics, total is the count (for context)
+        yearTotal += closed.length;
+      } else if (metricMode === "medianPsf") {
+        const closed = listings.filter(
+          (l) =>
+            l.status === "Closed" &&
+            l.closeDate &&
+            l.closeDate >= monthStart &&
+            l.closeDate <= monthEnd
+        );
+        const psfs = closed
+          .map((l) => (l.closePrice && l.livingArea > 0 ? l.closePrice / l.livingArea : 0))
+          .filter((p) => p > 0);
+        value = median(psfs);
+        yearTotal += closed.length;
+      }
+
+      months.push({ month: m, value });
+    }
+
+    rows.push({ year: y, months, total: yearTotal });
+  }
+
+  return rows;
+}
+
 // --- Building Market Table ---
 
 export interface BuildingMarketRow {
@@ -506,7 +779,8 @@ export function computeBuildingMarketTable(
     );
     const pending = analyticsListings.filter(
       (l) =>
-        l.buildingSlug === building.slug && l.status === "Pending"
+        l.buildingSlug === building.slug &&
+        (l.status === "Pending" || l.status === "Active Under Contract")
     );
     const closed12 = analyticsListings.filter(
       (l) =>
@@ -573,9 +847,11 @@ export function computeBuildingComparisonTable(
       (l) => l.buildingSlug === building.slug
     );
     const active = buildingListings.filter(
-      (l) => l.status === "Active" || l.status === "Active Under Contract"
+      (l) => l.status === "Active"
     );
-    const pending = buildingListings.filter((l) => l.status === "Pending");
+    const pending = buildingListings.filter(
+      (l) => l.status === "Pending" || l.status === "Active Under Contract"
+    );
     const closed12 = buildingListings.filter(
       (l) => l.status === "Closed" && l.closeDate && l.closeDate >= cutoff
     );
