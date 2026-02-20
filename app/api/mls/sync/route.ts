@@ -20,6 +20,7 @@ import {
   readAnalyticsListings,
   writeAnalyticsSyncState,
   normalizeListingId,
+  removeListingFromOtherSlugs,
 } from "@/lib/mls/analytics-cache";
 import { readAllEnrichmentMaps, enrichActiveListingWithFloorPlan, writeEnrichmentMap, deleteEnrichmentMap } from "@/lib/mls/enrichment";
 import { unitLookup } from "@/data/unitLookup";
@@ -424,6 +425,17 @@ export async function GET(request: NextRequest) {
         analyticsAdded += result.added;
         analyticsUpdated += result.updated;
         analyticsTotalCached += result.total;
+      }
+
+      // Clean up cross-building duplicates: ensure each listing only exists in one cache
+      let analyticsDeduped = 0;
+      for (const [slug, listings] of Array.from(analyticsByBuilding)) {
+        const listingIds = new Set(listings.map(l => normalizeListingId(l.listingId)));
+        const removed = await removeListingFromOtherSlugs(slug, listingIds);
+        analyticsDeduped += removed;
+      }
+      if (analyticsDeduped > 0) {
+        console.log(`[MLS Sync] Analytics dedup: removed ${analyticsDeduped} cross-building duplicates`);
       }
 
       // Update analytics sync state

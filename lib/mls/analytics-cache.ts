@@ -124,7 +124,9 @@ export async function upsertAnalyticsListings(
 
 /**
  * Read all analytics listings across all buildings.
- * Returns a flat array of all listings.
+ * Returns a flat array of all listings, deduplicated by normalized listingId.
+ * When duplicates exist across building caches, prefers api-sync over csv-import,
+ * and most recent importedAt within the same source type.
  */
 export async function readAllAnalyticsListings(): Promise<AnalyticsListing[]> {
   noStore();
@@ -139,7 +141,59 @@ export async function readAllAnalyticsListings(): Promise<AnalyticsListing[]> {
   const unmatched = await readAnalyticsListings(UNMATCHED_SLUG);
   allListings.push(...unmatched);
 
-  return allListings;
+  // Deduplicate across building caches by normalized listingId.
+  // A listing can exist in multiple caches (e.g., CSV-imported into 44-east as Pending,
+  // then API-synced as Closed). Keep the most authoritative entry.
+  const dedupMap = new Map<string, AnalyticsListing>();
+  for (const listing of allListings) {
+    const normId = normalizeListingId(listing.listingId);
+    const existing = dedupMap.get(normId);
+    if (!existing) {
+      dedupMap.set(normId, listing);
+    } else {
+      // Prefer api-sync source over csv-import
+      const existingIsApiSync = existing.source === "api-sync";
+      const newIsApiSync = listing.source === "api-sync";
+      if (newIsApiSync && !existingIsApiSync) {
+        dedupMap.set(normId, listing);
+      } else if (newIsApiSync === existingIsApiSync) {
+        // Same source type: prefer the one with more recent importedAt
+        if ((listing.importedAt || "") > (existing.importedAt || "")) {
+          dedupMap.set(normId, listing);
+        }
+      }
+    }
+  }
+
+  return Array.from(dedupMap.values());
+}
+
+/**
+ * Remove listings from all building caches EXCEPT the target slug.
+ * Ensures each listingId only exists in one building cache (single source of truth).
+ * Called after sync upserts to clean up cross-building duplicates.
+ */
+export async function removeListingFromOtherSlugs(
+  targetSlug: string,
+  listingIds: Set<string>
+): Promise<number> {
+  let totalRemoved = 0;
+  const allSlugs = [...buildings.map(b => b.slug), UNMATCHED_SLUG];
+
+  for (const slug of allSlugs) {
+    if (slug === targetSlug) continue;
+    const existing = await readAnalyticsListings(slug);
+    const cleaned = existing.filter(
+      l => !listingIds.has(normalizeListingId(l.listingId))
+    );
+    if (cleaned.length < existing.length) {
+      const removed = existing.length - cleaned.length;
+      totalRemoved += removed;
+      await writeAnalyticsListings(slug, cleaned);
+      console.log(`[Analytics Cache] Removed ${removed} duplicate listings from ${slug} (moved to ${targetSlug})`);
+    }
+  }
+  return totalRemoved;
 }
 
 // --- Sync State ---
