@@ -242,7 +242,7 @@ function renderActiveListing(
     const direction = listing.listPrice - listing.originalListPrice > 0 ? "increased" : "reduced";
     historyEvents.push({ date: "", label: `Price ${direction}`, detail: `Price ${direction} to $${listing.listPrice.toLocaleString()}` });
   }
-  historyEvents.push({ date: "Now", label: listing.status, detail: `${listing.status} · ${dom} days on market` });
+  historyEvents.push({ date: "Now", label: listing.status, detail: `${listing.status} · ${listing.daysOnMarket} days on market` });
   historyEvents.reverse();
 
   return (
