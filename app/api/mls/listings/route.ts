@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 const UNMATCHED_SLUG = "_unmatched";
 
 // Status values considered "active" in the analytics cache
-const ACTIVE_STATUSES = new Set(["active", "active under contract"]);
+const ACTIVE_STATUSES = new Set(["active", "pending"]);
 const SOLD_STATUSES = new Set(["closed"]);
 const OFFMARKET_STATUSES = new Set(["withdrawn", "hold", "expired", "canceled", "deleted"]);
 

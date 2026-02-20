@@ -337,7 +337,7 @@ export async function GET(request: NextRequest) {
         const cachedListings = await readAnalyticsListings(slug);
         for (const cached of cachedListings) {
           const s = (cached.status || "").toLowerCase();
-          if ((s === "active" || s === "active under contract" || s === "pending") &&
+          if ((s === "active" || s === "pending") &&
               !currentActiveIds.has(normalizeListingId(cached.listingId))) {
             staleIds.push(normalizeListingId(cached.listingId));
           }

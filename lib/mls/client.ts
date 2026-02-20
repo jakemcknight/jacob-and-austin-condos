@@ -133,8 +133,8 @@ export class MLSGridClient {
     const filters = [];
     filters.push(`OriginatingSystemName eq '${options.originatingSystemName}'`);
     filters.push(`PropertyType eq '${propertyType}'`);
-    // Include both Active and Active Under Contract (user's MLS shows both as "active")
-    filters.push("(StandardStatus eq 'Active' or StandardStatus eq 'Active Under Contract')");
+    // Include Active, Active Under Contract, and Pending (all displayed on the site)
+    filters.push("(StandardStatus eq 'Active' or StandardStatus eq 'Active Under Contract' or StandardStatus eq 'Pending')");
 
     if (options.mode === "initial") {
       filters.push("MlgCanView eq true");
@@ -178,6 +178,8 @@ export class MLSGridClient {
       "TaxYear",
       "AssociationFeeFrequency",
       "OriginalListPrice",
+      "MlsStatus",
+      "OnMarketDate",
     ].join(",");
 
     const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=500`;
@@ -206,13 +208,20 @@ export class MLSGridClient {
     }
 
     // Client-side filter: MLSAreaMajor = 'DT' (downtown Austin)
+    // Also filter out Flex/Coming Soon listings (MlsStatus not filterable via OData)
     const filtered = results.filter(listing => {
       const rawData = (listing as any).rawData;
       const area = rawData?.MLSAreaMajor || '';
-      return area === 'DT';
+      if (area !== 'DT') return false;
+      const mlsStatus = (rawData?.MlsStatus || '').toLowerCase();
+      if (mlsStatus === 'flex' || mlsStatus === 'coming soon') {
+        console.log(`[MLSGrid] Skipping Flex/Coming Soon listing: ${listing.listingId} (MlsStatus='${rawData?.MlsStatus}')`);
+        return false;
+      }
+      return true;
     });
 
-    console.log(`[MLSGrid] PropertyType='${propertyType}': ${results.length} total → ${filtered.length} DT`);
+    console.log(`[MLSGrid] PropertyType='${propertyType}': ${results.length} total → ${filtered.length} DT (excluding Flex)`);
 
     return filtered;
   }
@@ -251,6 +260,7 @@ export class MLSGridClient {
       "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
       "BuyerFinancing",
       "PublicRemarks", "ParkingFeatures",
+      "MlsStatus",
     ].join(",");
 
     // Build status filter
@@ -337,6 +347,7 @@ export class MLSGridClient {
       "ListAgentFullName", "BuyerAgentFullName", "ListOfficeName",
       "BuyerFinancing",
       "PublicRemarks", "ParkingFeatures",
+      "MlsStatus",
     ].join(",");
 
     // Batch into groups of 10 to keep OData filter URL length reasonable
@@ -609,7 +620,7 @@ export class MLSGridClient {
       livingArea,
       priceSf,
       status: this.normalizeStatus(data.StandardStatus),
-      listDate: data.ListingContractDate || "",
+      listDate: data.OnMarketDate || data.ListingContractDate || "",
       daysOnMarket: parseInt(data.DaysOnMarket || "0") || 0,
       modificationTimestamp: data.ModificationTimestamp || undefined,
       mlgCanView: data.MlgCanView !== undefined ? data.MlgCanView : true,
@@ -636,14 +647,12 @@ export class MLSGridClient {
   }
 
   /**
-   * Normalize MLS status to our standard types
+   * Normalize MLS status to our standard types.
+   * "Active Under Contract", "Pending", and "Under Contract" all map to "Pending".
    */
-  private normalizeStatus(status: string): "Active" | "Pending" | "Under Contract" | "Active Under Contract" {
+  private normalizeStatus(status: string): "Active" | "Pending" {
     const normalized = (status || "").toLowerCase();
-
-    if (normalized.includes("active under contract")) return "Active Under Contract";
-    if (normalized.includes("pending")) return "Pending";
-    if (normalized.includes("under contract")) return "Under Contract";
+    if (normalized.includes("pending") || normalized.includes("under contract")) return "Pending";
     return "Active";
   }
 }

@@ -45,7 +45,6 @@ interface ListingCardProps {
 // Status badge colors — matches the listing detail page
 const STATUS_BADGE_STYLES: Record<string, string> = {
   "Active": "bg-zilker text-white",
-  "Active Under Contract": "bg-zilker text-white",
   "Pending": "bg-yellow-500 text-white",
   "Closed": "bg-green-600 text-white",
   "Withdrawn": "bg-gray-500 text-white",

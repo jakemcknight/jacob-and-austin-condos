@@ -23,7 +23,7 @@ export interface MLSListing {
   priceSf: number; // Calculated: listPrice / livingArea
 
   // Status and dates
-  status: "Active" | "Pending" | "Under Contract" | "Active Under Contract";
+  status: "Active" | "Pending";
   listDate: string;
   daysOnMarket: number;
   modificationTimestamp?: string; // ISO 8601 timestamp for replication
