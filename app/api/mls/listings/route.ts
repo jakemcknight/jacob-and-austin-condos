@@ -81,12 +81,13 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get("status") || "active";
 
     // Determine which data sources to read
-    const includeActive = statusFilter === "active" || statusFilter === "all";
+    const includePending = statusFilter === "pending";
+    const includeActive = statusFilter === "active" || statusFilter === "all" || includePending;
     const includeSold = statusFilter === "sold" || statusFilter === "all";
     const includeOffmarket = statusFilter === "offmarket" || statusFilter === "all";
     const includeAnalytics = includeSold || includeOffmarket;
 
-    const allListings: any[] = [];
+    let allListings: any[] = [];
 
     if (buildingSlug) {
       // ===== SINGLE BUILDING =====
@@ -126,6 +127,12 @@ export async function GET(request: NextRequest) {
             allListings.push(analyticsToDisplayListing(al));
           }
         }
+      }
+
+      // If filtering for pending only, keep only Pending/AUC listings
+      if (includePending) {
+        const pendingStatuses = new Set(["pending", "active under contract"]);
+        allListings = allListings.filter((l: any) => pendingStatuses.has((l.status || "").toLowerCase()));
       }
 
       console.log(`[MLS API] Cache hit for ${buildingSlug} (${allListings.length} listings, status=${statusFilter})`);
@@ -189,6 +196,12 @@ export async function GET(request: NextRequest) {
           allListings.push(analyticsToDisplayListing(al));
         }
       }
+    }
+
+    // If filtering for pending only, keep only Pending/AUC listings
+    if (includePending) {
+      const pendingStatuses = new Set(["pending", "active under contract"]);
+      allListings = allListings.filter((l: any) => pendingStatuses.has((l.status || "").toLowerCase()));
     }
 
     console.log(`[MLS API] Returning ${allListings.length} total listings (status=${statusFilter})`);
