@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { calculateDaysOnMarket, formatDaysOnMarket } from "@/lib/format-dom";
+import { formatDaysOnMarket } from "@/lib/format-dom";
 import { useRetryImage } from "@/lib/use-retry-image";
 
 export interface MLSListingDisplay {
@@ -115,7 +115,7 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
           </span>
           {!isOffMarket && (
             <span className="rounded-full bg-zilker px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
-              {formatDaysOnMarket(calculateDaysOnMarket(listing.listDate))}
+              {formatDaysOnMarket(listing.daysOnMarket)}
             </span>
           )}
           {isOffMarket && listing.daysOnMarket > 0 && (

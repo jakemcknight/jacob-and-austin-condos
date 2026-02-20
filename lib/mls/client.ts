@@ -179,7 +179,6 @@ export class MLSGridClient {
       "AssociationFeeFrequency",
       "OriginalListPrice",
       "MlsStatus",
-      "OnMarketDate",
     ].join(",");
 
     const initialUrl = `${this.baseUrl}/${endpoint}?$filter=${encodeURIComponent(filters.join(" and "))}&$select=${select}&$expand=Media&$top=500`;
@@ -626,7 +625,7 @@ export class MLSGridClient {
       livingArea,
       priceSf,
       status: this.normalizeStatus(data.StandardStatus),
-      listDate: data.OnMarketDate || data.ListingContractDate || "",
+      listDate: data.ListingContractDate || "",
       daysOnMarket: parseInt(data.DaysOnMarket || "0") || 0,
       modificationTimestamp: data.ModificationTimestamp || undefined,
       mlgCanView: data.MlgCanView !== undefined ? data.MlgCanView : true,

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { readMlsCache } from "@/lib/mls/cache";
 import { readAnalyticsListings } from "@/lib/mls/analytics-cache";
 import { buildings } from "@/data/buildings";
-import { calculateDaysOnMarket, formatOrientation } from "@/lib/format-dom";
+import { formatOrientation } from "@/lib/format-dom";
 import ContactForm from "@/components/ContactForm";
 import ListingGallery from "@/components/ListingGallery";
 import ShareButton from "@/components/ShareButton";
@@ -219,8 +219,7 @@ function renderActiveListing(
 
   const propertyDetails: { label: string; value: string }[] = [];
   propertyDetails.push({ label: "Status", value: listing.status });
-  const dom = calculateDaysOnMarket(listing.listDate);
-  propertyDetails.push({ label: "Days on Market", value: String(dom) });
+  propertyDetails.push({ label: "Days on Market", value: String(listing.daysOnMarket) });
   if (listing.listDate) propertyDetails.push({ label: "List Date", value: formatDate(listing.listDate) });
   if (listing.yearBuilt) propertyDetails.push({ label: "Year Built", value: String(listing.yearBuilt) });
   if (listing.propertySubType) propertyDetails.push({ label: "Property Type", value: listing.propertySubType });
