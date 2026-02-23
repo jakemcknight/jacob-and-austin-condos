@@ -1,201 +1,149 @@
-"use client";
-
-import { useState, useMemo } from "react";
-import dynamic from "next/dynamic";
-import { buildings } from "@/data/buildings";
-import BuildingCard from "@/components/BuildingCard";
+import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
 import ContactForm from "@/components/ContactForm";
+import NewsletterForm from "@/components/NewsletterForm";
 
-const MapView = dynamic(() => import("@/components/MapView"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[500px] items-center justify-center bg-gray-100 md:h-[600px]">
-      <p className="text-sm uppercase tracking-wider text-gray-400">
-        Loading map...
-      </p>
-    </div>
-  ),
-});
+export const metadata: Metadata = {
+  title: "Jacob In Austin | Downtown Austin High-Rise Expert",
+  description:
+    "Find your dream condo in downtown Austin. Jacob Hannusch provides data-driven insight and exclusive resources for buying, selling, or leasing across the city's skyline.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Jacob In Austin | Downtown Austin High-Rise Expert",
+    description:
+      "Find your dream condo in downtown Austin. Data-driven insight and exclusive resources ensure that every buy, sell, or lease is guided with purpose.",
+    type: "website",
+    images: [
+      {
+        url: "/images/og-default.jpg",
+        width: 1280,
+        height: 720,
+        alt: "Downtown Austin skyline",
+      },
+    ],
+  },
+};
 
-export default function HomePage() {
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "floors" | "yearBuilt">("name");
+const landingSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Jacob In Austin | Downtown Austin High-Rise Expert",
+  description:
+    "Find your dream condo in downtown Austin with Jacob Hannusch — your downtown high-rise expert.",
+  url: "https://jacobinaustin.com",
+  mainEntity: {
+    "@type": "RealEstateAgent",
+    name: "Jacob Hannusch",
+    alternateName: "Jacob In Austin",
+    telephone: "+15127181600",
+    email: "jacob@jacobinaustin.com",
+  },
+};
 
-  const filteredBuildings = useMemo(() => {
-    // Buildings to hide (marked with * in CSV)
-    const excludedSlugs = [
-      "1704-west-condos",
-      "904-west",
-      "1306-west",
-      "penthouse-condos",
-      "cambridge-tower",
-      "celias-court",
-      "terrace-on-shoal-creek",
-      "greenwood-tower",
-    ];
-
-    let result = buildings
-      .filter((b) => !excludedSlugs.includes(b.slug))
-      .filter(
-        (b) =>
-          b.name.toLowerCase().includes(search.toLowerCase()) ||
-          b.address.toLowerCase().includes(search.toLowerCase())
-      );
-
-    result.sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "floors") return b.floors - a.floors;
-      return b.yearBuilt - a.yearBuilt;
-    });
-
-    return result;
-  }, [search, sortBy]);
-
+export default function LandingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(landingSchema) }}
+      />
+
       {/* Hero */}
-      <section className="relative flex min-h-[60vh] items-center justify-center bg-primary">
+      <section className="relative flex min-h-[70vh] items-center justify-center bg-primary">
         <div className="absolute inset-0 bg-gradient-to-br from-black to-gray-900" />
         <div className="relative z-10 px-6 text-center">
           <p className="text-xs uppercase tracking-[0.4em] text-gray-400">
             Jacob In Austin
           </p>
           <h1 className="mt-4 text-4xl font-bold uppercase tracking-widest text-white md:text-5xl lg:text-6xl">
-            Downtown Austin
+            High-Rise Living,
             <br />
-            Condos
+            Made Simple
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-gray-300">
-            Your comprehensive guide to downtown Austin&apos;s premier high-rise
-            living. Explore buildings, amenities, and find your next home.
+            Find your dream condo in downtown Austin. Data-driven insight and
+            exclusive resources ensure that every buy, sell, or lease across the
+            city&apos;s skyline is guided with purpose.
           </p>
           <a
-            href="#buildings"
+            href="#contact"
             className="mt-8 inline-block border border-white px-8 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary"
           >
-            Explore Buildings
+            Get in Touch
           </a>
         </div>
       </section>
 
-      {/* About Section */}
+      {/* About */}
       <section className="section-padding bg-white">
-        <div className="container-narrow max-w-3xl text-center">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-            Your Downtown High-Rise Expert
-          </h2>
-          <p className="mt-6 text-lg leading-relaxed text-secondary">
-            With deep expertise in Austin&apos;s downtown high-rise market,
-            Jacob provides data-driven insight and exclusive resources to help
-            you buy, sell, or lease in the city&apos;s most sought-after
-            buildings. From luxury penthouses to modern urban flats, find
-            your perfect downtown Austin condo.
-          </p>
-        </div>
-      </section>
-
-      {/* Map View */}
-      <section className="border-y border-gray-200">
-        <div className="container-narrow px-6 py-12 md:px-12 lg:px-20">
-          <h2 className="mb-8 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-            Explore the Map
-          </h2>
-          <div className="overflow-hidden border border-gray-200">
-            <MapView buildings={buildings} />
-          </div>
-          <p className="mt-4 text-center text-xs text-accent">
-            Click a pin to preview a building
-          </p>
-        </div>
-      </section>
-
-      {/* Building Directory */}
-      <section id="buildings" className="section-padding bg-light">
         <div className="container-narrow">
-          <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-            All Buildings
-          </h2>
+          <div className="mx-auto grid max-w-4xl items-center gap-12 md:grid-cols-2">
+            {/* Headshot */}
+            <div className="flex justify-center">
+              <div className="relative h-[350px] w-[280px] overflow-hidden md:h-[420px] md:w-[340px]">
+                <Image
+                  src="/images/jacob-headshot.jpg"
+                  alt="Jacob Hannusch — Downtown Austin high-rise condo expert"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 280px, 340px"
+                  priority
+                />
+              </div>
+            </div>
 
-          {/* Search & Filter Bar */}
-          <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <input
-              type="text"
-              placeholder="Search by name or address..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-200 bg-white px-5 py-3 text-sm text-primary outline-none transition-colors focus:border-primary md:max-w-sm"
-            />
-            <div className="flex items-center gap-3">
-              <span className="text-xs uppercase tracking-wider text-accent">
-                Sort by:
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(e.target.value as "name" | "floors" | "yearBuilt")
-                }
-                className="border border-gray-200 bg-white px-4 py-2 text-sm text-primary outline-none transition-colors focus:border-primary"
+            {/* Bio */}
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+                Your Downtown High-Rise Expert
+              </h2>
+              <p className="mt-6 text-lg leading-relaxed text-secondary">
+                With deep expertise in Austin&apos;s downtown high-rise market,
+                Jacob provides data-driven insight and exclusive resources to
+                help you buy, sell, or lease in the city&apos;s most
+                sought-after buildings.
+              </p>
+              <p className="mt-4 text-lg leading-relaxed text-secondary">
+                From luxury penthouses to modern urban flats, find your perfect
+                downtown Austin condo.
+              </p>
+              <Link
+                href="/downtown-condos"
+                className="mt-8 inline-block border border-primary px-8 py-3 text-sm uppercase tracking-widest text-primary transition-colors hover:bg-primary hover:text-white"
               >
-                <option value="name">Name</option>
-                <option value="floors">Most Floors</option>
-                <option value="yearBuilt">Newest</option>
-              </select>
+                Explore Downtown Condos
+              </Link>
             </div>
           </div>
-
-          {/* Building Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredBuildings.map((building) => (
-              <BuildingCard
-                key={building.slug}
-                name={building.name}
-                slug={building.slug}
-                address={building.address}
-                floors={building.floors}
-                units={building.units}
-                yearBuilt={building.yearBuilt}
-                heroImage={building.heroImage}
-              />
-            ))}
-          </div>
-
-          {filteredBuildings.length === 0 && (
-            <p className="py-12 text-center text-sm text-accent">
-              No buildings match your search.
-            </p>
-          )}
-
-          <p className="mt-8 text-center text-sm text-accent">
-            Showing {filteredBuildings.length} of {buildings.length} buildings
-          </p>
         </div>
       </section>
 
-      {/* Newsletter */}
-      <section className="section-padding bg-white">
+      {/* Newsletter CTA */}
+      <section className="section-padding bg-light">
         <div className="container-narrow max-w-xl text-center">
           <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-            Stay Informed
+            Get Downtown Austin Insights in Your Inbox
           </h2>
           <p className="mt-4 text-lg text-secondary">
-            Get downtown Austin market insights, new listings, and exclusive
-            opportunities delivered to your inbox.
+            A quick 60-second read every other Tuesday with market data, local
+            headlines, and off-market opportunities.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 border border-gray-200 bg-white px-5 py-3 text-sm text-primary outline-none transition-colors focus:border-primary"
-            />
-            <button className="border border-primary bg-primary px-8 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary">
-              Subscribe
-            </button>
+          <div className="mt-8">
+            <NewsletterForm compact />
           </div>
+          <p className="mt-4 text-xs text-accent">
+            <Link href="/insights" className="underline hover:text-primary">
+              Browse past newsletters
+            </Link>
+          </p>
         </div>
       </section>
 
       {/* Contact */}
-      <ContactForm />
+      <section id="contact">
+        <ContactForm />
+      </section>
     </>
   );
 }

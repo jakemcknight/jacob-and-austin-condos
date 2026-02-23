@@ -17,10 +17,10 @@ export default function NotFound() {
           href="/"
           className="border border-primary px-8 py-3 text-sm uppercase tracking-widest text-primary transition-colors hover:bg-primary hover:text-white"
         >
-          All Buildings
+          Home
         </Link>
         <Link
-          href="/for-sale"
+          href="/downtown-condos/for-sale"
           className="border border-primary bg-primary px-8 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary"
         >
           Browse Listings

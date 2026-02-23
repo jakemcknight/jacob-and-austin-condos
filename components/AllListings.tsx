@@ -60,7 +60,7 @@ export default function AllListings() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/downtown-condos/api/mls/listings?status=${statusFilter}`);
+      const response = await fetch(`/api/mls/listings?status=${statusFilter}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch listings: ${response.statusText}`);
       }

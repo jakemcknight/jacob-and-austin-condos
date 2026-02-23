@@ -44,7 +44,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/downtown-condos/api/mls/listings?building=${buildingSlug}`);
+      const response = await fetch(`/api/mls/listings?building=${buildingSlug}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch listings: ${response.statusText}`);

@@ -26,7 +26,7 @@ export default function ClosedListingGallery({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/downtown-condos/api/mls/listing-photos/${listingId}`)
+    fetch(`/api/mls/listing-photos/${listingId}`)
       .then((r) => r.json())
       .then((data) => {
         let photos = data.photos || [];

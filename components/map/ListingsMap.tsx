@@ -270,7 +270,7 @@ export default function ListingsMap({ listings, buildings }: ListingsMapProps) {
                     >
                       {listing.photos && listing.photos.length > 0 ? (
                         <img
-                          src={`/downtown-condos/api/mls/photo/${listing.listingId}/0`}
+                          src={`/api/mls/photo/${listing.listingId}/0`}
                           alt={`Unit ${listing.unitNumber}`}
                           loading="lazy"
                         />

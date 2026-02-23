@@ -10,33 +10,33 @@ export default function Header() {
   return (
     <header className="fixed top-0 z-50 w-full bg-[#E1DDD1]">
       <div className="flex items-center justify-between" style={{ padding: "1.3vw 4vw" }}>
-        <a href="https://www.jacobinaustin.com/" className="flex items-center">
+        <Link href="/" className="flex items-center">
           <Image
-            src="/downtown-condos/logo.webp"
+            src="/logo.webp"
             alt="Jacob Hannusch"
             width={200}
             height={50}
             className="w-auto h-[34px] md:h-[50px]"
             priority
           />
-        </a>
+        </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          <a
-            href="https://www.jacobinaustin.com/newsletter"
+          <Link
+            href="/newsletter"
             className="text-base font-medium text-primary transition-colors hover:opacity-70"
           >
             Join Newsletter
-          </a>
-          <a
-            href="https://www.jacobinaustin.com/insights"
+          </Link>
+          <Link
+            href="/insights"
             className="text-base font-medium text-primary transition-colors hover:opacity-70"
           >
             Insights
-          </a>
+          </Link>
           <Link
-            href="/"
+            href="/downtown-condos"
             className="text-base font-medium text-primary transition-colors hover:opacity-70"
           >
             Condos
@@ -72,22 +72,22 @@ export default function Header() {
       {mobileOpen && (
         <nav className="border-t border-black/10 bg-[#E1DDD1] px-[6vw] py-6 md:hidden">
           <div className="flex flex-col gap-4">
-            <a
-              href="https://www.jacobinaustin.com/newsletter"
+            <Link
+              href="/newsletter"
               onClick={() => setMobileOpen(false)}
               className="text-base font-medium text-primary"
             >
               Join Newsletter
-            </a>
-            <a
-              href="https://www.jacobinaustin.com/insights"
+            </Link>
+            <Link
+              href="/insights"
               onClick={() => setMobileOpen(false)}
               className="text-base font-medium text-primary"
             >
               Insights
-            </a>
+            </Link>
             <Link
-              href="/"
+              href="/downtown-condos"
               onClick={() => setMobileOpen(false)}
               className="text-base font-medium text-primary"
             >

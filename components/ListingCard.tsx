@@ -60,7 +60,7 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
   const statusDisplay = isClosed ? "Sold" : listing.status === "Active Under Contract" ? "Pending" : listing.status;
   const badgeStyle = STATUS_BADGE_STYLES[listing.status] || "bg-gray-500 text-white";
 
-  const photoBaseSrc = `/downtown-condos/api/mls/photo/${listing.listingId}/0`;
+  const photoBaseSrc = `/api/mls/photo/${listing.listingId}/0`;
   const { src: photoSrc, failed: imageError, onError: handleImageError } = useRetryImage(photoBaseSrc);
 
   // Off-market listings from analytics cache have empty photos array — don't show photo proxy
@@ -68,7 +68,7 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
 
   return (
     <Link
-      href={`/listings/${listing.mlsNumber}`}
+      href={`/downtown-condos/listings/${listing.mlsNumber}`}
       className="group block overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
     >
       {/* Photo */}

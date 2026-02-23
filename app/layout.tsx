@@ -6,10 +6,13 @@ import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Downtown Austin Condos | Jacob In Austin",
+  title: {
+    default: "Jacob In Austin | Downtown Austin High-Rise Expert",
+    template: "%s | Jacob In Austin",
+  },
   description:
-    "Explore downtown Austin's premier high-rise condos with Jacob Hannusch — your downtown high-rise expert. Browse buildings, amenities, and available units.",
-  metadataBase: new URL("https://jacobinaustin.com/downtown-condos"),
+    "Jacob Hannusch is your downtown Austin high-rise condo expert. Data-driven insight and exclusive resources for buying, selling, or leasing in Austin's skyline.",
+  metadataBase: new URL("https://jacobinaustin.com"),
   alternates: {
     canonical: "/",
   },
@@ -17,9 +20,9 @@ export const metadata: Metadata = {
     google: "cXQTHnRF6av0_gyKI__2zk0HDw9iAsHDeeLOlERa7P8",
   },
   openGraph: {
-    title: "Downtown Austin Condos | Jacob In Austin",
+    title: "Jacob In Austin | Downtown Austin High-Rise Expert",
     description:
-      "Explore downtown Austin's premier high-rise condos with Jacob Hannusch — your downtown high-rise expert.",
+      "Find your dream condo in downtown Austin. Data-driven insight and exclusive resources for buying, selling, or leasing.",
     type: "website",
     images: [
       {

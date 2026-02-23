@@ -38,7 +38,7 @@ export default function SEODashboard() {
 
   async function checkAuth() {
     try {
-      const res = await fetch("/downtown-condos/api/seo/auth");
+      const res = await fetch("/api/seo/auth");
       const data = await res.json();
       setAuthenticated(data.authenticated === true);
     } catch {
@@ -52,7 +52,7 @@ export default function SEODashboard() {
     setAuthError(null);
 
     try {
-      const res = await fetch("/downtown-condos/api/seo/auth", {
+      const res = await fetch("/api/seo/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -134,7 +134,7 @@ export default function SEODashboard() {
 
     try {
       // Fetch all data from KV via API
-      const res = await fetch("/downtown-condos/api/seo/dashboard-data");
+      const res = await fetch("/api/seo/dashboard-data");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -178,19 +178,19 @@ export default function SEODashboard() {
       <div className="border-b bg-white px-6 py-4">
         <div className="mx-auto flex max-w-6xl flex-wrap gap-3">
           <button
-            onClick={() => triggerEndpoint("/downtown-condos/api/seo/gsc-sync")}
+            onClick={() => triggerEndpoint("/api/seo/gsc-sync")}
             className="rounded border border-gray-300 px-4 py-2 text-xs uppercase tracking-wider text-gray-700 transition hover:bg-gray-100"
           >
             Sync GSC Now
           </button>
           <button
-            onClick={() => triggerEndpoint("/downtown-condos/api/seo/pagespeed-audit")}
+            onClick={() => triggerEndpoint("/api/seo/pagespeed-audit")}
             className="rounded border border-gray-300 px-4 py-2 text-xs uppercase tracking-wider text-gray-700 transition hover:bg-gray-100"
           >
             Run PageSpeed Audit
           </button>
           <button
-            onClick={() => triggerEndpoint("/downtown-condos/api/seo/content-gaps")}
+            onClick={() => triggerEndpoint("/api/seo/content-gaps")}
             className="rounded border border-gray-300 px-4 py-2 text-xs uppercase tracking-wider text-gray-700 transition hover:bg-gray-100"
           >
             Analyze Content Gaps

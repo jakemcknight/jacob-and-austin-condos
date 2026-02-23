@@ -26,9 +26,9 @@ export default function ListingGallery({
   const basePhotoUrl = useCallback(
     (index: number) => {
       if (photoUrls && photoUrls[index]) {
-        return `/downtown-condos/api/mls/photo-proxy?url=${encodeURIComponent(photoUrls[index])}`;
+        return `/api/mls/photo-proxy?url=${encodeURIComponent(photoUrls[index])}`;
       }
-      return `/downtown-condos/api/mls/photo/${listingId}/${index}`;
+      return `/api/mls/photo/${listingId}/${index}`;
     },
     [listingId, photoUrls]
   );

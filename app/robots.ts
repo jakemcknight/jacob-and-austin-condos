@@ -5,35 +5,35 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/downtown-condos/",
+        allow: "/",
         disallow: [
-          "/downtown-condos/api/",
-          "/downtown-condos/data-v2/",
+          "/api/",
+          "/downtown-condos/data/",
           "/downtown-condos/seo-dashboard/",
         ],
       },
       // Explicitly allow AI crawlers for GEO (Generative Engine Optimization)
       {
         userAgent: "GPTBot",
-        allow: "/downtown-condos/",
-        disallow: ["/downtown-condos/api/", "/downtown-condos/seo-dashboard/"],
+        allow: "/",
+        disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
       },
       {
         userAgent: "ChatGPT-User",
-        allow: "/downtown-condos/",
-        disallow: ["/downtown-condos/api/", "/downtown-condos/seo-dashboard/"],
+        allow: "/",
+        disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
       },
       {
         userAgent: "ClaudeBot",
-        allow: "/downtown-condos/",
-        disallow: ["/downtown-condos/api/", "/downtown-condos/seo-dashboard/"],
+        allow: "/",
+        disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
       },
       {
         userAgent: "PerplexityBot",
-        allow: "/downtown-condos/",
-        disallow: ["/downtown-condos/api/", "/downtown-condos/seo-dashboard/"],
+        allow: "/",
+        disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
       },
     ],
-    sitemap: "https://jacobinaustin.com/downtown-condos/sitemap.xml",
+    sitemap: "https://jacobinaustin.com/sitemap.xml",
   };
 }

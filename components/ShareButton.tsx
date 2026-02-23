@@ -38,7 +38,7 @@ export default function ShareButton({
       }
 
       // Fire-and-forget tracking
-      fetch("/downtown-condos/api/shares", {
+      fetch("/api/shares", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,7 +59,7 @@ export default function ShareButton({
           setTimeout(() => setCopied(false), 2000);
           method = "clipboard";
 
-          fetch("/downtown-condos/api/shares", {
+          fetch("/api/shares", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 
 const CURRENT_YEAR = 2026;
@@ -51,16 +52,16 @@ export default function Footer() {
 
           {/* Logo */}
           <div className="mt-3">
-            <a href="https://www.jacobinaustin.com/">
+            <Link href="/">
               <Image
-                src="/downtown-condos/logo-footer.webp"
+                src="/logo-footer.webp"
                 alt="Jacob Hannusch"
                 width={200}
                 height={50}
                 className="w-auto"
                 style={{ height: "50px" }}
               />
-            </a>
+            </Link>
           </div>
 
           {/* Contact Info */}

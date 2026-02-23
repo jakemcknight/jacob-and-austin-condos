@@ -53,7 +53,7 @@ export async function GET(
     }
 
     // 3. Fallback: try our photo proxy (may have Vercel CDN cached copy)
-    const proxyUrl = `https://jacobinaustin.com/downtown-condos/api/mls/photo/${listingKey}/0`;
+    const proxyUrl = `https://jacobinaustin.com/api/mls/photo/${listingKey}/0`;
     const proxyResult = await tryFetch(proxyUrl);
     if (proxyResult) {
       console.log(`[OG Image] Served photo via proxy for ${listingKey}: ${(proxyResult.bytes.byteLength / 1024).toFixed(0)}KB`);
@@ -111,7 +111,7 @@ function fallbackRedirect() {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: "https://jacobinaustin.com/downtown-condos/images/og-default.jpg",
+      Location: "https://jacobinaustin.com/images/og-default.jpg",
       // Short cache so next request tries to fetch the real photo again
       "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60, max-age=60",
     },

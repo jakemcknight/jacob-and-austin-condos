@@ -4,7 +4,7 @@
 
 @font-face {
   font-family: 'Neue Haas Grotesk Display Pro';
-  src: url('/downtown-condos/fonts/neue-haas-grotesk-display-pro.ttf') format('truetype');
+  src: url('/fonts/neue-haas-grotesk-display-pro.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -12,7 +12,7 @@
 
 @font-face {
   font-family: 'NHaasGroteskDSPro-65Md';
-  src: url('/downtown-condos/fonts/nhaasgroteskdspro-65md.ttf') format('truetype');
+  src: url('/fonts/nhaasgroteskdspro-65md.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;

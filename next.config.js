@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/downtown-condos',
   images: {
     unoptimized: true,
   },
@@ -8,12 +7,12 @@ const nextConfig = {
     return [
       {
         source: '/44-east-avenue',
-        destination: '/44-east',
+        destination: '/downtown-condos/44-east',
         permanent: true,
       },
       {
         source: '/44-east-avenue/:path*',
-        destination: '/44-east/:path*',
+        destination: '/downtown-condos/44-east/:path*',
         permanent: true,
       },
     ];
