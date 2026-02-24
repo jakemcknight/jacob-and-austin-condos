@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildings, getBuildingBySlug } from "@/data/buildings";
@@ -128,7 +129,15 @@ export default function BuildingPage({ params }: PageProps) {
         floorPlans={floorPlans[building.slug]}
       />
 
-      <ActiveListings buildingSlug={building.slug} />
+      <Suspense fallback={
+        <section className="section-padding bg-light">
+          <div className="container-narrow">
+            <p className="text-center text-sm uppercase tracking-wider text-secondary">Loading active listings...</p>
+          </div>
+        </section>
+      }>
+        <ActiveListings buildingSlug={building.slug} />
+      </Suspense>
 
       {/* {nearbyPlaces[building.slug] && (
         <NearbyPlaces

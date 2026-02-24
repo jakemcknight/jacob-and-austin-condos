@@ -8,6 +8,7 @@ import ListingGrid from "./ListingGrid";
 import ListingCard from "./ListingCard";
 import type { MLSListingDisplay } from "./ListingCard";
 import dynamic from "next/dynamic";
+import { useAllListingsFilterParams } from "@/lib/use-filter-params";
 
 // Dynamic import for map component (uses Leaflet which needs window)
 const ListingsMap = dynamic(() => import("./map/ListingsMap"), {
@@ -24,11 +25,15 @@ const PAGE_TITLES: Record<string, Record<string, string>> = {
   Sale: {
     active: "Downtown Austin Condos For Sale",
     pending: "Pending Downtown Austin Condos",
+    sold: "Sold Downtown Austin Condos",
+    offmarket: "Off-Market Downtown Austin Condos",
     all: "All Downtown Austin Condos",
   },
   Lease: {
     active: "Downtown Austin Condos For Lease",
     pending: "Pending Downtown Austin Condos",
+    sold: "Closed Downtown Austin Leases",
+    offmarket: "Off-Market Downtown Austin Condos",
     all: "All Downtown Austin Condos",
   },
 };
@@ -42,19 +47,13 @@ export default function AllListings() {
     return "map";
   });
 
-  const [filters, setFilters] = useState<FilterState>({
-    listingTypeFilter: "Sale",
-    statusFilter: "active",
-    bedroomFilters: [],
-    selectedBuildings: [],
-    priceMin: "",
-    priceMax: "",
-    sqftMin: "",
-    sqftMax: "",
-    sortBy: "dom",
-    floorPlanFilters: [],
-    orientationFilters: [],
-  });
+  const { initialFilters, syncToUrl } = useAllListingsFilterParams();
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
+
+  // Sync filters to URL whenever they change
+  useEffect(() => {
+    syncToUrl(filters);
+  }, [filters, syncToUrl]);
 
   const fetchListings = useCallback(async (statusFilter: string) => {
     try {
@@ -113,6 +112,13 @@ export default function AllListings() {
     if (filters.orientationFilters.length > 0) {
       if (!listing.orientation || !filters.orientationFilters.includes(listing.orientation)) return false;
     }
+
+    // DOM filter
+    if (filters.maxDom !== null && listing.daysOnMarket > filters.maxDom) return false;
+
+    // Date range filters
+    if (filters.listedAfter && listing.listDate < filters.listedAfter) return false;
+    if (filters.listedBefore && listing.listDate > filters.listedBefore) return false;
 
     return true;
   });

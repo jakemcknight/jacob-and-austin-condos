@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AllListings from "@/components/AllListings";
 import type { Metadata } from "next";
 
@@ -57,7 +58,15 @@ export default function ForSalePage() {
       </section>
 
       {/* All Listings Component */}
-      <AllListings />
+      <Suspense fallback={
+        <section className="section-padding bg-light">
+          <div className="container-narrow">
+            <p className="text-center text-sm uppercase tracking-wider text-secondary">Loading listings...</p>
+          </div>
+        </section>
+      }>
+        <AllListings />
+      </Suspense>
 
       {/* Footer CTA */}
       <section className="border-t border-gray-100 bg-white px-6 py-12 text-center">

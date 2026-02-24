@@ -482,9 +482,10 @@ export class MLSGridClient {
    * Used on-demand when viewing closed/historical listing detail pages.
    * Returns an array of photo URLs sorted by display order, or empty array if none.
    */
-  async fetchListingPhotos(listingId: string): Promise<string[]> {
+  async fetchListingPhotos(listingId: string, limit: number = 25): Promise<string[]> {
     try {
-      const url = `${this.baseUrl}/Media?$filter=ResourceRecordKey eq '${listingId}'&$orderby=Order asc&$top=25&$select=MediaURL`;
+      const top = Math.min(Math.max(limit, 1), 25);
+      const url = `${this.baseUrl}/Media?$filter=ResourceRecordKey eq '${listingId}'&$orderby=Order asc&$top=${top}&$select=MediaURL`;
       const response = await this.makeRequest(url);
       if (response.value && Array.isArray(response.value)) {
         return response.value

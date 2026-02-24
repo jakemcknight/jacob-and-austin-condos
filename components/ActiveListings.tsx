@@ -1,55 +1,86 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { buildings } from "@/data/buildings";
 import { formatOrientation } from "@/lib/format-dom";
 import FilterDropdown from "./filters/FilterDropdown";
 import ListingCard from "./ListingCard";
 import type { MLSListingDisplay as MLSListing } from "./ListingCard";
+import { useBuildingFilterParams } from "@/lib/use-filter-params";
+import type { StatusFilter } from "./filters/FilterBar";
 
 interface ActiveListingsProps {
   buildingSlug: string;
 }
 
 type SortOption = "price" | "priceSf" | "dom" | "date";
-type StatusFilter = "all" | "Active" | "Pending";
+
+const sortLabels: Record<SortOption, string> = {
+  dom: "Days on Market",
+  price: "Price (High to Low)",
+  priceSf: "$/SF (High to Low)",
+  date: "Newest First",
+};
 
 export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const [listings, setListings] = useState<MLSListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("dom");
 
   // Get building name for contact link
   const building = buildings.find(b => b.slug === buildingSlug);
   const buildingName = building?.name || "";
 
-  // Filter state
-  const [listingTypeFilter, setListingTypeFilter] = useState<"Sale" | "Lease">("Sale");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [bedroomFilters, setBedroomFilters] = useState<number[]>([]);
-  const [priceMin, setPriceMin] = useState<string>("");
-  const [priceMax, setPriceMax] = useState<string>("");
-  const [sqftMin, setSqftMin] = useState<string>("");
-  const [sqftMax, setSqftMax] = useState<string>("");
-  const [floorPlanFilters, setFloorPlanFilters] = useState<string[]>([]);
-  const [orientationFilters, setOrientationFilters] = useState<string[]>([]);
+  // URL sync
+  const { initialFilters, syncToUrl } = useBuildingFilterParams();
 
+  // Filter state — initialized from URL params
+  const [listingTypeFilter, setListingTypeFilter] = useState<"Sale" | "Lease">(initialFilters.listingTypeFilter);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialFilters.statusFilter);
+  const [bedroomFilters, setBedroomFilters] = useState<number[]>(initialFilters.bedroomFilters);
+  const [priceMin, setPriceMin] = useState<string>(initialFilters.priceMin);
+  const [priceMax, setPriceMax] = useState<string>(initialFilters.priceMax);
+  const [sqftMin, setSqftMin] = useState<string>(initialFilters.sqftMin);
+  const [sqftMax, setSqftMax] = useState<string>(initialFilters.sqftMax);
+  const [sortBy, setSortBy] = useState<SortOption>(initialFilters.sortBy);
+  const [floorPlanFilters, setFloorPlanFilters] = useState<string[]>(initialFilters.floorPlanFilters);
+  const [orientationFilters, setOrientationFilters] = useState<string[]>(initialFilters.orientationFilters);
+  const [maxDom, setMaxDom] = useState<number | null>(initialFilters.maxDom);
+  const [listedAfter, setListedAfter] = useState<string | null>(initialFilters.listedAfter);
+  const [listedBefore, setListedBefore] = useState<string | null>(initialFilters.listedBefore);
+
+  // Sync all filter state to URL
   useEffect(() => {
-    fetchListings();
-  }, [buildingSlug]);
+    syncToUrl({
+      listingTypeFilter,
+      statusFilter,
+      bedroomFilters,
+      selectedBuildings: [],
+      priceMin,
+      priceMax,
+      sqftMin,
+      sqftMax,
+      sortBy,
+      floorPlanFilters,
+      orientationFilters,
+      maxDom,
+      listedAfter,
+      listedBefore,
+    });
+  }, [
+    listingTypeFilter, statusFilter, bedroomFilters, priceMin, priceMax,
+    sqftMin, sqftMax, sortBy, floorPlanFilters, orientationFilters,
+    maxDom, listedAfter, listedBefore, syncToUrl,
+  ]);
 
-  async function fetchListings() {
+  const fetchListings = useCallback(async (status: string) => {
     try {
       setLoading(true);
       setError(null);
-
-      const response = await fetch(`/api/mls/listings?building=${buildingSlug}`);
-
+      const response = await fetch(`/api/mls/listings?building=${buildingSlug}&status=${status}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch listings: ${response.statusText}`);
       }
-
       const data = await response.json();
       setListings(data);
     } catch (err) {
@@ -58,7 +89,12 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [buildingSlug]);
+
+  // Fetch on mount and when statusFilter changes
+  useEffect(() => {
+    fetchListings(statusFilter);
+  }, [statusFilter, fetchListings]);
 
   // Toggle helpers
   const toggleBedroomFilter = (bedrooms: number) => {
@@ -80,7 +116,7 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   };
 
   const clearFilters = () => {
-    setStatusFilter("all");
+    setStatusFilter("active");
     setBedroomFilters([]);
     setPriceMin("");
     setPriceMax("");
@@ -88,12 +124,14 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     setSqftMax("");
     setFloorPlanFilters([]);
     setOrientationFilters([]);
+    setMaxDom(null);
+    setListedAfter(null);
+    setListedBefore(null);
   };
 
   // Filter listings
   const filteredListings = listings.filter(listing => {
     if (listing.listingType !== listingTypeFilter) return false;
-    if (statusFilter !== "all" && listing.status !== statusFilter) return false;
 
     if (bedroomFilters.length > 0) {
       const beds = listing.bedroomsTotal;
@@ -113,6 +151,13 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
       if (!listing.orientation || !orientationFilters.includes(listing.orientation)) return false;
     }
 
+    // DOM filter
+    if (maxDom !== null && listing.daysOnMarket > maxDom) return false;
+
+    // Date range filters
+    if (listedAfter && listing.listDate < listedAfter) return false;
+    if (listedBefore && listing.listDate > listedBefore) return false;
+
     return true;
   });
 
@@ -124,8 +169,6 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   const availableOrientations = Array.from(
     new Set(typeFilteredListings.map(l => l.orientation).filter((o): o is string => !!o))
   ).sort();
-  const hasActiveListings = typeFilteredListings.some(l => l.status === "Active");
-  const hasPendingListings = typeFilteredListings.some(l => l.status === "Pending");
 
   // Sort listings
   const sortedListings = [...filteredListings].sort((a, b) => {
@@ -159,30 +202,58 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
   }
 
   // Active filter labels
-  const statusLabel = statusFilter === "all" ? undefined : statusFilter;
+  const statusLabels: Record<StatusFilter, string> = {
+    active: "Active",
+    pending: "Pending",
+    sold: "Sold",
+    offmarket: "Off-Market",
+    all: "All",
+  };
+  const statusLabel = statusFilter !== "active" ? statusLabels[statusFilter] : undefined;
+
   const bedsLabel = bedroomFilters.length > 0
     ? bedroomFilters.map(b => b === 0 ? "Studio" : b === 3 ? "3+" : `${b}`).join(", ") + " BR"
     : undefined;
   const sqftLabel = sqftMin || sqftMax
-    ? `${sqftMin || "0"}–${sqftMax || "Any"} SF`
+    ? `${sqftMin || "0"}\u2013${sqftMax || "Any"} SF`
     : undefined;
   const priceLabel = priceMin || priceMax
-    ? `$${formatCompact(priceMin)}–${formatCompact(priceMax)}`
+    ? `$${formatCompact(priceMin)}\u2013${formatCompact(priceMax)}`
     : undefined;
   const detailsActive = bedroomFilters.length > 0 || !!sqftMin || !!sqftMax;
   const detailsLabel = detailsActive
     ? [bedsLabel, sqftLabel].filter(Boolean).join(", ")
     : undefined;
 
+  // Listed filter label
+  const listedActive = maxDom !== null || listedAfter !== null || listedBefore !== null;
+  let listedLabel: string | undefined;
+  if (maxDom !== null && !listedAfter && !listedBefore) {
+    listedLabel = `\u2264${maxDom} DOM`;
+  } else if (listedAfter && listedBefore) {
+    const af = new Date(listedAfter + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const bf = new Date(listedBefore + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `${af}\u2013${bf}`;
+  } else if (listedAfter) {
+    const af = new Date(listedAfter + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `After ${af}`;
+  } else if (listedBefore) {
+    const bf = new Date(listedBefore + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `Before ${bf}`;
+  } else if (maxDom !== null) {
+    listedLabel = `\u2264${maxDom} DOM`;
+  }
+
   const activeFilterCount =
-    (statusFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "active" ? 1 : 0) +
     bedroomFilters.length +
     floorPlanFilters.length +
     orientationFilters.length +
     (priceMin ? 1 : 0) +
     (priceMax ? 1 : 0) +
     (sqftMin ? 1 : 0) +
-    (sqftMax ? 1 : 0);
+    (sqftMax ? 1 : 0) +
+    (listedActive ? 1 : 0);
 
   return (
     <section id="active-listings" className="section-padding bg-light">
@@ -233,30 +304,93 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
             {/* Dropdown Filter Bar */}
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {/* Status */}
-              {(hasActiveListings && hasPendingListings) && (
-                <FilterDropdown
-                  label="Status"
-                  activeLabel={statusLabel}
-                  isActive={statusFilter !== "all"}
-                  width="w-48"
-                >
+              <FilterDropdown
+                label="Status"
+                activeLabel={statusLabel}
+                isActive={statusFilter !== "active"}
+                width="w-64"
+              >
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Listing Status</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {(["all", "Active", "Pending"] as StatusFilter[]).map(s => (
+                    {([
+                      { value: "active" as StatusFilter, label: "Active" },
+                      { value: "pending" as StatusFilter, label: "Pending" },
+                      { value: "sold" as StatusFilter, label: "Sold" },
+                      { value: "offmarket" as StatusFilter, label: "Off-Market" },
+                      { value: "all" as StatusFilter, label: "All" },
+                    ]).map(({ value, label }) => (
                       <button
-                        key={s}
-                        onClick={() => setStatusFilter(s)}
-                        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                          statusFilter === s
+                        key={value}
+                        onClick={() => setStatusFilter(value)}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                          statusFilter === value
                             ? "bg-accent text-white"
                             : "bg-gray-100 text-secondary hover:bg-gray-200"
                         }`}
                       >
-                        {s === "all" ? "All" : s}
+                        {label}
                       </button>
                     ))}
                   </div>
-                </FilterDropdown>
-              )}
+                </div>
+              </FilterDropdown>
+
+              {/* Listed (DOM + Date Range) */}
+              <FilterDropdown
+                label="Listed"
+                activeLabel={listedLabel}
+                isActive={listedActive}
+                width="w-72"
+              >
+                <div className="space-y-4">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Max Days on Market</p>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 14"
+                      value={maxDom ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMaxDom(val ? parseInt(val, 10) || null : null);
+                      }}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Date Range</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">After</label>
+                        <input
+                          type="date"
+                          value={listedAfter ?? ""}
+                          onChange={(e) => setListedAfter(e.target.value || null)}
+                          className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">Before</label>
+                        <input
+                          type="date"
+                          value={listedBefore ?? ""}
+                          onChange={(e) => setListedBefore(e.target.value || null)}
+                          className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {listedActive && (
+                    <button
+                      onClick={() => { setMaxDom(null); setListedAfter(null); setListedBefore(null); }}
+                      className="text-xs font-medium text-accent hover:text-primary"
+                    >
+                      Clear listed
+                    </button>
+                  )}
+                </div>
+              </FilterDropdown>
 
               {/* Details (Beds + Sqft) */}
               <FilterDropdown
@@ -397,9 +531,22 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
                 </FilterDropdown>
               )}
 
-              {/* Sort */}
+              {/* Clear All */}
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-medium text-accent hover:text-primary"
+                >
+                  Clear ({activeFilterCount})
+                </button>
+              )}
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Sort — right-aligned */}
               <FilterDropdown
-                label="Sort"
+                label={sortBy !== "dom" ? sortLabels[sortBy] : "Sort"}
                 activeLabel={sortBy === "dom" ? undefined : sortLabels[sortBy]}
                 isActive={sortBy !== "dom"}
                 width="w-52"
@@ -419,16 +566,6 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
                   </button>
                 ))}
               </FilterDropdown>
-
-              {/* Clear All */}
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs font-medium text-accent hover:text-primary"
-                >
-                  Clear ({activeFilterCount})
-                </button>
-              )}
             </div>
 
             {/* Results count */}
@@ -454,13 +591,6 @@ export default function ActiveListings({ buildingSlug }: ActiveListingsProps) {
     </section>
   );
 }
-
-const sortLabels: Record<SortOption, string> = {
-  dom: "Days on Market",
-  price: "Price (High to Low)",
-  priceSf: "$/SF (High to Low)",
-  date: "Newest First",
-};
 
 function formatCompact(val: string): string {
   if (!val) return "Any";

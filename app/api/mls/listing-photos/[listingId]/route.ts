@@ -18,8 +18,9 @@ export async function GET(
   }
 
   try {
+    const limit = parseInt(request.nextUrl.searchParams.get("limit") || "25", 10);
     const mlsClient = new MLSGridClient();
-    const photos = await mlsClient.fetchListingPhotos(listingId);
+    const photos = await mlsClient.fetchListingPhotos(listingId, limit);
 
     return NextResponse.json(
       { photos },

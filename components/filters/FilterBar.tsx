@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import FilterDropdown from "./FilterDropdown";
 import { buildings } from "@/data/buildings";
 import { formatOrientation } from "@/lib/format-dom";
 
 type SortOption = "price" | "priceSf" | "dom" | "date";
 
-export type StatusFilter = "active" | "pending" | "all";
+export type StatusFilter = "active" | "pending" | "sold" | "offmarket" | "all";
 
 export interface FilterState {
   listingTypeFilter: "Sale" | "Lease";
@@ -21,6 +21,9 @@ export interface FilterState {
   sortBy: SortOption;
   floorPlanFilters: string[];
   orientationFilters: string[];
+  maxDom: number | null;
+  listedAfter: string | null;
+  listedBefore: string | null;
 }
 
 interface FilterBarProps {
@@ -42,6 +45,13 @@ function formatPriceShort(val: string): string {
   if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
   return `$${n}`;
 }
+
+const sortLabels: Record<SortOption, string> = {
+  dom: "Days on Market",
+  date: "Newest First",
+  price: "Price (High to Low)",
+  priceSf: "$/SF (High to Low)",
+};
 
 const sortedBuildings = [...buildings].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -90,6 +100,9 @@ export default function FilterBar({
     update({ orientationFilters: next });
   };
 
+  // Listed filter active state
+  const listedActive = filters.maxDom !== null || filters.listedAfter !== null || filters.listedBefore !== null;
+
   // Active filter counts
   const activeFilterCount =
     (filters.statusFilter !== "active" ? 1 : 0) +
@@ -100,9 +113,10 @@ export default function FilterBar({
     (filters.priceMin ? 1 : 0) +
     (filters.priceMax ? 1 : 0) +
     (filters.sqftMin ? 1 : 0) +
-    (filters.sqftMax ? 1 : 0);
+    (filters.sqftMax ? 1 : 0) +
+    (listedActive ? 1 : 0);
 
-  const moreCount =
+  const sqftCount =
     (filters.sqftMin ? 1 : 0) +
     (filters.sqftMax ? 1 : 0);
 
@@ -112,13 +126,33 @@ export default function FilterBar({
   const statusLabels: Record<StatusFilter, string> = {
     active: "Active",
     pending: "Pending",
+    sold: "Sold",
+    offmarket: "Off-Market",
     all: "All",
   };
   const statusLabel = filters.statusFilter !== "active" ? statusLabels[filters.statusFilter] : undefined;
 
+  // Listed label
+  let listedLabel: string | undefined;
+  if (filters.maxDom !== null && !filters.listedAfter && !filters.listedBefore) {
+    listedLabel = `\u2264${filters.maxDom} DOM`;
+  } else if (filters.listedAfter && filters.listedBefore) {
+    const af = new Date(filters.listedAfter + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const bf = new Date(filters.listedBefore + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `${af}\u2013${bf}`;
+  } else if (filters.listedAfter) {
+    const af = new Date(filters.listedAfter + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `After ${af}`;
+  } else if (filters.listedBefore) {
+    const bf = new Date(filters.listedBefore + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    listedLabel = `Before ${bf}`;
+  } else if (filters.maxDom !== null) {
+    listedLabel = `\u2264${filters.maxDom} DOM`;
+  }
+
   let priceLabel: string | undefined;
   if (filters.priceMin && filters.priceMax) {
-    priceLabel = `${formatPriceShort(filters.priceMin)}–${formatPriceShort(filters.priceMax)}`;
+    priceLabel = `${formatPriceShort(filters.priceMin)}\u2013${formatPriceShort(filters.priceMax)}`;
   } else if (filters.priceMin) {
     priceLabel = `${formatPriceShort(filters.priceMin)}+`;
   } else if (filters.priceMax) {
@@ -197,7 +231,7 @@ export default function FilterBar({
             label="Status"
             activeLabel={statusLabel}
             isActive={filters.statusFilter !== "active"}
-            width="w-56"
+            width="w-64"
           >
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Listing Status</p>
@@ -205,6 +239,8 @@ export default function FilterBar({
                 {([
                   { value: "active" as StatusFilter, label: "Active" },
                   { value: "pending" as StatusFilter, label: "Pending" },
+                  { value: "sold" as StatusFilter, label: "Sold" },
+                  { value: "offmarket" as StatusFilter, label: "Off-Market" },
                   { value: "all" as StatusFilter, label: "All" },
                 ]).map(({ value, label }) => (
                   <button
@@ -220,6 +256,62 @@ export default function FilterBar({
                   </button>
                 ))}
               </div>
+            </div>
+          </FilterDropdown>
+
+          {/* Listed (DOM + Date Range) */}
+          <FilterDropdown
+            label="Listed"
+            activeLabel={listedLabel}
+            isActive={listedActive}
+            width="w-72"
+          >
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Max Days on Market</p>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 14"
+                  value={filters.maxDom ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    update({ maxDom: val ? parseInt(val, 10) || null : null });
+                  }}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Date Range</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">After</label>
+                    <input
+                      type="date"
+                      value={filters.listedAfter ?? ""}
+                      onChange={(e) => update({ listedAfter: e.target.value || null })}
+                      className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] uppercase tracking-wide text-gray-500">Before</label>
+                    <input
+                      type="date"
+                      value={filters.listedBefore ?? ""}
+                      onChange={(e) => update({ listedBefore: e.target.value || null })}
+                      className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+              {listedActive && (
+                <button
+                  onClick={() => update({ maxDom: null, listedAfter: null, listedBefore: null })}
+                  className="text-xs font-medium text-accent hover:text-primary"
+                >
+                  Clear listed
+                </button>
+              )}
             </div>
           </FilterDropdown>
 
@@ -242,7 +334,7 @@ export default function FilterBar({
                     className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
                   />
                 </div>
-                <span className="text-gray-400">–</span>
+                <span className="text-gray-400">&ndash;</span>
                 <div className="flex-1">
                   <input
                     type="number"
@@ -441,47 +533,32 @@ export default function FilterBar({
             </FilterDropdown>
           )}
 
-          {/* More (Sqft + Sort) */}
+          {/* Sqft */}
           <FilterDropdown
-            label={moreCount > 0 ? `More +${moreCount}` : "More"}
-            isActive={moreCount > 0}
-            width="w-72"
+            label={sqftCount > 0 ? `Sqft +${sqftCount}` : "Sqft"}
+            isActive={sqftCount > 0}
+            width="w-64"
           >
-            <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Square Footage</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.sqftMin}
-                    onChange={(e) => update({ sqftMin: e.target.value })}
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
-                  />
-                  <span className="text-gray-400">–</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.sqftMax}
-                    onChange={(e) => update({ sqftMax: e.target.value })}
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Sort By</p>
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => update({ sortBy: e.target.value as SortOption })}
+            <div className="space-y-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Square Footage</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.sqftMin}
+                  onChange={(e) => update({ sqftMin: e.target.value })}
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
-                >
-                  <option value="dom">Days on Market</option>
-                  <option value="date">List Date</option>
-                  <option value="price">Price (High to Low)</option>
-                  <option value="priceSf">$/SF (High to Low)</option>
-                </select>
+                />
+                <span className="text-gray-400">&ndash;</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.sqftMax}
+                  onChange={(e) => update({ sqftMax: e.target.value })}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                />
               </div>
-              {moreCount > 0 && (
+              {sqftCount > 0 && (
                 <button
                   onClick={() => update({ sqftMin: "", sqftMax: "" })}
                   className="text-xs font-medium text-accent hover:text-primary"
@@ -504,8 +581,12 @@ export default function FilterBar({
                 priceMax: "",
                 sqftMin: "",
                 sqftMax: "",
+                sortBy: "dom",
                 floorPlanFilters: [],
                 orientationFilters: [],
+                maxDom: null,
+                listedAfter: null,
+                listedBefore: null,
               })}
               className="whitespace-nowrap text-sm font-medium text-accent hover:text-primary"
             >
@@ -516,6 +597,28 @@ export default function FilterBar({
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Sort — right-aligned */}
+        <FilterDropdown
+          label={filters.sortBy !== "dom" ? sortLabels[filters.sortBy] : "Sort"}
+          isActive={filters.sortBy !== "dom"}
+          width="w-52"
+          align="right"
+        >
+          {(["dom", "date", "price", "priceSf"] as SortOption[]).map(opt => (
+            <button
+              key={opt}
+              onClick={() => update({ sortBy: opt })}
+              className={`block w-full rounded px-3 py-1.5 text-left text-sm font-medium transition-colors ${
+                filters.sortBy === opt
+                  ? "bg-accent/10 text-accent"
+                  : "text-secondary hover:bg-gray-100"
+              }`}
+            >
+              {sortLabels[opt]}
+            </button>
+          ))}
+        </FilterDropdown>
 
         {/* Results count */}
         <span className="whitespace-nowrap text-xs text-secondary sm:text-sm">

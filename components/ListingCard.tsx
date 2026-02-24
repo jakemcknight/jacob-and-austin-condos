@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDaysOnMarket } from "@/lib/format-dom";
 import { useRetryImage } from "@/lib/use-retry-image";
+import LazyListingPhoto from "@/components/LazyListingPhoto";
 
 export interface MLSListingDisplay {
   listingId: string;
@@ -63,8 +64,23 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
   const photoBaseSrc = `/api/mls/photo/${listing.listingId}/0`;
   const { src: photoSrc, failed: imageError, onError: handleImageError } = useRetryImage(photoBaseSrc);
 
-  // Off-market listings from analytics cache have empty photos array — don't show photo proxy
-  const hasPhoto = listing.photos && listing.photos.length > 0 && !imageError && !isOffMarket;
+  const hasCachedPhoto = listing.photos && listing.photos.length > 0 && !imageError;
+
+  // Overlay badges rendered on top of any photo state
+  const photoBadges = (
+    <>
+      {showBuilding && listing.buildingName && (
+        <div className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-white">
+          {listing.buildingName}
+        </div>
+      )}
+      {listing.listingType === "Lease" && (
+        <div className="absolute right-2 top-2 rounded-full bg-denim px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
+          For Lease
+        </div>
+      )}
+    </>
+  );
 
   return (
     <Link
@@ -72,7 +88,7 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
       className="group block overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
     >
       {/* Photo */}
-      {hasPhoto ? (
+      {hasCachedPhoto ? (
         <div className={`relative w-full overflow-hidden bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
           <Image
             src={photoSrc}
@@ -81,28 +97,20 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             onError={handleImageError}
           />
-          {/* Building Badge - Top Left */}
-          {showBuilding && listing.buildingName && (
-            <div className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-white">
-              {listing.buildingName}
-            </div>
-          )}
-          {/* Lease Badge - Top Right */}
-          {listing.listingType === "Lease" && (
-            <div className="absolute right-2 top-2 rounded-full bg-denim px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
-              For Lease
-            </div>
-          )}
+          {photoBadges}
         </div>
+      ) : isOffMarket ? (
+        <LazyListingPhoto
+          listingId={listing.listingId}
+          alt={`Unit ${listing.unitNumber}`}
+          compact={compact}
+        >
+          {photoBadges}
+        </LazyListingPhoto>
       ) : (
         <div className={`relative flex items-center justify-center bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
           <p className="text-sm uppercase tracking-wider text-gray-400">No Photo Available</p>
-          {/* Building Badge - Top Left (no-photo state) */}
-          {showBuilding && listing.buildingName && (
-            <div className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-white">
-              {listing.buildingName}
-            </div>
-          )}
+          {photoBadges}
         </div>
       )}
 
