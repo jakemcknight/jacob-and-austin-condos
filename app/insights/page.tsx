@@ -50,14 +50,14 @@ export default function InsightsPage() {
             Insights
           </h1>
           <p className="mt-4 text-lg text-secondary">
-            Downtown Austin market insights, newsletters, and analysis —
+            Past newsletters on downtown Austin market insights and analysis —
             delivered every other Tuesday.
           </p>
         </div>
       </section>
 
       {/* Newsletter CTA */}
-      <section className="bg-light px-6 py-8 md:px-12">
+      <section className="bg-white px-6 py-8 md:px-12">
         <div className="mx-auto max-w-xl text-center">
           <p className="text-sm font-medium text-secondary">
             Get insights in your inbox every other Tuesday
@@ -69,7 +69,7 @@ export default function InsightsPage() {
       </section>
 
       {/* Posts Grid */}
-      <section className="section-padding bg-light">
+      <section className="section-padding bg-white">
         <div className="container-narrow">
           {posts.length === 0 ? (
             <p className="py-12 text-center text-secondary">

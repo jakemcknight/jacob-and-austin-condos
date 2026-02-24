@@ -172,10 +172,17 @@ export default function InsightPage({ params }: PageProps) {
       </section>
 
       {/* Article Content */}
-      <section className="px-6 pb-16 md:px-12 lg:px-20">
-        <article className="container-narrow max-w-3xl">
-          <MDXRemote source={post.content} components={mdxComponents} />
-        </article>
+      <section className="bg-white px-6 pb-16 md:px-12 lg:px-20">
+        {post.format === "html" ? (
+          <article
+            className="newsletter-content"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        ) : (
+          <article className="container-narrow max-w-3xl">
+            <MDXRemote source={post.content} components={mdxComponents} />
+          </article>
+        )}
       </section>
 
       {/* Newsletter CTA */}
@@ -195,7 +202,7 @@ export default function InsightPage({ params }: PageProps) {
       </section>
 
       {/* Back to Insights */}
-      <section className="border-t border-gray-100 bg-light px-6 py-8 text-center">
+      <section className="border-t border-gray-100 bg-white px-6 py-8 text-center">
         <Link
           href="/insights"
           className="text-sm uppercase tracking-wider text-accent transition-colors hover:text-primary"
