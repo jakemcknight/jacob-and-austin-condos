@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import ContactForm from "@/components/ContactForm";
-import NewsletterForm from "@/components/NewsletterForm";
 
 export const metadata: Metadata = {
   title: "Jacob In Austin | Downtown Austin High-Rise Expert",
@@ -50,99 +49,72 @@ export default function LandingPage() {
       />
 
       {/* Hero */}
-      <section className="relative flex min-h-[70vh] items-center justify-center bg-primary">
-        <div className="absolute inset-0 bg-gradient-to-br from-black to-gray-900" />
-        <div className="relative z-10 px-6 text-center">
-          <p className="text-xs uppercase tracking-[0.4em] text-gray-400">
-            Jacob In Austin
-          </p>
-          <h1 className="mt-4 text-4xl font-bold uppercase tracking-widest text-white md:text-5xl lg:text-6xl">
-            High-Rise Living,
-            <br />
-            Made Simple
+      <section className="px-6 pb-12 pt-16 md:px-12 md:pb-16 md:pt-20 lg:px-20">
+        <div className="mx-auto max-w-6xl text-center">
+          <h1 className="text-3xl font-bold uppercase tracking-wider text-primary sm:text-4xl md:text-5xl lg:text-6xl">
+            High-Rise Living, Made Simple
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-gray-300">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-secondary">
             Find your dream condo in downtown Austin. Data-driven insight and
             exclusive resources ensure that every buy, sell, or lease across the
             city&apos;s skyline is guided with purpose.
           </p>
           <a
             href="#contact"
-            className="mt-8 inline-block border border-white px-8 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary"
+            className="mt-8 inline-block bg-primary px-8 py-3 text-sm uppercase tracking-widest text-white transition-opacity hover:opacity-80"
           >
             Get in Touch
           </a>
         </div>
       </section>
 
-      {/* About */}
-      <section className="section-padding bg-white">
-        <div className="container-narrow">
-          <div className="mx-auto grid max-w-4xl items-center gap-12 md:grid-cols-2">
-            {/* Headshot */}
-            <div className="flex justify-center">
-              <div className="relative h-[350px] w-[280px] overflow-hidden md:h-[420px] md:w-[340px]">
-                <Image
-                  src="/images/jacob-headshot.jpg"
-                  alt="Jacob Hannusch — Downtown Austin high-rise condo expert"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 280px, 340px"
-                  priority
-                />
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-                Your Downtown High-Rise Expert
-              </h2>
-              <p className="mt-6 text-lg leading-relaxed text-secondary">
-                With deep expertise in Austin&apos;s downtown high-rise market,
-                Jacob provides data-driven insight and exclusive resources to
-                help you buy, sell, or lease in the city&apos;s most
-                sought-after buildings.
-              </p>
-              <p className="mt-4 text-lg leading-relaxed text-secondary">
-                From luxury penthouses to modern urban flats, find your perfect
-                downtown Austin condo.
-              </p>
-              <Link
-                href="/downtown-condos"
-                className="mt-8 inline-block border border-primary px-8 py-3 text-sm uppercase tracking-widest text-primary transition-colors hover:bg-primary hover:text-white"
-              >
-                Explore Downtown Condos
-              </Link>
-            </div>
+      {/* Image Gallery */}
+      <section className="px-6 pb-16 md:px-12 lg:px-20">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="relative aspect-[3/4]">
+            <Image
+              src="/images/jacob-headshot.jpg"
+              alt="Jacob Hannusch — Downtown Austin high-rise condo expert"
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+            />
+          </div>
+          <div className="relative aspect-[3/4] overflow-hidden">
+            <Image
+              src="/images/buildings/the-independent.jpg"
+              alt="Downtown Austin high-rise living"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
           </div>
         </div>
       </section>
 
       {/* Newsletter CTA */}
-      <section className="section-padding bg-light">
-        <div className="container-narrow max-w-xl text-center">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+      <section className="section-padding bg-white">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold text-primary md:text-3xl">
             Get Downtown Austin Insights in Your Inbox
           </h2>
-          <p className="mt-4 text-lg text-secondary">
+          <p className="mt-4 text-lg text-secondary/70">
             A quick 60-second read every other Tuesday with market data, local
             headlines, and off-market opportunities.
           </p>
-          <div className="mt-8">
-            <NewsletterForm compact />
-          </div>
-          <p className="mt-4 text-xs text-accent">
-            <Link href="/insights" className="underline hover:text-primary">
-              Browse past newsletters
-            </Link>
-          </p>
+          <Link
+            href="/newsletter"
+            className="mt-8 inline-block bg-denim px-8 py-3 text-sm uppercase tracking-widest text-white transition-opacity hover:opacity-80"
+          >
+            Subscribe
+          </Link>
         </div>
       </section>
 
       {/* Contact */}
       <section id="contact">
-        <ContactForm />
+        <ContactForm variant="landing" />
       </section>
     </>
   );

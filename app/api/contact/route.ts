@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, interest, message, buildingName } = body;
+    const { name, email, phone, interest, interests, message, buildingName, referralSource } = body;
 
     // Validate required fields
     if (!name || !email) {
@@ -18,14 +18,18 @@ export async function POST(request: NextRequest) {
       ? `Inquiry about ${buildingName}`
       : "Downtown Austin Condos Inquiry";
 
+    const interestDisplay = Array.isArray(interests) && interests.length > 0
+      ? interests.join(", ")
+      : interest || "Not specified";
+
     const emailBody = `
 New inquiry from Jacob In Austin website:
 
 Name: ${name}
 Email: ${email}
 Phone: ${phone || "Not provided"}
-Interest: ${interest}
-Building: ${buildingName || "General inquiry"}
+Interest: ${interestDisplay}
+Building: ${buildingName || "General inquiry"}${referralSource ? `\nHow they heard about us: ${referralSource}` : ""}
 
 Message:
 ${message || "No message provided"}
