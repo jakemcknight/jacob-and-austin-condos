@@ -71,15 +71,17 @@ export default function LandingPage() {
       {/* Image Gallery */}
       <section className="px-6 pb-16 md:px-12 lg:px-20">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="relative aspect-[3/4]">
-            <Image
-              src="/images/jacob-headshot.jpg"
-              alt="Jacob Hannusch — Downtown Austin high-rise condo expert"
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
+          <div className="aspect-[3/4] overflow-hidden bg-[#E1DDD1] p-4">
+            <div className="relative h-full w-full">
+              <Image
+                src="/images/jacob-headshot.jpg"
+                alt="Jacob Hannusch — Downtown Austin high-rise condo expert"
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            </div>
           </div>
           <div className="relative aspect-[3/4] overflow-hidden">
             <Image

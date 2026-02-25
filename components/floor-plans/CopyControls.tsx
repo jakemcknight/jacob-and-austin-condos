@@ -100,7 +100,7 @@ function buildHtml(
       `<h3 style="color:#191919;margin:0 0 8px;font-size:16px;">${building.toUpperCase()}</h3>`
     );
     parts.push(
-      `<table style="border-collapse:collapse;width:100%;font-size:13px;">`
+      `<table style="border-collapse:collapse;font-size:13px;">`
     );
 
     // Header — moontower background
@@ -114,7 +114,7 @@ function buildHtml(
     if (columns.bathrooms) parts.push(th("Bath", "center"));
     if (columns.hasStudy) parts.push(th("Study", "center"));
     if (columns.sqft) parts.push(th("SF", "right"));
-    if (columns.orientation) parts.push(th("Orientation"));
+    if (columns.orientation) parts.push(th("Orientation", "center"));
     if (columns.unitNumbers) parts.push(th("Unit Numbers"));
     if (columns.quantity) parts.push(th("Qty", "center"));
     parts.push(`</tr></thead>`);
@@ -139,7 +139,7 @@ function buildHtml(
       if (columns.bathrooms) parts.push(td(String(p.bathrooms), "center"));
       if (columns.hasStudy) parts.push(td(p.hasStudy ? "Yes" : "", "center"));
       if (columns.sqft) parts.push(td(formatSqft(p.sqft), "right"));
-      if (columns.orientation) parts.push(td(p.orientation));
+      if (columns.orientation) parts.push(td(p.orientation, "center"));
       if (columns.unitNumbers) parts.push(td(p.unitNumbers));
       if (columns.quantity) parts.push(td(String(p.quantity), "center"));
       parts.push(`</tr>`);

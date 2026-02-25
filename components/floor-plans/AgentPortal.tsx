@@ -18,7 +18,7 @@ const DEFAULT_COLUMNS: Record<ColumnKey, boolean> = {
   floorPlan: true,
   bedrooms: true,
   bathrooms: true,
-  hasStudy: true,
+  hasStudy: false,
   sqft: true,
   orientation: true,
   unitNumbers: true,

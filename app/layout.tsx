@@ -89,7 +89,7 @@ export default function RootLayout({
           }}
         />
         <Header />
-        <main id="main-content" className="min-h-screen pt-[76px]">{children}</main>
+        <main id="main-content" className="min-h-screen pt-[calc(2.6vw+60px)]">{children}</main>
         <Footer />
         <Analytics />
         <SpeedInsights />

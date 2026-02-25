@@ -30,7 +30,18 @@ function formatPrice(val: number): string {
 
 interface ChartProps {
   type: "price-trend" | "inventory-velocity" | "building-comparison" | "bedroom-breakdown";
-  data: Record<string, unknown>[];
+  data: string | Record<string, unknown>[];
+}
+
+function parseData(data: string | Record<string, unknown>[]): Record<string, unknown>[] {
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+  return data;
 }
 
 function PriceTrendChart({ data }: { data: Record<string, unknown>[] }) {
@@ -181,7 +192,8 @@ function BedroomBreakdownChart({ data }: { data: Record<string, unknown>[] }) {
   );
 }
 
-export default function MarketReportChart({ type, data }: ChartProps) {
+export default function MarketReportChart({ type, data: rawData }: ChartProps) {
+  const data = parseData(rawData);
   if (!data || data.length === 0) return null;
 
   return (
