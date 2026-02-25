@@ -733,9 +733,7 @@ export default function MarketChart({
             {hoveredPoint.dom >= 0 && (
               <p>
                 <span className="text-accent">DOM:</span>{" "}
-                <span className={`font-medium text-primary ${
-                  hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" ? "text-base" : ""
-                }`}>
+                <span className="font-medium text-primary">
                   {hoveredPoint.dom}
                   {hoveredPoint.statusGroup && hoveredPoint.statusGroup !== "Closed" && (
                     <span className="ml-1 text-xs font-normal text-secondary">days</span>

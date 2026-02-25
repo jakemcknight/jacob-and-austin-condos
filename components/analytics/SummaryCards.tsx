@@ -5,6 +5,7 @@ interface StatCard {
   value: string;
   subvalue?: string;
   trend?: "up" | "down" | "neutral";
+  trendLabel?: string;
 }
 
 interface SummaryCardsProps {
@@ -23,9 +24,9 @@ export default function SummaryCards({ cards }: SummaryCardsProps) {
             {card.label}
           </p>
           <p className="mt-1 text-xl font-bold text-primary">{card.value}</p>
-          {card.subvalue && (
+          {card.trendLabel && (
             <p
-              className={`mt-0.5 text-xs ${
+              className={`mt-0.5 text-xs font-medium ${
                 card.trend === "up"
                   ? "text-green-600"
                   : card.trend === "down"
@@ -33,6 +34,11 @@ export default function SummaryCards({ cards }: SummaryCardsProps) {
                     : "text-secondary"
               }`}
             >
+              {card.trendLabel}
+            </p>
+          )}
+          {card.subvalue && (
+            <p className="mt-0.5 text-xs text-secondary">
               {card.subvalue}
             </p>
           )}

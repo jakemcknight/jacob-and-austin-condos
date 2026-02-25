@@ -424,6 +424,50 @@ export default function DataDashboard() {
     };
   }, [last12]);
 
+  // Prior 12 months (12–24 months ago) for trend comparison
+  const prior12 = useMemo(() => {
+    const now = new Date();
+    const prior12Start = new Date(now);
+    prior12Start.setMonth(prior12Start.getMonth() - 24);
+    const prior12Cutoff = prior12Start.toISOString().substring(0, 10);
+    return closedListings.filter(
+      (l) => l.closeDate && l.closeDate >= prior12Cutoff && l.closeDate < cutoff12
+    );
+  }, [closedListings, cutoff12]);
+
+  const prior12Stats = useMemo(() => {
+    const prices = prior12.map((l) => l.closePrice || 0).filter((p) => p > 0);
+    const psfs = prior12
+      .map((l) => (l.closePrice && l.livingArea > 0 ? l.closePrice / l.livingArea : 0))
+      .filter((p) => p > 0);
+    const doms = prior12.map((l) => l.daysOnMarket).filter((d) => d >= 0);
+    return {
+      count: prior12.length,
+      medianPrice: Math.round(median(prices)),
+      medianPsf: median(psfs),
+      medianDom: Math.round(median(doms)),
+    };
+  }, [prior12]);
+
+  // Trend helper: compares current vs prior, returns trend direction + label
+  function computeTrend(
+    current: number,
+    previous: number,
+    invert = false
+  ): { trend: "up" | "down" | "neutral"; label: string } {
+    if (previous === 0 || current === 0)
+      return { trend: "neutral", label: "" };
+    const pct = ((current - previous) / previous) * 100;
+    const absPct = Math.abs(pct);
+    if (absPct < 0.5) return { trend: "neutral", label: "" };
+    const isUp = pct > 0;
+    const direction = invert ? !isUp : isUp;
+    return {
+      trend: direction ? "up" : "down",
+      label: `${isUp ? "\u2191" : "\u2193"} ${absPct.toFixed(1)}%`,
+    };
+  }
+
   // Yearly breakdown
   const yearlyRows = useMemo(() => computeYearlyBreakdown(closedListings), [closedListings]);
 
@@ -1076,21 +1120,37 @@ export default function DataDashboard() {
                 {
                   label: "Closed (12 Mo)",
                   value: summaryStats.count.toLocaleString(),
+                  ...(() => {
+                    const t = computeTrend(summaryStats.count, prior12Stats.count);
+                    return t.label ? { trend: t.trend, trendLabel: t.label } : {};
+                  })(),
                 },
                 {
                   label: "Median $/SF",
                   value: formatPsf(summaryStats.medianPsf, isLease),
                   subvalue: activeStats.count > 0 ? `${formatPsf(activeStats.medianPsf, isLease)} ask` : undefined,
+                  ...(() => {
+                    const t = computeTrend(summaryStats.medianPsf, prior12Stats.medianPsf);
+                    return t.label ? { trend: t.trend, trendLabel: t.label } : {};
+                  })(),
                 },
                 {
                   label: "Median Price",
                   value: formatDollar(summaryStats.medianPrice),
                   subvalue: activeStats.count > 0 ? `${formatDollar(activeStats.medianPrice)} ask` : undefined,
+                  ...(() => {
+                    const t = computeTrend(summaryStats.medianPrice, prior12Stats.medianPrice);
+                    return t.label ? { trend: t.trend, trendLabel: t.label } : {};
+                  })(),
                 },
                 {
                   label: "Median DOM",
                   value: String(summaryStats.medianDom),
                   subvalue: summaryStats.medianCpLp > 0 ? `${formatPct(summaryStats.medianCpLp)} CP/LP` : undefined,
+                  ...(() => {
+                    const t = computeTrend(summaryStats.medianDom, prior12Stats.medianDom, true);
+                    return t.label ? { trend: t.trend, trendLabel: t.label } : {};
+                  })(),
                 },
               ]}
             />
