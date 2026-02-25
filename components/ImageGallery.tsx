@@ -43,6 +43,8 @@ export default function ImageGallery({
                 <button
                   key={index}
                   onClick={() => setSelectedIndex(index)}
+                  aria-label={`View photo ${index + 1} of ${images.length} for ${buildingName}`}
+                  aria-current={index === selectedIndex ? "true" : undefined}
                   className={`flex h-20 w-28 flex-shrink-0 items-center justify-center bg-gray-200 text-xs text-accent transition-all ${
                     index === selectedIndex
                       ? "ring-2 ring-primary"

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     "Explore downtown Austin condo market analytics — pricing trends, building comparisons, year-over-year performance, and appreciation data across 37+ buildings.",
   alternates: {
-    canonical: "/data",
+    canonical: "/downtown-condos/data",
   },
   openGraph: {
     title: "Downtown Austin Condo Market Data | Jacob In Austin",

@@ -1,6 +1,33 @@
-"use client";
-
+import type { Metadata } from "next";
 import BalconyViewer from "@/components/BalconyViewer";
+
+export const metadata: Metadata = {
+  title: "3D Balcony Views | Downtown Austin Condos",
+  description:
+    "Explore photorealistic 3D views from balconies of 72+ downtown Austin buildings. Select a building, floor, and direction to see exactly what you'd see from your future home.",
+  keywords: [
+    "austin condo views",
+    "downtown austin balcony views",
+    "3d building views austin",
+    "austin high rise views",
+  ],
+  alternates: {
+    canonical: "/downtown-condos/views",
+  },
+  openGraph: {
+    title: "3D Balcony Views | Downtown Austin Condos",
+    description:
+      "Explore photorealistic 3D views from 72+ downtown Austin buildings. See your future view before you buy.",
+    type: "website",
+    images: ["/images/og-default.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "3D Balcony Views | Downtown Austin Condos",
+    description:
+      "Explore photorealistic 3D views from 72+ downtown Austin buildings.",
+  },
+};
 
 export default function BalconyViewerPage() {
   return (

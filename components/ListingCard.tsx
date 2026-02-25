@@ -92,8 +92,9 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
         <div className={`relative w-full overflow-hidden bg-gray-100 ${compact ? "h-36" : "h-48"}`}>
           <Image
             src={photoSrc}
-            alt={`Unit ${listing.unitNumber}`}
+            alt={`${listing.buildingName || ""} ${listing.unitNumber ? `unit ${listing.unitNumber}` : ""} - ${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo`.trim()}
             fill
+            unoptimized
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             onError={handleImageError}
           />
@@ -102,7 +103,7 @@ export default function ListingCard({ listing, showBuilding = false, compact = f
       ) : isOffMarket ? (
         <LazyListingPhoto
           listingId={listing.listingId}
-          alt={`Unit ${listing.unitNumber}`}
+          alt={`${listing.buildingName || ""} ${listing.unitNumber ? `unit ${listing.unitNumber}` : ""} - ${listing.bedroomsTotal} bed, ${listing.bathroomsTotalInteger} bath condo`.trim()}
           compact={compact}
         >
           {photoBadges}

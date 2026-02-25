@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Browse all active condos for sale in downtown Austin. Filter by building, bedrooms, price, and more. View listings from 37+ luxury high-rise buildings with real-time MLS data.",
   keywords: ["downtown austin condos", "condos for sale austin", "austin high rise condos", "luxury condos austin", "downtown austin real estate"],
   alternates: {
-    canonical: "/for-sale",
+    canonical: "/downtown-condos/for-sale",
   },
   openGraph: {
     title: "Downtown Austin Condos For Sale | Jacob In Austin",

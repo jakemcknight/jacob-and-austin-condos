@@ -76,6 +76,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[9999] focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-white"
+        >
+          Skip to main content
+        </a>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -83,7 +89,7 @@ export default function RootLayout({
           }}
         />
         <Header />
-        <main className="min-h-screen pt-[76px]">{children}</main>
+        <main id="main-content" className="min-h-screen pt-[76px]">{children}</main>
         <Footer />
         <Analytics />
         <SpeedInsights />

@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${building.name} | Downtown Austin Condos | Jacob In Austin`,
     description,
     alternates: {
-      canonical: `/${building.slug}`,
+      canonical: `/downtown-condos/${building.slug}`,
     },
     openGraph: {
       title: `${building.name} | Downtown Austin Condos`,
@@ -83,6 +83,16 @@ export default function BuildingPage({ params }: PageProps) {
       name: a,
     })),
     url: `https://jacobinaustin.com/downtown-condos/${building.slug}`,
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jacobinaustin.com" },
+      { "@type": "ListItem", position: 2, name: "Downtown Condos", item: "https://jacobinaustin.com/downtown-condos" },
+      { "@type": "ListItem", position: 3, name: building.name, item: `https://jacobinaustin.com/downtown-condos/${building.slug}` },
+    ],
   };
 
   return (
@@ -169,6 +179,12 @@ export default function BuildingPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(structuredData),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbData),
         }}
       />
     </>

@@ -51,7 +51,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `/${params.slug}/${params.floorplan}`,
+      canonical: `/downtown-condos/${params.slug}/${params.floorplan}`,
     },
     openGraph: {
       title,
@@ -104,6 +104,17 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
         addressCountry: "US",
       },
     },
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jacobinaustin.com" },
+      { "@type": "ListItem", position: 2, name: "Downtown Condos", item: "https://jacobinaustin.com/downtown-condos" },
+      { "@type": "ListItem", position: 3, name: building.name, item: `https://jacobinaustin.com/downtown-condos/${building.slug}` },
+      { "@type": "ListItem", position: 4, name: `${floorPlan.name} Floor Plan`, item: `https://jacobinaustin.com/downtown-condos/${building.slug}/${params.floorplan}` },
+    ],
   };
 
   return (
@@ -243,6 +254,12 @@ export default function FloorPlanPage({ params }: FloorPlanPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(structuredData),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbData),
         }}
       />
     </>

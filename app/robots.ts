@@ -33,6 +33,11 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
       },
+      {
+        userAgent: "Google-Extended",
+        allow: "/",
+        disallow: ["/api/", "/downtown-condos/seo-dashboard/"],
+      },
     ],
     sitemap: "https://jacobinaustin.com/sitemap.xml",
   };

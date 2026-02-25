@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { firstName, email, referralSource } = body;
+    const { firstName, lastName, email, referralSource } = body;
 
     // Validate required fields
     if (!email) {
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
           status: "subscribed",
           merge_fields: {
             FNAME: firstName || "",
+            LNAME: lastName || "",
             ...(referralSource ? { REFERRAL: referralSource } : {}),
           },
         }),

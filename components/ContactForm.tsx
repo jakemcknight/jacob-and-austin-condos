@@ -118,10 +118,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
                   <p className="mb-2 text-sm font-medium text-white/80">Name</p>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">
+                      <label htmlFor="contact-first-name" className="mb-1 block text-xs text-white/60">
                         First Name <span className="text-white/40">(required)</span>
                       </label>
                       <input
+                        id="contact-first-name"
                         type="text"
                         required
                         value={formData.firstName}
@@ -132,10 +133,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">
+                      <label htmlFor="contact-last-name" className="mb-1 block text-xs text-white/60">
                         Last Name <span className="text-white/40">(required)</span>
                       </label>
                       <input
+                        id="contact-last-name"
                         type="text"
                         required
                         value={formData.lastName}
@@ -150,10 +152,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
 
                 {/* Email */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-white/80">
+                  <label htmlFor="contact-landing-email" className="mb-1 block text-sm font-medium text-white/80">
                     Email <span className="text-white/40">(required)</span>
                   </label>
                   <input
+                    id="contact-landing-email"
                     type="email"
                     required
                     value={formData.email}
@@ -166,10 +169,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
 
                 {/* Phone */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-white/80">
+                  <label htmlFor="contact-landing-phone" className="mb-1 block text-sm font-medium text-white/80">
                     Phone <span className="text-white/40">(required)</span>
                   </label>
                   <input
+                    id="contact-landing-phone"
                     type="tel"
                     required
                     value={formData.phone}
@@ -206,10 +210,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
 
                 {/* How did you hear about us */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-white/80">
+                  <label htmlFor="contact-landing-referral" className="mb-1 block text-sm font-medium text-white/80">
                     How did you hear about us?
                   </label>
                   <input
+                    id="contact-landing-referral"
                     type="text"
                     value={formData.referralSource}
                     onChange={(e) =>
@@ -221,10 +226,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
 
                 {/* Message */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-white/80">
+                  <label htmlFor="contact-landing-message" className="mb-1 block text-sm font-medium text-white/80">
                     Message
                   </label>
                   <textarea
+                    id="contact-landing-message"
                     rows={5}
                     value={formData.message}
                     onChange={(e) =>
@@ -281,10 +287,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
             )}
             <div className="grid gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+                <label htmlFor="contact-name" className="mb-1 block text-xs uppercase tracking-wider text-accent">
                   Name
                 </label>
                 <input
+                  id="contact-name"
                   type="text"
                   required
                   value={formData.name}
@@ -295,10 +302,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+                <label htmlFor="contact-email" className="mb-1 block text-xs uppercase tracking-wider text-accent">
                   Email
                 </label>
                 <input
+                  id="contact-email"
                   type="email"
                   required
                   value={formData.email}
@@ -312,10 +320,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
 
             <div className="grid gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+                <label htmlFor="contact-phone" className="mb-1 block text-xs uppercase tracking-wider text-accent">
                   Phone
                 </label>
                 <input
+                  id="contact-phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) =>
@@ -325,10 +334,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+                <label htmlFor="contact-interest" className="mb-1 block text-xs uppercase tracking-wider text-accent">
                   I&apos;m interested in
                 </label>
                 <select
+                  id="contact-interest"
                   value={formData.interest}
                   onChange={(e) =>
                     setFormData({ ...formData, interest: e.target.value })
@@ -343,10 +353,11 @@ export default function ContactForm({ buildingName, variant = "default" }: Conta
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+              <label htmlFor="contact-message" className="mb-1 block text-xs uppercase tracking-wider text-accent">
                 Message
               </label>
               <textarea
+                id="contact-message"
                 rows={4}
                 value={formData.message}
                 onChange={(e) =>

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
+    // Static building images are optimized by Next.js (WebP, resizing).
+    // MLS photo proxy images use unoptimized prop on individual <Image> components
+    // since their URLs are transient (~1hr expiry).
   },
   async redirects() {
     return [

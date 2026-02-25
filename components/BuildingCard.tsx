@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
 interface BuildingCardProps {
@@ -32,11 +33,12 @@ export default function BuildingCard({
       {/* Building Photo */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
         {!imageError && heroImage ? (
-          <img
+          <Image
             src={heroImage}
             alt={`${name} exterior`}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
             onError={() => setImageError(true)}
           />
         ) : (

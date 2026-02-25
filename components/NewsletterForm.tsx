@@ -10,6 +10,7 @@ interface NewsletterFormProps {
 export default function NewsletterForm({ compact = false }: NewsletterFormProps) {
   const [formData, setFormData] = useState({
     firstName: "",
+    lastName: "",
     email: "",
     referralSource: "",
   });
@@ -69,6 +70,7 @@ export default function NewsletterForm({ compact = false }: NewsletterFormProps)
           type="email"
           required
           placeholder="Your email address"
+          aria-label="Email address"
           value={formData.email}
           onChange={(e) =>
             setFormData({ ...formData, email: e.target.value })
@@ -92,56 +94,78 @@ export default function NewsletterForm({ compact = false }: NewsletterFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {error}
         </div>
       )}
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
-            First Name
+          <label htmlFor="newsletter-first-name" className="mb-2 block text-sm text-primary">
+            First Name{" "}
+            <span className="text-accent">(required)</span>
           </label>
           <input
+            id="newsletter-first-name"
             type="text"
             required
             value={formData.firstName}
             onChange={(e) =>
               setFormData({ ...formData, firstName: e.target.value })
             }
-            className="w-full border border-gray-200 bg-white px-4 py-3 text-sm text-primary outline-none transition-colors focus:border-primary"
+            className="w-full border-0 bg-light px-4 py-3 text-sm text-primary outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
-            Email
+          <label htmlFor="newsletter-last-name" className="mb-2 block text-sm text-primary">
+            Last Name{" "}
+            <span className="text-accent">(required)</span>
           </label>
           <input
-            type="email"
+            id="newsletter-last-name"
+            type="text"
             required
-            value={formData.email}
+            value={formData.lastName}
             onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
+              setFormData({ ...formData, lastName: e.target.value })
             }
-            className="w-full border border-gray-200 bg-white px-4 py-3 text-sm text-primary outline-none transition-colors focus:border-primary"
+            className="w-full border-0 bg-light px-4 py-3 text-sm text-primary outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs uppercase tracking-wider text-accent">
+        <label htmlFor="newsletter-email" className="mb-2 block text-sm text-primary">
+          Email{" "}
+          <span className="text-accent">(required)</span>
+        </label>
+        <input
+          id="newsletter-email"
+          type="email"
+          required
+          value={formData.email}
+          onChange={(e) =>
+            setFormData({ ...formData, email: e.target.value })
+          }
+          className="w-full border-0 bg-light px-4 py-3 text-sm text-primary outline-none focus:ring-1 focus:ring-accent"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="newsletter-referral" className="mb-2 block text-sm text-primary">
           How did you hear about the newsletter?
         </label>
         <select
+          id="newsletter-referral"
           value={formData.referralSource}
           onChange={(e) =>
             setFormData({ ...formData, referralSource: e.target.value })
           }
-          className="w-full border border-gray-200 bg-white px-4 py-3 text-sm text-primary outline-none transition-colors focus:border-primary"
+          className="w-full border-0 bg-light px-4 py-3 text-sm text-primary outline-none focus:ring-1 focus:ring-accent"
         >
-          <option value="">Select an option</option>
+          <option value="">Would love to hear how you found me!</option>
           <option value="Jacob">Jacob</option>
           <option value="Social Media">Social Media</option>
           <option value="Web Search">Web Search</option>
@@ -153,7 +177,7 @@ export default function NewsletterForm({ compact = false }: NewsletterFormProps)
       <button
         type="submit"
         disabled={submitting}
-        className="w-full border border-primary bg-primary py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+        className="border border-secondary bg-secondary px-10 py-3 text-sm uppercase tracking-widest text-white transition-colors hover:bg-primary hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
       >
         {submitting ? "Subscribing..." : "Subscribe"}
       </button>

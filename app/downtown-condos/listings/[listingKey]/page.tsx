@@ -134,7 +134,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     return {
       title,
       description,
-      alternates: { canonical: `/listings/${stripMlsPrefix(listing.mlsNumber)}` },
+      alternates: { canonical: `/downtown-condos/listings/${stripMlsPrefix(listing.mlsNumber)}` },
       openGraph: { title, description, images: [ogImage] },
       twitter: { card: "summary_large_image", images: [ogImage] },
     };
@@ -150,7 +150,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   return {
     title,
     description,
-    alternates: { canonical: `/listings/${al.listingId}` },
+    alternates: { canonical: `/downtown-condos/listings/${al.listingId}` },
     openGraph: { title, description },
     twitter: { card: "summary" },
   };
@@ -213,6 +213,17 @@ function renderActiveListing(
       priceCurrency: "USD",
       availability: listing.status === "Active" ? "https://schema.org/InStock" : "https://schema.org/LimitedAvailability",
     },
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jacobinaustin.com" },
+      { "@type": "ListItem", position: 2, name: "Downtown Condos", item: "https://jacobinaustin.com/downtown-condos" },
+      ...(building && buildingSlug ? [{ "@type": "ListItem", position: 3, name: building.name, item: `https://jacobinaustin.com/downtown-condos/${buildingSlug}` }] : []),
+      { "@type": "ListItem", position: building ? 4 : 3, name: `${listing.buildingName || building?.name || ""} ${listing.unitNumber ? `#${listing.unitNumber}` : ""}`.trim(), item: `https://jacobinaustin.com/downtown-condos/listings/${stripMlsPrefix(listing.mlsNumber)}` },
+    ],
   };
 
   const allPhotos = listing.photos || [];
@@ -362,6 +373,7 @@ function renderActiveListing(
         {building && <Link href={`/${buildingSlug}`} className="text-sm uppercase tracking-wider text-accent transition-colors hover:text-primary">← Back to {building.name}</Link>}
       </section>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
     </>
   );
 }
@@ -430,6 +442,17 @@ function renderAnalyticsListing(
     historyEvents.push({ date: offDate ? formatDate(offDate) : "", label: al.status, detail: `${al.status} after ${al.daysOnMarket} days on market` });
   }
   historyEvents.reverse();
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jacobinaustin.com" },
+      { "@type": "ListItem", position: 2, name: "Downtown Condos", item: "https://jacobinaustin.com/downtown-condos" },
+      ...(building && buildingSlug ? [{ "@type": "ListItem", position: 3, name: building.name, item: `https://jacobinaustin.com/downtown-condos/${buildingSlug}` }] : []),
+      { "@type": "ListItem", position: building ? 4 : 3, name: `${al.buildingName || building?.name || ""} ${al.unitNumber ? `#${al.unitNumber}` : ""}`.trim(), item: `https://jacobinaustin.com/downtown-condos/listings/${al.listingId}` },
+    ],
+  };
 
   return (
     <>
@@ -644,6 +667,8 @@ function renderAnalyticsListing(
           </Link>
         )}
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
     </>
   );
 }
