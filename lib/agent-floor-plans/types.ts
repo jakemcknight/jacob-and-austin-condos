@@ -24,7 +24,7 @@ export type ColumnKey =
   | "quantity";
 
 export interface Filters {
-  building: string;
+  buildings: string[];
   bedrooms: string;
   orientation: string;
   study: string;

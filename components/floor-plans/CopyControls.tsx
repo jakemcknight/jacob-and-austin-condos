@@ -94,7 +94,7 @@ function buildHtml(
       `<div style="font-family:Arial,sans-serif;font-size:14px;margin-bottom:24px;">`
     );
     parts.push(
-      `<h3 style="color:#191919;margin:0 0 8px;font-size:16px;">${building.toUpperCase()}</h3>`
+      `<h3 style="background:#E1DDD1;color:#191919;margin:0 0 8px;padding:8px 12px;font-size:16px;border-radius:4px;">${building.toUpperCase()}</h3>`
     );
     parts.push(
       `<table style="border-collapse:collapse;width:100%;font-size:13px;">`

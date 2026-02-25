@@ -27,7 +27,7 @@ const DEFAULT_COLUMNS: Record<ColumnKey, boolean> = {
 
 export default function AgentPortal({ allPlans }: AgentPortalProps) {
   const [filters, setFilters] = useState<Filters>({
-    building: "",
+    buildings: [],
     bedrooms: "",
     orientation: "",
     study: "",
@@ -37,11 +37,24 @@ export default function AgentPortal({ allPlans }: AgentPortalProps) {
 
   const [columns, setColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_COLUMNS);
 
-  const filteredPlans = useMemo(() => {
+  /** Apply all filters except orientation — used to derive dynamic orientation options */
+  const plansForOrientations = useMemo(() => {
     return allPlans.filter((p) => {
-      if (filters.building && p.building !== filters.building) return false;
+      if (filters.buildings.length > 0 && !filters.buildings.includes(p.building))
+        return false;
       if (filters.bedrooms && p.bedrooms !== parseInt(filters.bedrooms))
         return false;
+      if (filters.study === "yes" && !p.hasStudy) return false;
+      if (filters.study === "no" && p.hasStudy) return false;
+      if (filters.minSqft && p.sqft < parseInt(filters.minSqft)) return false;
+      if (filters.maxSqft && p.sqft > parseInt(filters.maxSqft)) return false;
+      return true;
+    });
+  }, [allPlans, filters.buildings, filters.bedrooms, filters.study, filters.minSqft, filters.maxSqft]);
+
+  /** Fully filtered plans */
+  const filteredPlans = useMemo(() => {
+    return plansForOrientations.filter((p) => {
       if (
         filters.orientation &&
         !p.orientation
@@ -50,13 +63,9 @@ export default function AgentPortal({ allPlans }: AgentPortalProps) {
           .includes(filters.orientation)
       )
         return false;
-      if (filters.study === "yes" && !p.hasStudy) return false;
-      if (filters.study === "no" && p.hasStudy) return false;
-      if (filters.minSqft && p.sqft < parseInt(filters.minSqft)) return false;
-      if (filters.maxSqft && p.sqft > parseInt(filters.maxSqft)) return false;
       return true;
     });
-  }, [allPlans, filters]);
+  }, [plansForOrientations, filters.orientation]);
 
   const buildingCount = new Set(filteredPlans.map((p) => p.building)).size;
   const studyCount = filteredPlans.filter((p) => p.hasStudy).length;
@@ -86,6 +95,7 @@ export default function AgentPortal({ allPlans }: AgentPortalProps) {
           filters={filters}
           onChange={setFilters}
           allPlans={allPlans}
+          plansForOrientations={plansForOrientations}
         />
       </div>
 
