@@ -6,6 +6,8 @@ interface CopyControlsProps {
   columns: Record<ColumnKey, boolean>;
   onColumnsChange: (columns: Record<ColumnKey, boolean>) => void;
   filteredPlans: AgentFloorPlan[];
+  plansToCopy: AgentFloorPlan[];
+  selectedCount: number;
 }
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
@@ -58,7 +60,8 @@ function buildPlainText(
     for (const p of bPlans) {
       const row: string[] = [];
       if (columns.floorPlan) row.push(p.floorPlan);
-      if (columns.bedrooms) row.push(p.bedrooms === 0 ? "Studio" : String(p.bedrooms));
+      if (columns.bedrooms)
+        row.push(p.bedrooms === 0 ? "Studio" : String(p.bedrooms));
       if (columns.bathrooms) row.push(String(p.bathrooms));
       if (columns.hasStudy) row.push(p.hasStudy ? "Yes" : "");
       if (columns.sqft) row.push(formatSqft(p.sqft));
@@ -94,15 +97,15 @@ function buildHtml(
       `<div style="font-family:Arial,sans-serif;font-size:14px;margin-bottom:24px;">`
     );
     parts.push(
-      `<h3 style="background:#E1DDD1;color:#191919;margin:0 0 8px;padding:8px 12px;font-size:16px;border-radius:4px;">${building.toUpperCase()}</h3>`
+      `<h3 style="color:#191919;margin:0 0 8px;font-size:16px;">${building.toUpperCase()}</h3>`
     );
     parts.push(
       `<table style="border-collapse:collapse;width:100%;font-size:13px;">`
     );
 
-    // Header
+    // Header — moontower background
     parts.push(
-      `<thead><tr style="background:#f5f5f5;border-bottom:2px solid #ddd;">`
+      `<thead><tr style="background:#E1DDD1;border-bottom:2px solid #ddd;">`
     );
     const th = (label: string, align = "left") =>
       `<th style="padding:6px 10px;text-align:${align};font-weight:600;">${label}</th>`;
@@ -130,7 +133,9 @@ function buildHtml(
         );
       }
       if (columns.bedrooms)
-        parts.push(td(p.bedrooms === 0 ? "Studio" : String(p.bedrooms), "center"));
+        parts.push(
+          td(p.bedrooms === 0 ? "Studio" : String(p.bedrooms), "center")
+        );
       if (columns.bathrooms) parts.push(td(String(p.bathrooms), "center"));
       if (columns.hasStudy) parts.push(td(p.hasStudy ? "Yes" : "", "center"));
       if (columns.sqft) parts.push(td(formatSqft(p.sqft), "right"));
@@ -168,7 +173,8 @@ function groupByBuilding(
 export default function CopyControls({
   columns,
   onColumnsChange,
-  filteredPlans,
+  plansToCopy,
+  selectedCount,
 }: CopyControlsProps) {
   const [copied, setCopied] = useState(false);
 
@@ -176,13 +182,9 @@ export default function CopyControls({
     onColumnsChange({ ...columns, [key]: !columns[key] });
   };
 
-  const handleCopy = async (buildingName?: string) => {
-    const plans = buildingName
-      ? filteredPlans.filter((p) => p.building === buildingName)
-      : filteredPlans;
-
-    const plainText = buildPlainText(plans, columns, buildingName);
-    const html = buildHtml(plans, columns, buildingName);
+  const handleCopy = async () => {
+    const plainText = buildPlainText(plansToCopy, columns);
+    const html = buildHtml(plansToCopy, columns);
 
     try {
       await navigator.clipboard.write([
@@ -195,7 +197,7 @@ export default function CopyControls({
       try {
         await navigator.clipboard.writeText(plainText);
       } catch {
-        // Clipboard not available (e.g. non-secure context)
+        // Clipboard not available
       }
     }
 
@@ -227,10 +229,14 @@ export default function CopyControls({
 
       <div className="flex items-center gap-3">
         <button
-          onClick={() => handleCopy()}
+          onClick={handleCopy}
           className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 transition-colors"
         >
-          {copied ? "Copied!" : "Copy All Filtered"}
+          {copied
+            ? "Copied!"
+            : selectedCount > 0
+              ? `Copy ${selectedCount} Selected`
+              : "Copy All Filtered"}
         </button>
       </div>
     </div>

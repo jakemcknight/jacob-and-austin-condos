@@ -25,8 +25,9 @@ export type ColumnKey =
 
 export interface Filters {
   buildings: string[];
-  bedrooms: string;
-  orientation: string;
+  bedrooms: string[];
+  bathrooms: string[];
+  orientation: string[];
   study: string;
   minSqft: string;
   maxSqft: string;

@@ -1,26 +1,40 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect } from "react";
 import type { Filters, AgentFloorPlan } from "@/lib/agent-floor-plans/types";
+import MultiSelectDropdown from "./MultiSelectDropdown";
 
 interface FloorPlanFiltersProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
   allPlans: AgentFloorPlan[];
-  /** Plans filtered by everything except orientation — used for dynamic orientation options */
-  plansForOrientations: AgentFloorPlan[];
+  /** Plans filtered by all filters EXCEPT the named key — for dynamic options */
+  plansExcluding: {
+    bedrooms: AgentFloorPlan[];
+    bathrooms: AgentFloorPlan[];
+    orientation: AgentFloorPlan[];
+  };
 }
 
 export default function FloorPlanFilters({
   filters,
   onChange,
   allPlans,
-  plansForOrientations,
+  plansExcluding,
 }: FloorPlanFiltersProps) {
+  // Buildings always derive from full data set (not dynamically filtered)
   const buildings = Array.from(new Set(allPlans.map((p) => p.building))).sort();
 
-  // Orientations derived from plans already filtered by other criteria
-  const orientations = Array.from(
+  // Dynamic options derived from plans filtered by everything except this filter
+  const bedroomOptions = Array.from(
+    new Set(plansExcluding.bedrooms.map((p) => String(p.bedrooms)))
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const bathroomOptions = Array.from(
+    new Set(plansExcluding.bathrooms.map((p) => String(p.bathrooms)))
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const orientationOptions = Array.from(
     new Set(
-      plansForOrientations.flatMap((p) =>
+      plansExcluding.orientation.flatMap((p) =>
         p.orientation
           .split(",")
           .map((o) => o.trim())
@@ -29,19 +43,43 @@ export default function FloorPlanFilters({
     )
   ).sort();
 
-  const bedroomOptions = Array.from(
-    new Set(allPlans.map((p) => p.bedrooms))
-  ).sort((a, b) => a - b);
-
   const update = (key: keyof Filters, value: string | string[]) => {
     onChange({ ...filters, [key]: value });
   };
 
+  // Auto-clear selected values that disappeared from available options
+  useEffect(() => {
+    const validBeds = filters.bedrooms.filter((b) => bedroomOptions.includes(b));
+    if (validBeds.length !== filters.bedrooms.length) {
+      onChange({ ...filters, bedrooms: validBeds });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bedroomOptions.join(",")]);
+
+  useEffect(() => {
+    const validBaths = filters.bathrooms.filter((b) => bathroomOptions.includes(b));
+    if (validBaths.length !== filters.bathrooms.length) {
+      onChange({ ...filters, bathrooms: validBaths });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bathroomOptions.join(",")]);
+
+  useEffect(() => {
+    const validOrientations = filters.orientation.filter((o) =>
+      orientationOptions.includes(o)
+    );
+    if (validOrientations.length !== filters.orientation.length) {
+      onChange({ ...filters, orientation: validOrientations });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orientationOptions.join(",")]);
+
   const clearAll = () => {
     onChange({
       buildings: [],
-      bedrooms: "",
-      orientation: "",
+      bedrooms: [],
+      bathrooms: [],
+      orientation: [],
       study: "",
       minSqft: "",
       maxSqft: "",
@@ -50,19 +88,12 @@ export default function FloorPlanFilters({
 
   const hasActiveFilters =
     filters.buildings.length > 0 ||
-    filters.bedrooms !== "" ||
-    filters.orientation !== "" ||
+    filters.bedrooms.length > 0 ||
+    filters.bathrooms.length > 0 ||
+    filters.orientation.length > 0 ||
     filters.study !== "" ||
     filters.minSqft !== "" ||
     filters.maxSqft !== "";
-
-  // Clear orientation if it's no longer available after other filters changed
-  useEffect(() => {
-    if (filters.orientation && !orientations.includes(filters.orientation)) {
-      onChange({ ...filters, orientation: "" });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orientations.join(",")]);
 
   const selectClass =
     "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
@@ -71,37 +102,40 @@ export default function FloorPlanFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <BuildingMultiSelect
-        buildings={buildings}
+      <MultiSelectDropdown
+        options={buildings}
         selected={filters.buildings}
         onChange={(vals) => update("buildings", vals)}
+        allLabel="All Buildings"
+        countLabel="Buildings"
+        widthClass="w-64"
       />
 
-      <select
-        value={filters.bedrooms}
-        onChange={(e) => update("bedrooms", e.target.value)}
-        className={selectClass}
-      >
-        <option value="">All Beds</option>
-        {bedroomOptions.map((b) => (
-          <option key={b} value={String(b)}>
-            {b === 0 ? "Studio" : `${b} Bed`}
-          </option>
-        ))}
-      </select>
+      <MultiSelectDropdown
+        options={bedroomOptions}
+        selected={filters.bedrooms}
+        onChange={(vals) => update("bedrooms", vals)}
+        allLabel="All Beds"
+        countLabel="Beds"
+        formatOption={(v) => (v === "0" ? "Studio" : `${v} Bed`)}
+      />
 
-      <select
-        value={filters.orientation}
-        onChange={(e) => update("orientation", e.target.value)}
-        className={selectClass}
-      >
-        <option value="">All Orientations</option>
-        {orientations.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+      <MultiSelectDropdown
+        options={bathroomOptions}
+        selected={filters.bathrooms}
+        onChange={(vals) => update("bathrooms", vals)}
+        allLabel="All Baths"
+        countLabel="Baths"
+        formatOption={(v) => `${v} Bath`}
+      />
+
+      <MultiSelectDropdown
+        options={orientationOptions}
+        selected={filters.orientation}
+        onChange={(vals) => update("orientation", vals)}
+        allLabel="All Orientations"
+        countLabel="Orientations"
+      />
 
       <select
         value={filters.study}
@@ -135,95 +169,6 @@ export default function FloorPlanFilters({
         >
           Clear Filters
         </button>
-      )}
-    </div>
-  );
-}
-
-/** Multi-select dropdown for buildings */
-function BuildingMultiSelect({
-  buildings,
-  selected,
-  onChange,
-}: {
-  buildings: string[];
-  selected: string[];
-  onChange: (vals: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const toggle = (building: string) => {
-    if (selected.includes(building)) {
-      onChange(selected.filter((b) => b !== building));
-    } else {
-      onChange([...selected, building]);
-    }
-  };
-
-  const label =
-    selected.length === 0
-      ? "All Buildings"
-      : selected.length === 1
-        ? selected[0]
-        : `${selected.length} Buildings`;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 rounded border bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent ${
-          selected.length > 0 ? "border-accent" : "border-gray-300"
-        }`}
-      >
-        {label}
-        <svg
-          className={`h-3.5 w-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          {selected.length > 0 && (
-            <button
-              onClick={() => onChange([])}
-              className="w-full border-b border-gray-100 px-3 py-1.5 text-left text-xs text-gray-500 hover:bg-gray-50"
-            >
-              Clear selection
-            </button>
-          )}
-          {buildings.map((b) => (
-            <label
-              key={b}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(b)}
-                onChange={() => toggle(b)}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
-              />
-              {b}
-            </label>
-          ))}
-        </div>
       )}
     </div>
   );
