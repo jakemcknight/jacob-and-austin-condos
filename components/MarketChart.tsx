@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ComposedChart,
   Scatter,
@@ -69,6 +69,17 @@ function median(arr: number[]): number {
     : sorted[mid];
 }
 
+type TrendMode = "rolling12" | "rolling3" | "yearly";
+
+interface RollingDataPoint {
+  timestamp: number;
+  monthLabel: string;
+  medianPsf: number;
+  medianPrice: number;
+  count: number;
+  windowMonths: number;
+}
+
 interface ScatterPoint {
   timestamp: number;
   priceSf: number;
@@ -116,6 +127,7 @@ interface YearDataPoint {
   medianPsf: number;
   medianPrice: number;
   timestamp: number;
+  isPartialYear?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,12 +137,44 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
   const first = payload[0];
   const fmtPsfLocal = (v: number) => isLease ? `$${v.toFixed(2)}` : `$${Math.round(v).toLocaleString()}`;
 
+  // Rolling data tooltip
+  if (first.payload.windowMonths !== undefined) {
+    const d = first.payload as RollingDataPoint;
+    const windowLabel = d.windowMonths === 12 ? "trailing 12 months" : "trailing 3 months";
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg">
+        <p className="font-semibold text-primary">{d.monthLabel}</p>
+        <p className="text-[10px] text-secondary">{windowLabel}</p>
+        <p className="mt-1">
+          <span className="text-accent">Transactions:</span>{" "}
+          <span className="font-medium text-primary">{d.count}</span>
+        </p>
+        <p>
+          <span className="text-accent">Median $/SF:</span>{" "}
+          <span className="font-medium text-primary">
+            {fmtPsfLocal(d.medianPsf)}
+          </span>
+        </p>
+        <p>
+          <span className="text-accent">Median Price:</span>{" "}
+          <span className="font-medium text-primary">
+            {formatFullPrice(d.medianPrice)}
+          </span>
+        </p>
+      </div>
+    );
+  }
+
   // Year data tooltip (bar or median line)
   if (first.payload.count !== undefined && first.payload.year !== undefined) {
     const d = first.payload as YearDataPoint;
+    const yearLabel = d.isPartialYear ? `${d.year} YTD` : String(d.year);
     return (
-      <div className="border border-gray-200 bg-white p-3 text-xs shadow-lg">
-        <p className="font-semibold text-primary">{d.year}</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg">
+        <p className="font-semibold text-primary">{yearLabel}</p>
+        {d.isPartialYear && (
+          <p className="text-[10px] text-secondary">Partial year — {d.count} transactions</p>
+        )}
         <p className="mt-1">
           <span className="text-accent">Transactions:</span>{" "}
           <span className="font-medium text-primary">{d.count}</span>
@@ -154,7 +198,7 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
   // Scatter tooltip
   const d = first.payload as ScatterPoint;
   return (
-    <div className="border border-gray-200 bg-white p-3 text-xs shadow-lg">
+    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg">
       <p className="font-semibold text-primary">{d.buildingName === "Other" ? d.address : d.buildingName}</p>
       <p className="text-secondary">
         Unit {d.unit} &middot; {bedroomLabel(d.bedrooms)}
@@ -237,6 +281,7 @@ export default function MarketChart({
 
   const [hoveredPoint, setHoveredPoint] = useState<ScatterPoint | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [trendMode, setTrendMode] = useState<TrendMode>("rolling12");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderScatterDot = (props: any) => {
@@ -319,6 +364,8 @@ export default function MarketChart({
     if (t.closePrice > 0) yearBuckets[t.year].prices.push(t.closePrice);
   }
 
+  const currentYear = new Date().getFullYear();
+
   const yearData: YearDataPoint[] = Object.entries(yearBuckets)
     .map(([yr, bucket]) => ({
       year: Number(yr),
@@ -326,8 +373,69 @@ export default function MarketChart({
       medianPsf: isLease ? Math.round(median(bucket.priceSfs) * 100) / 100 : Math.round(median(bucket.priceSfs)),
       medianPrice: Math.round(median(bucket.prices)),
       timestamp: new Date(Number(yr), 6, 1).getTime(),
+      isPartialYear: Number(yr) === currentYear,
     }))
     .sort((a, b) => a.year - b.year);
+
+  // Rolling median computation
+  const rollingData = useMemo((): RollingDataPoint[] => {
+    if (trendMode === "yearly") return [];
+
+    const windowMonths = trendMode === "rolling12" ? 12 : 3;
+
+    const filtered = transactions.filter((t) => activeBedrooms.has(t.bedrooms));
+    if (filtered.length === 0) return [];
+
+    const sorted = [...filtered].sort((a, b) => a.closeDate.localeCompare(b.closeDate));
+
+    const firstDate = new Date(sorted[0].closeDate);
+    const lastDate = new Date(sorted[sorted.length - 1].closeDate);
+
+    const startMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    const endMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+
+    // Start iterating from startMonth + windowMonths so each point has a full window
+    const cursor = new Date(startMonth);
+    cursor.setMonth(cursor.getMonth() + windowMonths);
+
+    const points: RollingDataPoint[] = [];
+
+    while (cursor <= endMonth) {
+      // Window: from first day of (cursor - windowMonths + 1) to last day of cursor month
+      const windowStart = new Date(cursor.getFullYear(), cursor.getMonth() - windowMonths + 1, 1);
+      const windowEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+
+      const wsStr = windowStart.toISOString().substring(0, 10);
+      const weStr = windowEnd.toISOString().substring(0, 10);
+
+      const windowTxns = filtered.filter(
+        (t) => t.closeDate >= wsStr && t.closeDate <= weStr
+      );
+
+      if (windowTxns.length > 0) {
+        const priceSfs = windowTxns.map((t) => t.priceSf).filter((v) => v > 0);
+        const prices = windowTxns.map((t) => t.closePrice).filter((v) => v > 0);
+
+        points.push({
+          timestamp: new Date(cursor.getFullYear(), cursor.getMonth(), 15).getTime(),
+          monthLabel: cursor.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+          medianPsf: isLease
+            ? Math.round(median(priceSfs) * 100) / 100
+            : Math.round(median(priceSfs)),
+          medianPrice: Math.round(median(prices)),
+          count: windowTxns.length,
+          windowMonths,
+        });
+      }
+
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return points;
+  }, [transactions, activeBedrooms, trendMode, isLease]);
+
+  // Active trend data and bar data based on mode
+  const trendData = trendMode === "yearly" ? yearData : rollingData;
 
   // Metric-specific values
   const metricKey = metric === "priceSf" ? "medianPsf" : "medianPrice";
@@ -341,13 +449,13 @@ export default function MarketChart({
   ];
   const allTimestamps = [
     ...allScatter.map((p) => p.timestamp),
-    ...yearData.map((p) => p.timestamp),
+    ...trendData.map((p) => p.timestamp),
   ];
   const minTime = allTimestamps.length > 0 ? Math.min(...allTimestamps) : 0;
   const maxTime = allTimestamps.length > 0 ? Math.max(...allTimestamps) : 0;
 
   // Compute max count for right Y axis
-  const maxCount = yearData.length > 0 ? Math.max(...yearData.map((b) => b.count)) : 0;
+  const maxCount = trendData.length > 0 ? Math.max(...trendData.map((b) => b.count)) : 0;
 
   // Build filter summary for display - separate buildings from other filters
   const buildingFilter = selectedBuildings.length > 0 ? selectedBuildings.join(", ") : "";
@@ -370,7 +478,7 @@ export default function MarketChart({
   const otherFilters = otherFilterParts.length > 0 ? otherFilterParts.join(" · ") : "";
 
   return (
-    <div className="border border-gray-200 bg-white p-4 md:p-6">
+    <div className="rounded-lg border border-gray-200 bg-white p-4 md:p-6">
       {/* Title and filter summary */}
       <div className="mb-4 text-center">
         <h3 className="text-base font-semibold text-primary">
@@ -386,11 +494,33 @@ export default function MarketChart({
             {otherFilters}
           </p>
         )}
+        {/* Trend mode toggle */}
+        <div className="mt-2 flex justify-center">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+            {([
+              ["rolling12", "12-Mo Rolling"],
+              ["rolling3", "3-Mo Rolling"],
+              ["yearly", "Yearly"],
+            ] as [TrendMode, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setTrendMode(key)}
+                className={`rounded-md px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                  trendMode === key
+                    ? "bg-zilker text-white"
+                    : "text-secondary hover:text-primary"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="relative h-[280px] md:h-[500px]">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={yearData} margin={{ top: 10, right: 60, bottom: 20, left: 10 }}>
+        <ComposedChart data={trendData} margin={{ top: 10, right: 60, bottom: 20, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="timestamp"
@@ -411,7 +541,9 @@ export default function MarketChart({
             stroke="#d1d5db"
             width={70}
             label={{
-              value: `Closed Median ${metricLabel}`,
+              value: trendMode === "yearly"
+                ? `Closed Median ${metricLabel}`
+                : `Rolling Median ${metricLabel}`,
               angle: -90,
               position: "insideLeft",
               style: { fontSize: 11, fill: "#886752" },
@@ -444,26 +576,45 @@ export default function MarketChart({
             )}
           />
 
-          {/* Bar chart - transaction count per year */}
+          {/* Bar chart - transaction count */}
           <Bar
             yAxisId="right"
             dataKey="count"
-            name="Transactions / Year"
+            name={trendMode === "yearly" ? "Transactions / Year" : "Transactions / Window"}
             fill="#E1DDD1"
             stroke="#d1d5db"
-            barSize={20}
+            barSize={trendMode === "yearly" ? 20 : 4}
             fillOpacity={0.7}
           />
 
-          {/* Yearly median line (always visible) - smooth curve */}
-          {yearData.length > 1 && (
+          {/* Trend line — rolling or yearly */}
+          {trendMode !== "yearly" && rollingData.length > 1 && (
+            <Line
+              yAxisId="left"
+              dataKey={metricKey}
+              name={`${trendMode === "rolling12" ? "12-Mo" : "3-Mo"} Rolling Median ${metric === "priceSf" ? "$/SF" : "Price"}`}
+              stroke="#324A32"
+              strokeWidth={2.5}
+              dot={false}
+              type="monotone"
+              legendType="line"
+              connectNulls
+            />
+          )}
+          {trendMode === "yearly" && yearData.length > 1 && (
             <Line
               yAxisId="left"
               dataKey={metricKey}
               name={metric === "priceSf" ? "Closed Median $/SF" : "Closed Median Sale Price"}
               stroke="#324A32"
               strokeWidth={2.5}
-              dot={{ r: 4, fill: "#324A32" }}
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                if (payload.isPartialYear) {
+                  return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="white" stroke="#324A32" strokeWidth={2} />;
+                }
+                return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="#324A32" />;
+              }}
               type="monotone"
               legendType="line"
               connectNulls
@@ -508,7 +659,7 @@ export default function MarketChart({
         {/* Custom scatter tooltip — bypasses Recharts tooltip for reliable hover */}
         {hoveredPoint && (
           <div
-            className="pointer-events-none absolute z-50 border border-gray-200 bg-white p-3 text-xs shadow-lg"
+            className="pointer-events-none absolute z-50 rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg"
             style={{
               left: tooltipPos.x + 12,
               top: tooltipPos.y,
@@ -598,8 +749,14 @@ export default function MarketChart({
 
       <p className="mt-3 text-center text-xs text-accent">
         {(showScatter || useStatusScatter) && "Dots show individual listings · "}
-        Bars show annual transaction volume
-        {yearData.length > 1 && ` · Line shows yearly closed median ${metricLabel}`}
+        {trendMode === "yearly"
+          ? "Bars show annual transaction volume"
+          : `Bars show ${trendMode === "rolling12" ? "12" : "3"}-month rolling transaction count`}
+        {trendData.length > 1 && (
+          trendMode === "yearly"
+            ? ` · Line shows yearly closed median ${metricLabel}`
+            : ` · Line shows ${trendMode === "rolling12" ? "12" : "3"}-month rolling closed median ${metricLabel}`
+        )}
       </p>
     </div>
   );

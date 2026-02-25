@@ -260,7 +260,7 @@ export default function MarketSnapshot({
       {/* 2. Active vs Closed Comparison + 3. Price Gap + 4. Market Velocity */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Bar Chart */}
-        <div className="rounded border border-gray-200 bg-white p-4 lg:col-span-2">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 lg:col-span-2">
           <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
             Active vs 12-Month Closed
           </h3>
@@ -293,7 +293,7 @@ export default function MarketSnapshot({
         {/* Price Gap + Market Velocity stacked */}
         <div className="space-y-4">
           {/* Price Gap Card */}
-          <div className="rounded border border-gray-200 bg-white p-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
               Price Gap
             </h3>
@@ -351,7 +351,7 @@ export default function MarketSnapshot({
           </div>
 
           {/* Market Velocity Card */}
-          <div className="rounded border border-gray-200 bg-white p-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
               Market Velocity
             </h3>
@@ -395,7 +395,7 @@ export default function MarketSnapshot({
       </div>
 
       {/* 5. YoY Comparison */}
-      <div className="rounded border border-gray-200 bg-white p-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
           Year-over-Year Comparison
         </h3>
@@ -484,7 +484,7 @@ export default function MarketSnapshot({
       </div>
 
       {/* 6. Per-Building Market Table */}
-      <div className="rounded border border-gray-200 bg-white">
+      <div className="rounded-lg border border-gray-200 bg-white">
         <h3 className="px-4 pt-4 text-xs font-bold uppercase tracking-wider text-secondary">
           Per-Building Breakdown
         </h3>

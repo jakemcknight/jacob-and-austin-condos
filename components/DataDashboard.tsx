@@ -28,7 +28,7 @@ import { buildings as buildingsData } from "@/data/buildings";
 const MarketChart = dynamic(() => import("@/components/MarketChart"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[500px] items-center justify-center border border-gray-200 bg-white">
+    <div className="flex h-[500px] items-center justify-center rounded-lg border border-gray-200 bg-white">
       <p className="text-sm uppercase tracking-wider text-gray-400">Loading chart...</p>
     </div>
   ),
@@ -1155,7 +1155,7 @@ export default function DataDashboard() {
                   <button
                     key={r}
                     onClick={() => setAppreciationRange(r)}
-                    className={`border px-3 py-1 text-xs uppercase tracking-wider ${
+                    className={`rounded-full border px-3 py-1 text-xs uppercase tracking-wider ${
                       appreciationRange === r ? "border-accent bg-accent text-white" : "border-gray-200 bg-white text-secondary"
                     }`}
                   >
@@ -1176,7 +1176,7 @@ export default function DataDashboard() {
                   { label: "Median Value", data: appreciation.value },
                   { label: "HOA $/SF", data: appreciation.hoaPsf },
                 ].map(({ label, data }) => (
-                  <div key={label} className="border border-gray-200 bg-white p-4">
+                  <div key={label} className="rounded-lg border border-gray-200 bg-white p-4">
                     <p className="text-xs uppercase tracking-wider text-accent">{label}</p>
                     <p className={`mt-1 text-lg font-bold ${data.totalGainPercent >= 0 ? "text-zilker" : "text-red-600"}`}>
                       {data.totalGainPercent >= 0 ? "+" : ""}{data.totalGainPercent.toFixed(1)}%
