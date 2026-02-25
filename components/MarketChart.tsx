@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   ComposedChart,
   Scatter,
@@ -95,6 +95,13 @@ interface ScatterPoint {
   dom: number;
   statusGroup?: string; // "Closed" | "Active" | "Pending" | "Didn't Sell"
   lastStatusChange?: string; // latest event date for tooltip display
+}
+
+interface PinnedCard {
+  id: string;
+  point: ScatterPoint;
+  dotPos: { x: number; y: number };
+  cardPos: { x: number; y: number };
 }
 
 // Status-grouped scatter data passed from parent
@@ -249,6 +256,46 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
   );
 }
 
+function computeInitialCardPos(
+  dotX: number,
+  dotY: number,
+  containerWidth: number,
+  containerHeight: number
+): { x: number; y: number } {
+  const CARD_W = 200;
+  const CARD_H = 170;
+  let x = dotX + 20;
+  let y = dotY - CARD_H - 10;
+  if (x + CARD_W > containerWidth) x = dotX - CARD_W - 20;
+  if (y < 0) y = dotY + 20;
+  if (x < 0) x = 10;
+  if (y + CARD_H > containerHeight) y = containerHeight - CARD_H - 10;
+  return { x, y };
+}
+
+function getCardEdgePoint(
+  dotX: number,
+  dotY: number,
+  cardX: number,
+  cardY: number,
+  cardW: number,
+  cardH: number
+): { x: number; y: number } {
+  const cx = cardX + cardW / 2;
+  const cy = cardY + cardH / 2;
+  const dx = dotX - cx;
+  const dy = dotY - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  const scaleX = dx !== 0 ? (cardW / 2) / Math.abs(dx) : Infinity;
+  const scaleY = dy !== 0 ? (cardH / 2) / Math.abs(dy) : Infinity;
+  const scale = Math.min(scaleX, scaleY);
+  return { x: cx + dx * scale, y: cy + dy * scale };
+}
+
+function makePointId(p: ScatterPoint): string {
+  return `${p.buildingName}-${p.unit}-${p.timestamp}`;
+}
+
 interface MarketChartProps {
   transactions: CsvTransaction[];
   showScatter: boolean;
@@ -283,22 +330,174 @@ export default function MarketChart({
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [trendMode, setTrendMode] = useState<TrendMode>("rolling12");
 
+  // Pinned cards state
+  const [pinnedCards, setPinnedCards] = useState<PinnedCard[]>([]);
+  const [dragging, setDragging] = useState<{
+    cardId: string;
+    startX: number;
+    startY: number;
+    startCardX: number;
+    startCardY: number;
+  } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const dotPositionUpdates = useRef(new Map<string, { x: number; y: number }>());
+
+  // Clear pins when filter props change
+  const filterKey = useMemo(
+    () => JSON.stringify({
+      beds: Array.from(activeBedrooms).sort(),
+      metric,
+      scatter: statusScatterListings.length,
+      txns: transactions.length,
+    }),
+    [activeBedrooms, metric, statusScatterListings.length, transactions.length]
+  );
+  const prevFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (prevFilterKey.current !== filterKey) {
+      setPinnedCards([]);
+      prevFilterKey.current = filterKey;
+    }
+  }, [filterKey]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      setPinnedCards([]);
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!fullscreenRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      fullscreenRef.current.requestFullscreen();
+    }
+  }, []);
+
+  // Dot position updates after render (for resize handling)
+  useEffect(() => {
+    if (dotPositionUpdates.current.size === 0) return;
+    const updates = new Map(dotPositionUpdates.current);
+    dotPositionUpdates.current = new Map();
+
+    setPinnedCards((prev) => {
+      let changed = false;
+      const next = prev.map((card) => {
+        const newDot = updates.get(card.id);
+        if (newDot && (Math.abs(newDot.x - card.dotPos.x) > 1 || Math.abs(newDot.y - card.dotPos.y) > 1)) {
+          changed = true;
+          const dx = newDot.x - card.dotPos.x;
+          const dy = newDot.y - card.dotPos.y;
+          return {
+            ...card,
+            dotPos: newDot,
+            cardPos: { x: card.cardPos.x + dx, y: card.cardPos.y + dy },
+          };
+        }
+        return card;
+      });
+      return changed ? next : prev;
+    });
+  });
+
+  // Drag handlers
+  const handleDragStart = useCallback(
+    (cardId: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const card = pinnedCards.find((p) => p.id === cardId);
+      if (!card) return;
+      setDragging({
+        cardId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startCardX: card.cardPos.x,
+        startCardY: card.cardPos.y,
+      });
+    },
+    [pinnedCards]
+  );
+
+  useEffect(() => {
+    if (!dragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragging.startX;
+      const dy = e.clientY - dragging.startY;
+      setPinnedCards((prev) =>
+        prev.map((card) =>
+          card.id === dragging.cardId
+            ? { ...card, cardPos: { x: dragging.startCardX + dx, y: dragging.startCardY + dy } }
+            : card
+        )
+      );
+    };
+    const handleMouseUp = () => setDragging(null);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragging]);
+
+  // Click handler for scatter dots
+  const handleDotClick = useCallback(
+    (payload: ScatterPoint, cx: number, cy: number) => {
+      const id = makePointId(payload);
+      setPinnedCards((prev) => {
+        if (prev.some((p) => p.id === id)) {
+          return prev.filter((p) => p.id !== id);
+        }
+        const container = containerRef.current;
+        const containerWidth = container?.offsetWidth ?? 800;
+        const containerHeight = container?.offsetHeight ?? 500;
+        const cardPos = computeInitialCardPos(cx, cy, containerWidth, containerHeight);
+        return [...prev, { id, point: payload, dotPos: { x: cx, y: cy }, cardPos }];
+      });
+    },
+    []
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderScatterDot = (props: any) => {
     const { cx, cy, payload, fill } = props;
+    const id = makePointId(payload);
+    const isPinned = pinnedCards.some((p) => p.id === id);
+
+    // Track dot positions for resize updates
+    if (isPinned) {
+      dotPositionUpdates.current.set(id, { x: cx, y: cy });
+    }
+
     return (
       <circle
         cx={cx}
         cy={cy}
-        r={6}
+        r={isPinned ? 8 : 6}
         fill={fill}
-        fillOpacity={0.55}
+        fillOpacity={isPinned ? 0.9 : 0.55}
+        stroke={isPinned ? "#191919" : "none"}
+        strokeWidth={isPinned ? 2 : 0}
         cursor="pointer"
         onMouseEnter={() => {
-          setHoveredPoint(payload);
-          setTooltipPos({ x: cx, y: cy });
+          if (!dragging) {
+            setHoveredPoint(payload);
+            setTooltipPos({ x: cx, y: cy });
+          }
         }}
         onMouseLeave={() => setHoveredPoint(null)}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDotClick(payload, cx, cy);
+        }}
       />
     );
   };
@@ -477,23 +676,51 @@ export default function MarketChart({
   }
   const otherFilters = otherFilterParts.length > 0 ? otherFilterParts.join(" · ") : "";
 
+  const CARD_W = 200;
+  const CARD_H = 170;
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 md:p-6">
+    <div
+      ref={fullscreenRef}
+      className={`rounded-lg border border-gray-200 bg-white p-4 md:p-6 ${
+        isFullscreen ? "flex flex-col h-screen" : ""
+      }`}
+    >
       {/* Title and filter summary */}
       <div className="mb-4 text-center">
-        <h3 className="text-base font-semibold text-primary">
-          {metric === "priceSf" ? "Downtown Austin: Price per Square Foot" : "Downtown Austin: Sale Price"}
-        </h3>
-        {buildingFilter && (
-          <p className="mt-1 text-xs text-accent">
-            {buildingFilter}
-          </p>
-        )}
-        {otherFilters && (
-          <p className={buildingFilter ? "text-xs text-accent" : "mt-1 text-xs text-accent"}>
-            {otherFilters}
-          </p>
-        )}
+        <div className="flex items-start justify-between">
+          <div className="w-10" />
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-primary">
+              {metric === "priceSf" ? "Downtown Austin: Price per Square Foot" : "Downtown Austin: Sale Price"}
+            </h3>
+            {buildingFilter && (
+              <p className="mt-1 text-xs text-accent">
+                {buildingFilter}
+              </p>
+            )}
+            {otherFilters && (
+              <p className={buildingFilter ? "text-xs text-accent" : "mt-1 text-xs text-accent"}>
+                {otherFilters}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={toggleFullscreen}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-gray-100 hover:text-primary transition-colors"
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m7 11l5 5m0 0v-4m0 4h-4M9 15l-5 5m0 0h4m-4 0v-4m11-7l5-5m0 0h-4m4 0v4" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 14H4m0 0v-4m0 4l5-5m7 5h4m0 0v-4m0 4l-5-5" />
+              </svg>
+            )}
+          </button>
+        </div>
         {/* Trend mode toggle */}
         <div className="mt-2 flex justify-center">
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
@@ -518,7 +745,12 @@ export default function MarketChart({
         </div>
       </div>
 
-      <div className="relative h-[280px] md:h-[500px]">
+      <div
+        ref={containerRef}
+        className={`relative overflow-visible ${
+          isFullscreen ? "flex-1 min-h-0" : "h-[280px] md:h-[500px]"
+        }`}
+      >
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={trendData} margin={{ top: 10, right: 60, bottom: 20, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -656,14 +888,152 @@ export default function MarketChart({
         </ComposedChart>
       </ResponsiveContainer>
 
-        {/* Custom scatter tooltip — bypasses Recharts tooltip for reliable hover */}
-        {hoveredPoint && (
+        {/* SVG connecting lines from dots to pinned cards */}
+        {pinnedCards.length > 0 && (
+          <svg
+            className="pointer-events-none absolute inset-0"
+            style={{ width: "100%", height: "100%", zIndex: 40 }}
+          >
+            {pinnedCards.map((card) => {
+              const edge = getCardEdgePoint(
+                card.dotPos.x, card.dotPos.y,
+                card.cardPos.x, card.cardPos.y,
+                CARD_W, CARD_H
+              );
+              return (
+                <line
+                  key={`line-${card.id}`}
+                  x1={card.dotPos.x}
+                  y1={card.dotPos.y}
+                  x2={edge.x}
+                  y2={edge.y}
+                  stroke="#886752"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 3"
+                  opacity={0.6}
+                />
+              );
+            })}
+          </svg>
+        )}
+
+        {/* Pinned cards */}
+        {pinnedCards.map((card) => (
           <div
-            className="pointer-events-none absolute z-50 rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg"
+            key={card.id}
+            className="absolute rounded-lg border border-gray-200 bg-white shadow-lg select-none"
+            style={{
+              left: card.cardPos.x,
+              top: card.cardPos.y,
+              width: CARD_W,
+              zIndex: 45,
+              cursor: dragging?.cardId === card.id ? "grabbing" : "default",
+            }}
+          >
+            {/* Drag handle header */}
+            <div
+              className="flex items-center justify-between rounded-t-lg border-b border-gray-100 bg-gray-50 px-3 py-1.5"
+              style={{ cursor: dragging?.cardId === card.id ? "grabbing" : "grab" }}
+              onMouseDown={(e) => handleDragStart(card.id, e)}
+            >
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: STATUS_COLORS[card.point.statusGroup || "Closed"] || "#666" }}
+              >
+                {card.point.statusGroup || "Closed"}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPinnedCards((prev) => prev.filter((p) => p.id !== card.id));
+                }}
+                className="flex h-4 w-4 items-center justify-center rounded text-secondary hover:text-primary transition-colors"
+              >
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Card body */}
+            <div className="p-3 text-xs">
+              <p className="font-semibold text-primary">
+                {card.point.buildingName === "Other" ? card.point.address : card.point.buildingName}
+              </p>
+              <p className="text-secondary">
+                Unit {card.point.unit} &middot; {bedroomLabel(card.point.bedrooms)}
+              </p>
+              {card.point.floorPlan && (
+                <p className="text-secondary">
+                  Plan: {card.point.floorPlan}
+                  {card.point.orientation ? ` · ${card.point.orientation}` : ""}
+                </p>
+              )}
+              <p className="mt-1 text-secondary">
+                {card.point.statusGroup === "Closed" ? "Closed" : "Listed"}:{" "}
+                {new Date(card.point.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+              {card.point.lastStatusChange && card.point.statusGroup !== "Closed" && (
+                <p className="text-secondary">
+                  Last Activity:{" "}
+                  {new Date(card.point.lastStatusChange).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              )}
+              <p className="mt-1">
+                <span className="text-accent">
+                  {card.point.statusGroup && card.point.statusGroup !== "Closed" ? "List Price:" : "Price:"}
+                </span>{" "}
+                <span className="font-medium text-primary">
+                  {formatFullPrice(card.point.price)}
+                </span>
+              </p>
+              {card.point.priceSf > 0 && (
+                <p>
+                  <span className="text-accent">$/SF:</span>{" "}
+                  <span className="font-medium text-primary">
+                    {fmtPsf(card.point.priceSf)}
+                  </span>
+                </p>
+              )}
+              {card.point.sqft > 0 && (
+                <p>
+                  <span className="text-accent">Size:</span>{" "}
+                  <span className="font-medium text-primary">
+                    {card.point.sqft.toLocaleString()} SF
+                  </span>
+                </p>
+              )}
+              {card.point.dom >= 0 && (
+                <p>
+                  <span className="text-accent">DOM:</span>{" "}
+                  <span className="font-medium text-primary">
+                    {card.point.dom}
+                    {card.point.statusGroup && card.point.statusGroup !== "Closed" && (
+                      <span className="ml-1 text-xs font-normal text-secondary">days</span>
+                    )}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Custom scatter tooltip — bypasses Recharts tooltip for reliable hover */}
+        {hoveredPoint && !dragging && (
+          <div
+            className="pointer-events-none absolute rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg"
             style={{
               left: tooltipPos.x + 12,
               top: tooltipPos.y,
               transform: "translateY(-100%)",
+              zIndex: 50,
             }}
           >
             <p className="font-semibold text-primary">
@@ -745,17 +1115,32 @@ export default function MarketChart({
         )}
       </div>
 
-      <p className="mt-3 text-center text-xs text-accent">
-        {(showScatter || useStatusScatter) && "Dots show individual listings · "}
-        {trendMode === "yearly"
-          ? "Bars show annual transaction volume"
-          : `Bars show ${trendMode === "rolling12" ? "12" : "3"}-month rolling transaction count`}
-        {trendData.length > 1 && (
-          trendMode === "yearly"
-            ? ` · Line shows yearly closed median ${metricLabel}`
-            : ` · Line shows ${trendMode === "rolling12" ? "12" : "3"}-month rolling closed median ${metricLabel}`
+      <div className="mt-3 text-center">
+        <p className="text-xs text-accent">
+          {(showScatter || useStatusScatter) && "Dots show individual listings · "}
+          {trendMode === "yearly"
+            ? "Bars show annual transaction volume"
+            : `Bars show ${trendMode === "rolling12" ? "12" : "3"}-month rolling transaction count`}
+          {trendData.length > 1 && (
+            trendMode === "yearly"
+              ? ` · Line shows yearly closed median ${metricLabel}`
+              : ` · Line shows ${trendMode === "rolling12" ? "12" : "3"}-month rolling closed median ${metricLabel}`
+          )}
+        </p>
+        {pinnedCards.length > 0 && (
+          <div className="mt-1 flex items-center justify-center gap-3">
+            <span className="text-xs text-secondary">
+              {pinnedCards.length} pinned
+            </span>
+            <button
+              onClick={() => setPinnedCards([])}
+              className="text-xs font-medium text-accent hover:text-primary transition-colors"
+            >
+              Clear all pins
+            </button>
+          </div>
         )}
-      </p>
+      </div>
     </div>
   );
 }
