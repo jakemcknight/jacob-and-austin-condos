@@ -92,7 +92,8 @@ export default function MarketSnapshot({
   const summaryCards = useMemo(
     () => [
       {
-        label: "Absorption Rate",
+        label: "Months of Supply",
+        tooltip: "Active listings \u00f7 avg monthly closings over 12 months (UnlockMLS methodology)",
         value:
           absorption.monthsOfSupply === Infinity
             ? "N/A"
@@ -499,7 +500,7 @@ export default function MarketSnapshot({
                     ["pendingCount", "Pending"],
                     ["closedLast12", "Closed (12mo)"],
                     ["medianPsf", "Median $/SF"],
-                    ["absorptionRate", "Absorption"],
+                    ["absorptionRate", "Mo Supply"],
                     ["avgDom", "Avg DOM"],
                   ] as [SortKey, string][]
                 ).map(([key, label]) => (

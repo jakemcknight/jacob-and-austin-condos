@@ -1121,6 +1121,7 @@ export default function DataDashboard() {
                       ? "N/A supply"
                       : `${absorptionRate.monthsOfSupply.toFixed(1)} mo supply`
                     : undefined,
+                  tooltip: "Active listings \u00f7 avg monthly closings over 12 months (UnlockMLS methodology)",
                 },
                 {
                   label: "Pending",
@@ -1409,7 +1410,7 @@ export default function DataDashboard() {
                       ["activeCount", "Active"],
                       ["pendingCount", "Pending"],
                       ["closedLast12", "Closed (12 Mo)"],
-                      ["absorptionRate", "Absorption"],
+                      ["absorptionRate", "Mo Supply"],
                       ["avgDom", "Avg DOM"],
                       ["medianSf", "Med SF"],
                     ] as [keyof BuildingMarketRow, string][]).map(([key, label]) => (
