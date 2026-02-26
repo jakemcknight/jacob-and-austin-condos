@@ -76,6 +76,7 @@ interface RollingDataPoint {
   monthLabel: string;
   medianPsf: number;
   medianPrice: number;
+  medianHoaPsf: number;
   count: number;
   windowMonths: number;
 }
@@ -84,6 +85,7 @@ interface ScatterPoint {
   timestamp: number;
   priceSf: number;
   price: number;
+  hoaPsf: number;
   date: string;
   unit: string;
   bedrooms: number;
@@ -110,6 +112,7 @@ export interface StatusScatterListing {
   date: string;
   price: number;
   priceSf: number;
+  hoaPsf: number;
   bedrooms: number;
   unit: string;
   buildingName: string;
@@ -133,6 +136,7 @@ interface YearDataPoint {
   count: number;
   medianPsf: number;
   medianPrice: number;
+  medianHoaPsf: number;
   timestamp: number;
   isPartialYear?: boolean;
 }
@@ -168,6 +172,14 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
             {formatFullPrice(d.medianPrice)}
           </span>
         </p>
+        {d.medianHoaPsf > 0 && (
+          <p>
+            <span className="text-accent">Median HOA $/SF:</span>{" "}
+            <span className="font-medium text-primary">
+              ${d.medianHoaPsf.toFixed(2)}
+            </span>
+          </p>
+        )}
       </div>
     );
   }
@@ -198,6 +210,14 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
             {formatFullPrice(d.medianPrice)}
           </span>
         </p>
+        {d.medianHoaPsf > 0 && (
+          <p>
+            <span className="text-accent">Median HOA $/SF:</span>{" "}
+            <span className="font-medium text-primary">
+              ${d.medianHoaPsf.toFixed(2)}
+            </span>
+          </p>
+        )}
       </div>
     );
   }
@@ -233,6 +253,14 @@ function CustomTooltip({ active, payload, metric, isLease }: any) {
           <span className="text-accent">$/SF:</span>{" "}
           <span className="font-medium text-primary">
             {fmtPsfLocal(d.priceSf)}
+          </span>
+        </p>
+      )}
+      {d.hoaPsf > 0 && (
+        <p>
+          <span className="text-accent">HOA $/SF:</span>{" "}
+          <span className="font-medium text-primary">
+            ${d.hoaPsf.toFixed(2)}
           </span>
         </p>
       )}
@@ -301,7 +329,7 @@ interface MarketChartProps {
   showScatter: boolean;
   activeBedrooms: Set<number>;
   bedroomCounts: number[];
-  metric: "priceSf" | "price";
+  metric: "priceSf" | "price" | "hoaPsf";
   selectedBuildings?: string[];
   activeOrientations?: string[];
   activeFloorPlans?: string[];
@@ -328,7 +356,14 @@ export default function MarketChart({
 
   const [hoveredPoint, setHoveredPoint] = useState<ScatterPoint | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const [trendMode, setTrendMode] = useState<TrendMode>("rolling12");
+  const [trendMode, setTrendMode] = useState<TrendMode>(metric === "hoaPsf" ? "yearly" : "rolling12");
+
+  // Auto-force yearly when HOA $/SF metric is selected
+  useEffect(() => {
+    if (metric === "hoaPsf" && trendMode !== "yearly") {
+      setTrendMode("yearly");
+    }
+  }, [metric, trendMode]);
 
   // Pinned cards state
   const [pinnedCards, setPinnedCards] = useState<PinnedCard[]>([]);
@@ -507,11 +542,13 @@ export default function MarketChart({
   for (const t of transactions) {
     if (!activeBedrooms.has(t.bedrooms)) continue;
     if (metric === "priceSf" && t.priceSf <= 0) continue;
+    if (metric === "hoaPsf" && t.hoaPsf <= 0) continue;
     if (!scatterByBed[t.bedrooms]) scatterByBed[t.bedrooms] = [];
     scatterByBed[t.bedrooms].push({
       timestamp: new Date(t.closeDate).getTime(),
       priceSf: t.priceSf,
       price: t.closePrice,
+      hoaPsf: t.hoaPsf,
       date: t.closeDate,
       unit: t.unit,
       bedrooms: t.bedrooms,
@@ -531,13 +568,14 @@ export default function MarketChart({
   if (useStatusScatter) {
     for (const s of statusScatterListings) {
       if (!activeBedrooms.has(s.bedrooms)) continue;
-      const val = metric === "priceSf" ? s.priceSf : s.price;
+      const val = metric === "hoaPsf" ? s.hoaPsf : metric === "priceSf" ? s.priceSf : s.price;
       if (val <= 0) continue;
       if (!statusScatterByGroup[s.statusGroup]) statusScatterByGroup[s.statusGroup] = [];
       statusScatterByGroup[s.statusGroup].push({
         timestamp: new Date(s.date).getTime(),
         priceSf: s.priceSf,
         price: s.price,
+        hoaPsf: s.hoaPsf,
         date: s.date,
         unit: s.unit,
         bedrooms: s.bedrooms,
@@ -554,13 +592,14 @@ export default function MarketChart({
   }
 
   // Build yearly aggregated data (bars + median line points)
-  const yearBuckets: Record<number, { priceSfs: number[]; prices: number[]; count: number }> = {};
+  const yearBuckets: Record<number, { priceSfs: number[]; prices: number[]; hoaPsfs: number[]; count: number }> = {};
   for (const t of transactions) {
     if (!activeBedrooms.has(t.bedrooms)) continue;
-    if (!yearBuckets[t.year]) yearBuckets[t.year] = { priceSfs: [], prices: [], count: 0 };
+    if (!yearBuckets[t.year]) yearBuckets[t.year] = { priceSfs: [], prices: [], hoaPsfs: [], count: 0 };
     yearBuckets[t.year].count++;
     if (t.priceSf > 0) yearBuckets[t.year].priceSfs.push(t.priceSf);
     if (t.closePrice > 0) yearBuckets[t.year].prices.push(t.closePrice);
+    if (t.hoaPsf > 0) yearBuckets[t.year].hoaPsfs.push(t.hoaPsf);
   }
 
   const currentYear = new Date().getFullYear();
@@ -571,6 +610,7 @@ export default function MarketChart({
       count: bucket.count,
       medianPsf: isLease ? Math.round(median(bucket.priceSfs) * 100) / 100 : Math.round(median(bucket.priceSfs)),
       medianPrice: Math.round(median(bucket.prices)),
+      medianHoaPsf: Math.round(median(bucket.hoaPsfs) * 100) / 100,
       timestamp: new Date(Number(yr), 6, 1).getTime(),
       isPartialYear: Number(yr) === currentYear,
     }))
@@ -614,6 +654,7 @@ export default function MarketChart({
       if (windowTxns.length > 0) {
         const priceSfs = windowTxns.map((t) => t.priceSf).filter((v) => v > 0);
         const prices = windowTxns.map((t) => t.closePrice).filter((v) => v > 0);
+        const hoaPsfs = windowTxns.map((t) => t.hoaPsf).filter((v) => v > 0);
 
         points.push({
           timestamp: new Date(cursor.getFullYear(), cursor.getMonth(), 15).getTime(),
@@ -622,6 +663,7 @@ export default function MarketChart({
             ? Math.round(median(priceSfs) * 100) / 100
             : Math.round(median(priceSfs)),
           medianPrice: Math.round(median(prices)),
+          medianHoaPsf: Math.round(median(hoaPsfs) * 100) / 100,
           count: windowTxns.length,
           windowMonths,
         });
@@ -637,9 +679,9 @@ export default function MarketChart({
   const trendData = trendMode === "yearly" ? yearData : rollingData;
 
   // Metric-specific values
-  const metricKey = metric === "priceSf" ? "medianPsf" : "medianPrice";
-  const metricLabel = metric === "priceSf" ? "$/SF" : "Sale Price";
-  const scatterKey = metric === "priceSf" ? "priceSf" : "price";
+  const metricKey = metric === "priceSf" ? "medianPsf" : metric === "price" ? "medianPrice" : "medianHoaPsf";
+  const metricLabel = metric === "priceSf" ? "$/SF" : metric === "price" ? (isLease ? "Lease Price" : "Sale Price") : "HOA $/SF";
+  const scatterKey = metric === "hoaPsf" ? "hoaPsf" : metric === "priceSf" ? "priceSf" : "price";
 
   // Compute time domain
   const allScatter: ScatterPoint[] = [
@@ -692,7 +734,7 @@ export default function MarketChart({
           <div className="w-10" />
           <div className="flex-1">
             <h3 className="text-base font-semibold text-primary">
-              {metric === "priceSf" ? "Downtown Austin: Price per Square Foot" : "Downtown Austin: Sale Price"}
+              {metric === "priceSf" ? "Downtown Austin: Price per Square Foot" : metric === "price" ? "Downtown Austin: Sale Price" : "Downtown Austin: HOA per Square Foot"}
             </h3>
             {buildingFilter && (
               <p className="mt-1 text-xs text-accent">
@@ -728,19 +770,25 @@ export default function MarketChart({
               ["rolling12", "12-Mo Rolling"],
               ["rolling3", "3-Mo Rolling"],
               ["yearly", "Yearly"],
-            ] as [TrendMode, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setTrendMode(key)}
-                className={`rounded-md px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                  trendMode === key
-                    ? "bg-zilker text-white"
-                    : "text-secondary hover:text-primary"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+            ] as [TrendMode, string][]).map(([key, label]) => {
+              const disabled = metric === "hoaPsf" && key !== "yearly";
+              return (
+                <button
+                  key={key}
+                  onClick={() => !disabled && setTrendMode(key)}
+                  disabled={disabled}
+                  className={`rounded-md px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                    trendMode === key
+                      ? "bg-zilker text-white"
+                      : disabled
+                        ? "text-gray-300 cursor-not-allowed"
+                        : "text-secondary hover:text-primary"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -767,7 +815,7 @@ export default function MarketChart({
             yAxisId="left"
             type="number"
             tickFormatter={(val) =>
-              metric === "priceSf" ? fmtPsf(val) : formatPrice(val)
+              metric === "hoaPsf" ? `$${val.toFixed(2)}` : metric === "priceSf" ? fmtPsf(val) : formatPrice(val)
             }
             tick={{ fontSize: 11, fill: "#666" }}
             stroke="#d1d5db"
@@ -1002,6 +1050,14 @@ export default function MarketChart({
                   </span>
                 </p>
               )}
+              {card.point.hoaPsf > 0 && (
+                <p>
+                  <span className="text-accent">HOA $/SF:</span>{" "}
+                  <span className="font-medium text-primary">
+                    ${card.point.hoaPsf.toFixed(2)}
+                  </span>
+                </p>
+              )}
               {card.point.sqft > 0 && (
                 <p>
                   <span className="text-accent">Size:</span>{" "}
@@ -1089,6 +1145,14 @@ export default function MarketChart({
                 <span className="text-accent">$/SF:</span>{" "}
                 <span className="font-medium text-primary">
                   {fmtPsf(hoveredPoint.priceSf)}
+                </span>
+              </p>
+            )}
+            {hoveredPoint.hoaPsf > 0 && (
+              <p>
+                <span className="text-accent">HOA $/SF:</span>{" "}
+                <span className="font-medium text-primary">
+                  ${hoveredPoint.hoaPsf.toFixed(2)}
                 </span>
               </p>
             )}

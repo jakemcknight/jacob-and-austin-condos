@@ -116,7 +116,7 @@ export default function DataDashboard() {
   const [advancedDates, setAdvancedDates] = useState(initialState.advancedDates);
   const [dateFrom, setDateFrom] = useState(initialState.dateFrom);
   const [dateTo, setDateTo] = useState(initialState.dateTo);
-  const [metric, setMetric] = useState<"priceSf" | "price">(initialState.metric);
+  const [metric, setMetric] = useState<"priceSf" | "price" | "hoaPsf">(initialState.metric);
   const [scatterStatuses, setScatterStatuses] = useState<Set<string>>(initialState.scatterStatuses);
 
   // Tab state — initialized from URL
@@ -528,12 +528,14 @@ export default function DataDashboard() {
       if (price <= 0 || !date) continue;
 
       const priceSf = l.livingArea > 0 ? price / l.livingArea : 0;
+      const hoaPsf = l.hoaFee && l.livingArea > 0 ? l.hoaFee / l.livingArea : 0;
 
       result.push({
         statusGroup: group,
         date,
         price,
         priceSf,
+        hoaPsf,
         bedrooms: capBedrooms(l.bedroomsTotal),
         unit: l.unitNumber,
         buildingName: l.buildingName,
@@ -1067,6 +1069,14 @@ export default function DataDashboard() {
                 }`}
               >
                 {listingMode === "buy" ? "Sale Price" : "Lease Price"}
+              </button>
+              <button
+                onClick={() => setMetric("hoaPsf")}
+                className={`rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  metric === "hoaPsf" ? "bg-accent text-white" : "bg-gray-100 text-secondary hover:bg-gray-200"
+                }`}
+              >
+                HOA $/SF
               </button>
             </div>
 

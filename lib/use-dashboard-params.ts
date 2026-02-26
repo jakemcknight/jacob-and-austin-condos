@@ -20,7 +20,7 @@ export interface DashboardUrlState {
   activeBedrooms: Set<number>;
   activeOrientations: Set<string>;
   activeFloorPlans: Set<string>;
-  metric: "priceSf" | "price";
+  metric: "priceSf" | "price" | "hoaPsf";
   scatterStatuses: Set<string>;
   // Buildings tab
   buildingSortKey: keyof BuildingMarketRow;
@@ -104,7 +104,7 @@ function parseDashboardParams(params: URLSearchParams): DashboardUrlState {
   if (plans) state.activeFloorPlans = new Set(plans.split(",").filter(Boolean));
 
   const metric = params.get("metric");
-  if (metric === "price") state.metric = "price";
+  if (metric === "price" || metric === "hoaPsf") state.metric = metric;
 
   const statuses = params.get("statuses");
   if (statuses) state.scatterStatuses = new Set(statuses.split(",").filter(Boolean));
