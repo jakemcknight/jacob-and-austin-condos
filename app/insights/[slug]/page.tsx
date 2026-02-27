@@ -9,6 +9,39 @@ import {
 } from "@/lib/blog/mdx";
 import NewsletterForm from "@/components/NewsletterForm";
 import MarketReportChart from "@/components/MarketReportChart";
+import {
+  MarketReportLayout,
+  ReportHeader,
+  Takeaway,
+  KeyNumbers,
+  Narrative,
+  Methodology,
+  RollingPsfChart,
+  BuildingByBuilding,
+  BuildingCta,
+  Spotlight,
+  ForwardLook,
+  FAQ,
+  ReportFooter,
+} from "@/components/market-report";
+
+// Market report MDX components
+const marketReportComponents = {
+  ReportHeader,
+  Takeaway,
+  KeyNumbers,
+  Narrative,
+  Methodology,
+  RollingPsfChart,
+  BuildingByBuilding,
+  BuildingCta,
+  Spotlight,
+  ForwardLook,
+  FAQ,
+  ReportFooter,
+  // Override default p tag to not add extra styling
+  p: (props: React.ComponentPropsWithoutRef<"p">) => <p {...props} />,
+};
 
 // Custom MDX components for consistent typography
 const mdxComponents = {
@@ -160,6 +193,54 @@ export default function InsightPage({ params }: PageProps) {
     keywords: post.keywords.join(", "),
   };
 
+  const isMarketReport = post.category === "market-report";
+
+  // Market report: use dedicated layout with its own typography and style
+  if (isMarketReport) {
+    return (
+      <div className="-mt-[76px] pt-[76px] min-h-screen" style={{ background: "#fafaf7" }}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        />
+        <MarketReportLayout>
+          <MDXRemote
+            source={post.content}
+            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            components={marketReportComponents}
+          />
+        </MarketReportLayout>
+
+        {/* Newsletter CTA */}
+        <section style={{ padding: "40px 24px", maxWidth: 720, margin: "0 auto" }}>
+          <div className="text-center">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.3em]" style={{ color: "#2c5f4a" }}>
+              Get Insights in Your Inbox
+            </h2>
+            <p className="mt-4" style={{ color: "#7a7a72", fontSize: 15 }}>
+              Delivered every other Tuesday — market data, local headlines, and
+              off-market opportunities.
+            </p>
+            <div className="mt-6">
+              <NewsletterForm compact />
+            </div>
+          </div>
+        </section>
+
+        {/* Back to Insights */}
+        <section style={{ borderTop: "1px solid #e2e0da", padding: "24px", textAlign: "center" }}>
+          <Link
+            href="/insights"
+            style={{ fontSize: 14, textTransform: "uppercase", letterSpacing: "0.05em", color: "#2c5f4a", textDecoration: "none" }}
+          >
+            &larr; Back to Insights
+          </Link>
+        </section>
+      </div>
+    );
+  }
+
+  // Standard article/newsletter layout
   return (
     <div className="-mt-[76px] pt-[76px] bg-white min-h-screen">
       <script

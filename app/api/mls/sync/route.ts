@@ -26,6 +26,7 @@ import { readAllEnrichmentMaps, enrichActiveListingWithFloorPlan, writeEnrichmen
 import { unitLookup } from "@/data/unitLookup";
 import type { AnalyticsListing, AnalyticsSyncState } from "@/lib/mls/analytics-types";
 import type { MLSListing } from "@/lib/mls/types";
+import { captureAndStoreDailySnapshot } from "@/lib/mls/snapshot-capture";
 
 // Disable static optimization - this is a dynamic route
 export const dynamic = "force-dynamic";
@@ -473,6 +474,21 @@ export async function GET(request: NextRequest) {
       analyticsResult = {
         analyticsError: analyticsError instanceof Error ? analyticsError.message : String(analyticsError),
       };
+    }
+
+    // ========== DAILY SNAPSHOT PHASE ==========
+    // Capture/overwrite today's market snapshot on every sync run.
+    // By end of day, the snapshot reflects all changes (price reductions, status changes, closings).
+    try {
+      // Include unmatched listings under the "_unmatched" slug
+      const snapshotMap = new Map(listingsByBuilding);
+      if (unmatchedFullListings.length > 0) {
+        snapshotMap.set(UNMATCHED_SLUG, unmatchedFullListings);
+      }
+      await captureAndStoreDailySnapshot(snapshotMap);
+    } catch (snapshotError) {
+      // Snapshot failure should never break the sync
+      console.error("[MLS Sync] Snapshot phase error (non-fatal):", snapshotError);
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);

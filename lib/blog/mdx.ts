@@ -21,7 +21,7 @@ export interface BlogPostMeta {
   keywords: string[];
   image?: string;
   thumbnail?: string;
-  category?: "newsletter" | "article";
+  category?: "newsletter" | "article" | "market-report";
   status: "draft" | "published";
   readingTime: number; // minutes
   format?: "mdx" | "html";
