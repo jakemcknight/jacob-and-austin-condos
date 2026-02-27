@@ -57,10 +57,14 @@ export interface ListingSnapshotEntry {
   daysOnMarket: number;
 }
 
-// --- KV Keys ---
+// --- KV Keys & Limits ---
 
 const SNAPSHOT_PREFIX = "mls:snapshots:";
 const SNAPSHOT_INDEX_KEY = "mls:snapshots:index";
+
+// Max snapshots before pruning oldest. Keeps storage at ~90% of 256MB Upstash free tier.
+// Average snapshot ~116KB × 1760 ≈ 200MB, leaving ~30MB for listings/analytics/sync data.
+const MAX_SNAPSHOTS = 1760;
 
 function getSnapshotKey(date: string): string {
   return `${SNAPSHOT_PREFIX}${date}`;
@@ -261,6 +265,20 @@ async function ensureDateInIndex(date: string): Promise<void> {
   if (!index.includes(date)) {
     index.push(date);
     index.sort();
-    await kv.set(SNAPSHOT_INDEX_KEY, index);
   }
+
+  // Prune oldest snapshots if over the limit
+  while (index.length > MAX_SNAPSHOTS) {
+    const oldest = index.shift(); // Remove the earliest date
+    if (oldest) {
+      try {
+        await kv.del(getSnapshotKey(oldest));
+        console.log(`[Snapshot] Pruned oldest snapshot: ${oldest}`);
+      } catch (err) {
+        console.error(`[Snapshot] Failed to prune ${oldest}:`, err);
+      }
+    }
+  }
+
+  await kv.set(SNAPSHOT_INDEX_KEY, index);
 }
